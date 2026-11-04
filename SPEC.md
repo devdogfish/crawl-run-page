@@ -66,6 +66,7 @@ Step ids and names are examples; use your pipeline's own. The UI reads whatever 
 | D24 | The crawler is already built; just make it easy to add logs in the right places, and store everything in SQLite. | One small module (`crawl_events.py`, §4.1) is the only thing the crawler imports. It is called at 7 points (§4.2), and a single background writer thread does batched SQLite inserts (§5). |
 | D25 | Three typography styles next to each other look bad. | **Monospace only for code-like text** (URLs, log lines, commands). Numbers, times and durations use the normal font with tabular digits. A label + value pair is one font and size, with only the value emphasised. |
 | D26 | Should the filter tabs match the search input's size? | Yes. All controls in a toolbar share one height (32px) and one text size (12px). The reference tools (GitHub Actions log search, Vercel log filters) do the same; the mismatch came from Chakra's default sizes. |
+| D27 | Logs should be more consistent; an INFO/ERROR column isn't useful. What should a log line contain? | As in normal CI/crawler logs: **time + one plain sentence**, with severity shown only by colour. Every message follows `Verb subject (details)`, one template per kind of event. Structured fields go in `data` for filtering and export, not into the visible line (§4.3). |
 
 ---
 
@@ -232,21 +233,36 @@ log.addHandler(DbLogHandler())   # keep your existing console handler as it is
 
 ### 4.3 Log catalogue: what goes in the Logs tab
 
+**What a log line contains.** This matches how CI and crawler logs normally look (GitHub Actions, Vercel, Scrapy):
+
+| Part | Stored | Shown in the UI |
+|---|---|---|
+| Time | `ts` (UTC) | `HH:MM:SS` in the gutter |
+| Severity | `level` (INFO / WARNING / ERROR) | **colour only**: errors red, warnings yellow, info default. No level column. |
+| Step | `step_id` (from the context variable) | which tab the line appears in, not repeated per line |
+| Message | `message` | one plain sentence, in the fixed shape below |
+| Fields | `data` JSON (url, status, attempts, duration…) | not shown; used for filtering, export and debugging |
+
+**Message shape: `Verb subject (details)`.** Past tense, the subject (a URL, a count or a name) right after the verb, and extra numbers in parentheses separated by commas. Each kind of event always uses the same template, so lines line up when you scan them. Scrapy's progress line works the same way: `Crawled N pages (at X pages/min)`.
+
 Use the `crawler` logger anywhere (`from crawl_events import log`). Attach machine-readable fields with `extra={"data": {...}}`.
 
-| Level | When | Example message | `data` |
+| Level | When | Template (example) | `data` |
 |---|---|---|---|
-| INFO | Step start, with the command/config used | `$ crawler run shop.example.com --max-concurrency 64` | — |
-| INFO | Seeds loaded / estimate | `Seeded 1,200 URLs from sitemap.xml · estimate 48,200 pages` | `{seeds, expected}` |
-| INFO | **Summary every 15–30s** (the same numbers as `progress`) | `Fetched 10,512 pages · 39/s · queue 6,120` | `{done, rate, queue}` |
-| INFO | Step finished, with a result summary | `Crawl complete · 49,350 pages (+2.4% vs estimate)` | `{done, errors}` |
-| WARNING | Timeout, retry scheduled | `Timeout after 30s: /category/outdoor?page=21` | `{url, timeout_s}` |
-| WARNING | Rate limited / concurrency change | `429 Too Many Requests · backing off 30s · concurrency 64 → 16` | `{until, concurrency}` |
-| WARNING | Grouped 4xx (one line per summary, not per URL) | `37 pages returned 404 in the last 30s` | `{count, status}` |
-| ERROR | Each 5xx after retries | `503 Service Unavailable: /product/10065` | `{url, status, attempts}` |
-| ERROR | Render/browser crash | `Render failed: Target closed (/product/10091)` | `{url, error}` |
-| ERROR | Step failure, with the cause and a hint if known | `Numeric value '1.299,00' is not recognized` | `{error, hint}` |
-| INFO | Retry marker (written by the retry endpoint) | `── Retry · attempt 2 · crawl output reused ──` | `{attempt}` |
+| INFO | Step start: the command or config used | `$ crawler run shop.example.com --max-concurrency 64` | — |
+| INFO | Seeds loaded | `Seeded 1,200 URLs from sitemap.xml (expecting ~48,200 pages)` | `{seeds, expected}` |
+| INFO | **Progress every 15–30s** (same numbers as `progress`) | `Crawled 10,512 pages (39/s, 6,120 queued)` | `{done, rate, queue}` |
+| INFO | Step finished | `Finished crawl: 49,350 pages (+2.4% vs expected)` | `{done, errors}` |
+| WARNING | Timeout, retry scheduled | `Timed out /category/outdoor?page=21 (after 30s, will retry)` | `{url, timeout_s}` |
+| WARNING | Rate limited | `Rate limited by shop.example.com (429, backing off 30s, concurrency 64 → 16)` | `{until, concurrency}` |
+| INFO | Rate limit over | `Resumed full speed (concurrency 64)` | `{concurrency}` |
+| WARNING | Grouped 4xx (one line per summary, not per URL) | `Got 404 for 37 pages (last 30s)` | `{count, status}` |
+| ERROR | Each 5xx after retries | `Failed /product/10065 (503 Service Unavailable, 3 attempts)` | `{url, status, attempts}` |
+| ERROR | Render/browser crash | `Failed to render /product/10091 (Target closed)` | `{url, error}` |
+| ERROR | Step failure, with the cause and a hint if known | `Failed model fct_prices (Numeric value '1.299,00' is not recognized)` | `{error, hint}` |
+| INFO | Retry marker (written by the retry endpoint) | `Retrying from this step (attempt 2, reusing crawl output)` | `{attempt}` |
+
+Keep the templates in one place (e.g. small helper functions such as `log_timeout(url, after_s)` in `crawl_events.py`), so every call site produces exactly the same shape.
 
 **Not logged individually:** successful fetches, redirects, URL-normalisation skips and single 4xx responses. They are `rec.page(...)` rows, plus counts in `progress`.
 

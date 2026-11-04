@@ -54,16 +54,15 @@ const TAIL_DEFS = [
 export const USUAL_TOTAL_SEC = USUAL_CRAWL_SEC + TAIL_DEFS.reduce((a, d) => a + d.sec, 0);
 
 const TAIL_LOGS: Record<string, string[]> = {
-  parse: ["$ parse --schema product.v3", "Parsed 49,350 documents", "1,204 pages had no product block (skipped)"],
-  transform: ["$ dbt build --select +fct_prices", "OK view stg_products", "OK table int_price_history", "OK merged fct_prices"],
-  load: ["$ warehouse upsert PRODUCTS", "48,146 rows upserted", "Audit row written"],
-  lighthouse: ["$ lighthouse --sample 200 --strategy stratified", "Picked 200 pages across 14 templates", "Audited 100 of 200 pages · median performance 71", "Audited 200 of 200 pages · median performance 72", "Sample scores: performance 72 · accessibility 91 · best practices 96 · SEO 98"],
+  parse: ["$ parse --schema product.v3", "Parsed 49,350 pages (1,204 skipped, no product block)"],
+  transform: ["$ dbt build --select +fct_prices", "Built view stg_products", "Built table int_price_history", "Built table fct_prices"],
+  load: ["$ warehouse upsert PRODUCTS", "Upserted 48,146 rows into PRODUCTS", "Wrote audit row"],
+  lighthouse: ["$ lighthouse --sample 200", "Audited 100 of 200 pages (median performance 71)", "Audited 200 of 200 pages (median performance 72)", "Finished sample (performance 72, accessibility 91, best practices 96, SEO 98)"],
   publish: ["$ publish --dashboards pricing_*", "Refreshed 6 dashboards", "Posted summary to #pricing"],
 };
 const FAIL_LOGS = [
-  "Database Error in model fct_prices (models/marts/fct_prices.sql)",
-  "100038 (22018): Numeric value '1.299,00' is not recognized",
-  "Hint: 3,412 prices use a comma decimal separator (locale de-DE)",
+  "Failed model fct_prices (Numeric value '1.299,00' is not recognized)",
+  "Found 3,412 prices with a comma decimal separator (locale de-DE)",
 ];
 
 function initial(scenario: CrawlScenario): RunState {
@@ -82,7 +81,7 @@ function initial(scenario: CrawlScenario): RunState {
       samples: [],
       logs: [
         { t: 0, level: "cmd", msg: "$ crawler run shop.example.com --sitemap --max-concurrency 64" },
-        { t: 0, level: "info", msg: "Seeded 1,200 URLs from sitemap.xml · estimate 48,200 pages (median of last 5 crawls)" },
+        { t: 0, level: "info", msg: "Seeded 1,200 URLs from sitemap.xml (expecting ~48,200 pages)" },
       ],
       backoffUntil: null,
     },
@@ -118,14 +117,14 @@ function stepCrawl(c: CrawlState, t: number, scenario: CrawlScenario): CrawlStat
 
   const logs = [...c.logs];
   const tick = Math.round(t / DT);
-  if (tick % 4 === 0) logs.push({ t, level: "info", msg: `Fetched ${done.toLocaleString("en-US")} pages · ${Math.round(base)}/s · queue ${(discovered - done).toLocaleString("en-US")}` });
-  if (tick % 11 === 3) logs.push({ t, level: "warn", msg: `Timeout after 30s: /category/outdoor?page=${(tick * 7) % 90}` });
-  if (tick % 17 === 5) logs.push({ t, level: "error", msg: `503 Service Unavailable: /product/${10_000 + tick * 13}` });
-  if (limited && tick % 3 === 0) logs.push({ t, level: "warn", msg: "429 Too Many Requests · backing off 30s · concurrency 64 → 16" });
-  if (scenario === "ratelimited" && Math.abs(t - 720) < DT / 2) logs.push({ t, level: "info", msg: "Rate limit lifted · concurrency back to 64" });
+  if (tick % 4 === 0) logs.push({ t, level: "info", msg: `Crawled ${done.toLocaleString("en-US")} pages (${Math.round(base)}/s, ${(discovered - done).toLocaleString("en-US")} queued)` });
+  if (tick % 11 === 3) logs.push({ t, level: "warn", msg: `Timed out /category/outdoor?page=${(tick * 7) % 90} (after 30s, will retry)` });
+  if (tick % 17 === 5) logs.push({ t, level: "error", msg: `Failed /product/${10_000 + tick * 13} (503 Service Unavailable, 3 attempts)` });
+  if (limited && tick % 3 === 0) logs.push({ t, level: "warn", msg: "Rate limited by shop.example.com (429, backing off 30s, concurrency 64 → 16)" });
+  if (scenario === "ratelimited" && Math.abs(t - 720) < DT / 2) logs.push({ t, level: "info", msg: "Resumed full speed (concurrency 64)" });
 
   const finished = done >= c.total;
-  if (finished) logs.push({ t, level: "info", msg: `Crawl complete · ${c.total.toLocaleString("en-US")} pages (+${(((c.total - ESTIMATED_PAGES) / ESTIMATED_PAGES) * 100).toFixed(1)}% vs estimate)` });
+  if (finished) logs.push({ t, level: "info", msg: `Finished crawl: ${c.total.toLocaleString("en-US")} pages (+${(((c.total - ESTIMATED_PAGES) / ESTIMATED_PAGES) * 100).toFixed(1)}% vs expected)` });
 
   return {
     ...c,
@@ -154,7 +153,7 @@ function stepTail(state: RunState): RunState {
   const p = Math.min(100, s.progress + (DT / s.expectedSec) * 100);
   const shown = Math.min(lines.length, 1 + Math.floor((p / 100) * (lines.length - 1) + 0.0001));
   // Count only lines printed in the current attempt (after the last retry marker)
-  const marker = s.logs.map((l) => l.msg.startsWith("──")).lastIndexOf(true);
+  const marker = s.logs.map((l) => l.msg.startsWith("Retrying from")).lastIndexOf(true);
   const printed = s.logs.length - (marker + 1);
   s.logs = [...s.logs, ...lines.slice(printed, shown).map((msg) => ({ t: state.t, level: "info" as const, msg }))];
   s.progress = p;
@@ -186,10 +185,10 @@ function stepFullLh(j: FullJob): FullJob {
   const pagesDone = Math.round((progress / 100) * j.pagesTotal);
   const logs = [...j.logs];
   const tick = Math.round(elapsed / FULL_LH_DT);
-  if (tick % 4 === 0) logs.push({ t: j.startedAt! + elapsed, level: "info", msg: `Audited ${pagesDone.toLocaleString("en-US")} of ${j.pagesTotal.toLocaleString("en-US")} pages · median performance ${70 + (tick % 4)}` });
-  if (tick % 9 === 4) logs.push({ t: j.startedAt! + elapsed, level: "warn", msg: `Lighthouse timed out after 60s: /search?q=${tick * 31} (will retry once)` });
+  if (tick % 4 === 0) logs.push({ t: j.startedAt! + elapsed, level: "info", msg: `Audited ${pagesDone.toLocaleString("en-US")} of ${j.pagesTotal.toLocaleString("en-US")} pages (median performance ${70 + (tick % 4)})` });
+  if (tick % 9 === 4) logs.push({ t: j.startedAt! + elapsed, level: "warn", msg: `Timed out /search?q=${tick * 31} (after 60s, will retry)` });
   const finished = progress >= 100;
-  if (finished) logs.push({ t: j.startedAt! + elapsed, level: "info", msg: "Full-site audit complete · performance 70 · accessibility 90 · best practices 95 · SEO 97" });
+  if (finished) logs.push({ t: j.startedAt! + elapsed, level: "info", msg: "Finished full-site audit (performance 70, accessibility 90, best practices 95, SEO 97)" });
   return {
     ...j, elapsed, progress, pagesDone, logs,
     samples: [...j.samples, { t: j.startedAt! + elapsed, rowsPerSec: Math.round(3.6 * 60 * wave(elapsed, 7)), rows: pagesDone }],
@@ -236,7 +235,7 @@ export function useCrawlRun(scenario: CrawlScenario) {
       const tail = s.tail.map((x, i) => {
         if (i < fi) return x;
         if (i === fi) return { ...x, status: "running" as const, startedAt: s.t, endedAt: null, progress: 0, error: undefined, samples: [],
-          logs: [...x.logs, { t: s.t, level: "cmd" as const, msg: "── Retry · attempt 2 · crawl output reused ──" }] };
+          logs: [...x.logs, { t: s.t, level: "cmd" as const, msg: "Retrying from this step (attempt 2, reusing crawl output)" }] };
         return { ...x, status: (i === fi + 1 ? "waiting" : "pending") as Stage["status"] };
       });
       return { ...s, tail, failArmed: false };
@@ -265,7 +264,7 @@ export function useCrawlRun(scenario: CrawlScenario) {
         rowsIn: 0, rowsOut: 0, rejected: 0, progress: 0, samples: [], elapsed: 0, pagesDone: 0, pagesTotal: s.crawl.done,
         logs: [
           { t: s.t, level: "cmd", msg: `$ lighthouse --all --input runs/812/pages.parquet --concurrency 8` },
-          { t: s.t, level: "info", msg: `Queued ${s.crawl.done.toLocaleString("en-US")} pages · crawl output reused, no new crawl` },
+          { t: s.t, level: "info", msg: `Queued ${s.crawl.done.toLocaleString("en-US")} pages (reusing crawl output)` },
         ],
       },
     });
