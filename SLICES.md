@@ -55,11 +55,12 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 
 **Crawler (calls only)**
 - Attach `DbLogHandler` to the `crawler` logger; the existing console output is unchanged.
-- Make sure the lines in the **log catalogue** (SPEC §4.3) are emitted where they happen:
+- Call `log_request(...)` (SPEC §4.1) for **every HTTP request**, including each redirect hop and each retry. It writes the standard status-first line.
+- Make sure the other lines in the **log catalogue** (SPEC §4.3) are emitted where they happen:
   - step start/command;
   - seeds/estimate;
   - a summary every 15–30s;
-  - timeouts, rate limits, grouped 4xx, each 5xx, render crashes;
+  - rate limits, render crashes;
   - the step result or failure.
 - Add `extra={"data": {...}}` with the fields listed there.
 
@@ -81,7 +82,8 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 **Acceptance**
 - [ ] While running, new lines appear within about 1s and the view follows the bottom. Scrolling up pauses following and shows "↓ N new lines".
 - [ ] After a network drop, the stream resumes without gaps or duplicates.
-- [ ] No per-URL success, redirect or skip lines in the log (SPEC D21).
+- [ ] Every request has one line with its status code first (`200 GET …`, `301 GET … → …`, `ERR GET … (timed out …)`), coloured by status class (SPEC D28).
+- [ ] A crawl with ~50K request lines scrolls smoothly, and "Warnings & errors" narrows it to the 4xx/5xx/failed requests.
 - [ ] Line selection, Copy and Download work; the download contains the whole log.
 
 ---

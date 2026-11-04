@@ -60,13 +60,14 @@ Step ids and names are examples; use your pipeline's own. The UI reads whatever 
 | D18 | How do I collect metrics during processing? | Each step reports progress every few seconds (`items_total`, `items_done`, counters). Charts and ETAs come from those rows, **never from parsing log text**. |
 | D19 | 50K log lines: won't the client struggle? | A virtualized list (only visible rows in the DOM). Load the newest ~1,000 lines, fetch older ones on scroll up, filter on the server. |
 | D20 | How do I keep the log scrolled to the bottom? | "Follow" pattern: stick to the bottom while the user is there; pause when they scroll up and show "↓ N new lines"; clicking it resumes (`react-virtuoso` `followOutput`). |
-| D21 | How much to log? Every redirect, skip, success? | **Per-page outcomes are data, not logs.** Each URL is a row in `crawl_pages`. The log gets milestones, periodic summaries and problems only (catalogue in §4.3). Successes, redirects, skips and individual 4xx are **counted**, not logged one by one. |
+| D21 | How much to log? Every redirect, skip, success? | *Revised (D28):* **every HTTP request is logged**, including each redirect hop and retry, alongside milestones and progress summaries. `crawl_pages` still holds one row per URL with its final outcome, for the filterable Pages table. The log is the time-ordered record; the table is the per-URL summary. Skipped URLs are never requested, so they appear only in the table. |
 | D22 | Should users be able to copy or export logs? | Yes. Click a line number to select it, shift-click for a range; Copy; Download full log (`.txt`, served by the API). Pages export as `.csv`. |
 | D23 | Breadcrumb. | `Crawls › {crawl_id}`; title "Crawl {crawl_id}". |
 | D24 | The crawler is already built; just make it easy to add logs in the right places, and store everything in SQLite. | One small module (`crawl_events.py`, §4.1) is the only thing the crawler imports. It is called at 7 points (§4.2), and a single background writer thread does batched SQLite inserts (§5). |
 | D25 | Three typography styles next to each other look bad. | **Monospace only for code-like text** (URLs, log lines, commands). Numbers, times and durations use the normal font with tabular digits. A label + value pair is one font and size, with only the value emphasised. |
 | D26 | Should the filter tabs match the search input's size? | Yes. All controls in a toolbar share one height (32px) and one text size (12px). The reference tools (GitHub Actions log search, Vercel log filters) do the same; the mismatch came from Chakra's default sizes. |
 | D27 | Logs should be more consistent; an INFO/ERROR column isn't useful. What should a log line contain? | As in normal CI/crawler logs: **time + one plain sentence**, with severity shown only by colour. Every message follows `Verb subject (details)`, one template per kind of event. Structured fields go in `data` for filtering and export, not into the visible line (§4.3). |
+| D28 | The HTTP code must be in the line, because every request is logged. | Request lines use an access-log template with the **status first**, so it lines up down the page: `200 GET /product/10065 (412 ms)`, `301 GET /p/1 → /product/1 (88 ms)`, `ERR GET /x (30.0 s, timed out after 30s)`. Level follows the status class, and the log viewer is virtualised, so ~50K lines per crawl is fine (§4.3, §5.2). |
 
 ---
 
@@ -201,14 +202,27 @@ class CrawlRecorder:
         _q.put(("lighthouse", dict(crawl_id=self.crawl_id, scope=scope, url=url, **scores)))
 
 
+def log_request(url: str, status: int | None, ms: int, *, method: str = "GET",
+                redirect_to: str | None = None, detail: str | None = None, attempt: int | None = None):
+    """Call once per HTTP request (every hop and retry). Builds the standard request line (§4.3)."""
+    code = "ERR" if status is None else str(status)
+    took = f"{ms / 1000:.1f} s" if ms >= 1000 else f"{ms} ms"
+    extra = ", ".join(x for x in [took, detail] if x)
+    msg = f"{code} {method} {url}" + (f" → {redirect_to}" if redirect_to else "") + f" ({extra})"
+    level = logging.ERROR if status is None or status >= 500 else logging.WARNING if status >= 400 else logging.INFO
+    log.log(level, msg, extra={"data": {"url": url, "status": status, "ms": ms, "method": method,
+                                         "redirect_to": redirect_to, "attempt": attempt}})
+
+
 class DbLogHandler(logging.Handler):
     """Every log record emitted inside a crawl goes to crawl_logs (console output is unchanged)."""
     def emit(self, record):
         if crawl_id_var.get() is None:
             return
+        data = getattr(record, "data", None) or {}
         _q.put(("log", dict(crawl_id=crawl_id_var.get(), step_id=step_var.get() or "crawl", ts=now(),
                             level=record.levelname, message=record.getMessage(),
-                            data=getattr(record, "data", None))))
+                            status=data.get("status"), url=data.get("url"), data=data or None)))
 
 log = logging.getLogger("crawler")
 log.setLevel(logging.INFO)
@@ -224,6 +238,7 @@ log.addHandler(DbLogHandler())   # keep your existing console handler as it is
 | A crawl is created | `rec.crawl_started(site, trigger, config, steps)` | breadcrumb, header facts, step list (all `pending`), expected pages, usual durations |
 | Each step begins | `rec.step_started("crawl", items_total=None)`; processing steps pass the page count; Lighthouse passes the sample size | step status, "Started", progress denominator |
 | Every 5–10s while a step runs (a timer, or every N items) | **crawl:** `rec.progress(done, rate, codes={...}, discovered=n, queue=n, render_ms_median=n)` · **others:** `rec.progress(done, rate)` | progress bar, ETA, Metrics charts, response-code bar, queue, facts row "Pages"/"Errors" |
+| **Every HTTP request** (each redirect hop and each retry too) | `log_request(url, status, ms, redirect_to=…, detail=…)` | Logs tab (one line per request) |
 | Each URL finishes, **including** redirects, errors, timeouts and skips | `rec.page(n, url, status=…, kind=…, hops=[…], …)` | Pages table, filter counts, CSV |
 | Backoff starts / ends | `rec.rate_limited(until)` / `rec.rate_limited(None)` | rate-limit alert |
 | Each Lighthouse audit | `rec.lighthouse_result("sample"\|"full", url, {performance, accessibility, best_practices, seo})` | Scores tab |
@@ -247,24 +262,36 @@ log.addHandler(DbLogHandler())   # keep your existing console handler as it is
 
 Use the `crawler` logger anywhere (`from crawl_events import log`). Attach machine-readable fields with `extra={"data": {...}}`.
 
+**Request lines (every request).** These follow an access-log template with the status code first, `<status> <METHOD> <path>[ → <target>] (<duration>[, detail])`, built by `log_request()`:
+
+| Case | Line | Level (colour) |
+|---|---|---|
+| Success | `200 GET /product/10065 (412 ms)` | INFO (default) |
+| Server redirect hop | `301 GET /p/10065 → /product/10065 (88 ms)` | INFO |
+| Client-side redirect (seen after render) | `200 GET /m/product/10065 → /product/10065 (595 ms, client-side JavaScript)` | INFO |
+| Client error | `404 GET /product/10066 (120 ms)` | WARNING (yellow) |
+| Rate limited | `429 GET /product/10067 (41 ms, backing off)` | WARNING |
+| Server error, after retries | `503 GET /product/10068 (900 ms, after 3 attempts)` | ERROR (red) |
+| No response | `ERR GET /search?q=1 (30.0 s, timed out after 30s)` | ERROR |
+| Redirect loop | `ERR GET /product/10069 (0 ms, redirect loop, gave up after 10 hops)` | ERROR |
+
+**Other lines** use `Verb subject (details)`:
+
 | Level | When | Template (example) | `data` |
 |---|---|---|---|
 | INFO | Step start: the command or config used | `$ crawler run shop.example.com --max-concurrency 64` | — |
 | INFO | Seeds loaded | `Seeded 1,200 URLs from sitemap.xml (expecting ~48,200 pages)` | `{seeds, expected}` |
 | INFO | **Progress every 15–30s** (same numbers as `progress`) | `Crawled 10,512 pages (39/s, 6,120 queued)` | `{done, rate, queue}` |
 | INFO | Step finished | `Finished crawl: 49,350 pages (+2.4% vs expected)` | `{done, errors}` |
-| WARNING | Timeout, retry scheduled | `Timed out /category/outdoor?page=21 (after 30s, will retry)` | `{url, timeout_s}` |
 | WARNING | Rate limited | `Rate limited by shop.example.com (429, backing off 30s, concurrency 64 → 16)` | `{until, concurrency}` |
 | INFO | Rate limit over | `Resumed full speed (concurrency 64)` | `{concurrency}` |
-| WARNING | Grouped 4xx (one line per summary, not per URL) | `Got 404 for 37 pages (last 30s)` | `{count, status}` |
-| ERROR | Each 5xx after retries | `Failed /product/10065 (503 Service Unavailable, 3 attempts)` | `{url, status, attempts}` |
 | ERROR | Render/browser crash | `Failed to render /product/10091 (Target closed)` | `{url, error}` |
 | ERROR | Step failure, with the cause and a hint if known | `Failed model fct_prices (Numeric value '1.299,00' is not recognized)` | `{error, hint}` |
 | INFO | Retry marker (written by the retry endpoint) | `Retrying from this step (attempt 2, reusing crawl output)` | `{attempt}` |
 
 Keep the templates in one place (e.g. small helper functions such as `log_timeout(url, after_s)` in `crawl_events.py`), so every call site produces exactly the same shape.
 
-**Not logged individually:** successful fetches, redirects, URL-normalisation skips and single 4xx responses. They are `rec.page(...)` rows, plus counts in `progress`.
+**Volume:** ~1 line per request, so roughly 50K lines per crawl. The viewer is virtualised and filters on the server ("Warnings & errors" = `level IN ('WARNING','ERROR')`, or by status class), so this is fine. Progress summaries every 15–30s keep the log readable while it scrolls.
 
 **Never log** secrets (tokens, cookies, auth headers), because the UI shows log lines to users.
 
@@ -334,11 +361,14 @@ CREATE TABLE crawl_logs (
   step_id  TEXT NOT NULL,
   ts       TEXT NOT NULL,
   level    TEXT NOT NULL,                              -- INFO | WARNING | ERROR
-  message  TEXT NOT NULL,
-  data     TEXT                                        -- JSON or NULL
+  message  TEXT NOT NULL,                              -- the rendered line, e.g. "200 GET /product/1 (412 ms)"
+  status   INTEGER,                                    -- HTTP status for request lines (NULL = no response / not a request)
+  url      TEXT,                                       -- request URL for request lines
+  data     TEXT                                        -- JSON: ms, method, redirect_to, attempt, ...
 );
 CREATE INDEX crawl_logs_step ON crawl_logs (crawl_id, step_id, id);
 CREATE INDEX crawl_logs_level ON crawl_logs (crawl_id, step_id, level, id);
+CREATE INDEX crawl_logs_status ON crawl_logs (crawl_id, step_id, status, id) WHERE status IS NOT NULL;
 
 CREATE TABLE crawl_pages (                             -- one row per URL; per-page detail lives here, not in logs
   crawl_id      TEXT NOT NULL REFERENCES crawls(id) ON DELETE CASCADE,
@@ -415,7 +445,7 @@ The API computes at read time:
 - **`error_pct`:** from `counters.codes`.
 
 ### 5.5 Retention and size
-- About 50K page rows plus a few thousand log lines per crawl is a few tens of MB. That's fine for SQLite.
+- About 50K page rows plus ~50K request log lines per crawl comes to roughly 15–25 MB. That's fine for SQLite. Batched inserts (§5.3) keep 50+ lines/s cheap.
 - Keep `crawls` and `crawl_steps` forever (history and medians).
 - Daily, delete `crawl_logs`, `crawl_samples` and `crawl_pages` for crawls older than 30–90 days (`DELETE … WHERE crawl_id IN (…)`). Then run `PRAGMA incremental_vacuum` (with `auto_vacuum=INCREMENTAL` set at creation), or a `VACUUM` now and then.
 
@@ -458,10 +488,11 @@ All under `/api`. Times are ISO 8601 UTC. Pydantic models mirror the payloads be
 | `GET …/logs?step=crawl&before=<id>&limit=1000` | Older lines when the user scrolls up. |
 | `GET …/logs?step=crawl&after=<id>` | New lines (polling fallback). |
 | `GET …/logs?…&level=warning&q=timeout` | "Warnings & errors" filter (`level IN ('WARNING','ERROR')`) and search (`message LIKE '%' || :q || '%'`). |
+| `GET …/logs?…&status=4xx` | Optional status-class filter (`status BETWEEN 400 AND 499`; also `5xx`, `429`, `none`). |
 | `GET /api/crawls/{id}/logs/stream?step=crawl` | **SSE.** Each event `id: <log id>`, `data: <json line>`; honours `Last-Event-ID`; sends `event: end` when the step finishes. |
 | `GET /api/crawls/{id}/logs/download?step=crawl` | Streamed `text/plain` download. Omit `step` for all steps. |
 
-Line payload: `{ "id": 18234, "step": "crawl", "ts": "…", "level": "ERROR", "message": "503 Service Unavailable: /product/10065", "data": { "url": "…", "status": 503 } }`
+Line payload: `{ "id": 18234, "step": "crawl", "ts": "…", "level": "ERROR", "message": "503 GET /product/10065 (900 ms, after 3 attempts)", "status": 503, "url": "/product/10065" }`
 
 ```python
 @router.get("/crawls/{crawl_id}/logs/stream")

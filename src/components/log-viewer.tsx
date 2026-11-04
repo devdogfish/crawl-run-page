@@ -41,6 +41,8 @@ export function LogViewer({ lines, running, fileName, h = "560px" }: { lines: Lo
   const copy = () => navigator.clipboard.writeText(asText(selected.length ? selected : rows));
   const pick = (n: number, shift: boolean) =>
     setSel((s) => (shift && s ? { a: s.a, b: n } : s && s.a === n && s.b === n ? null : { a: n, b: n }));
+  // Gutter fits the largest line number (5+ digits once every request is logged)
+  const gutter = `calc(${String(lines.length).length}ch + 0.75rem)`;
   const isSel = (n: number) => !!sel && n >= Math.min(sel.a, sel.b) && n <= Math.max(sel.a, sel.b);
 
   return (
@@ -78,7 +80,7 @@ export function LogViewer({ lines, running, fileName, h = "560px" }: { lines: Lo
               >
                 <Box
                   as="button"
-                  w="12" flexShrink={0} textAlign="right" pe="3" color={isSel(l.n) ? "blue.300" : "gray.600"} userSelect="none"
+                  w={gutter} flexShrink={0} textAlign="right" pe="3" whiteSpace="nowrap" color={isSel(l.n) ? "blue.300" : "gray.600"} userSelect="none"
                   cursor="pointer" _hover={{ color: "gray.300" }}
                   onClick={(e: React.MouseEvent) => pick(l.n, e.shiftKey)}
                   aria-label={`Select line ${l.n}`}

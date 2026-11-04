@@ -4,6 +4,17 @@
 // Page total is estimated from previous crawls, so progress and ETA are real numbers.
 import { useCallback, useEffect, useState } from "react";
 import type { LogLine, Stage } from "@/lib/types";
+import { pageAt } from "@/lib/pages";
+
+// Request line template: "<status> GET <path> (<ms> ms[, detail])". Status first, so it lines up like an access log.
+// Level follows the status class: 2xx/3xx info, 4xx warning, 5xx and network failures error.
+function requestLine(t: number, status: number | null, path: string, ms: number, detail?: string): LogLine {
+  const code = status == null ? "ERR" : String(status);
+  const time = ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${ms} ms`;
+  const level: LogLine["level"] = status == null || status >= 500 ? "error" : status >= 400 ? "warn" : "info";
+  const tail = detail?.startsWith("→") ? ` ${detail} (${time})` : ` (${time}${detail ? `, ${detail}` : ""})`;
+  return { t, level, msg: `${code} GET ${path}${tail}` };
+}
 
 export type CrawlScenario = "healthy" | "ratelimited" | "failure";
 export type CrawlStatus = "running" | "success" | "failed";
@@ -105,21 +116,37 @@ function stepCrawl(c: CrawlState, t: number, scenario: CrawlScenario): CrawlStat
   const fetched = Math.max(0, Math.min(queue, Math.round(base * DT)));
   const done = c.done + fetched;
 
+  // One log line per HTTP request, generated from the same rows as the Pages table,
+  // so the log, the response-code bar and the table always agree.
   const codes = { ...c.codes };
-  const n429 = limited ? Math.round(fetched * 0.18) : 0;
-  const rest = fetched - n429;
-  codes["429"] += n429;
-  codes["3xx"] += Math.round(rest * 0.045);
-  codes["4xx"] += Math.round(rest * 0.014);
-  codes["5xx"] += Math.round(rest * 0.004);
-  codes.timeout += Math.round(rest * 0.005);
-  codes["2xx"] += rest - Math.round(rest * 0.045) - Math.round(rest * 0.014) - Math.round(rest * 0.004) - Math.round(rest * 0.005);
-
   const logs = [...c.logs];
   const tick = Math.round(t / DT);
-  if (tick % 4 === 0) logs.push({ t, level: "info", msg: `Crawled ${done.toLocaleString("en-US")} pages (${Math.round(base)}/s, ${(discovered - done).toLocaleString("en-US")} queued)` });
-  if (tick % 11 === 3) logs.push({ t, level: "warn", msg: `Timed out /category/outdoor?page=${(tick * 7) % 90} (after 30s, will retry)` });
-  if (tick % 17 === 5) logs.push({ t, level: "error", msg: `Failed /product/${10_000 + tick * 13} (503 Service Unavailable, 3 attempts)` });
+  const n429 = limited ? Math.round(fetched * 0.18) : 0;
+  const end = Math.min(done, c.total);
+  const span = Math.max(1, end - c.done + n429);
+  let k = 0;
+  const at = () => t - DT + (DT * k++) / span; // spread the requests across the tick
+  for (let i = 0; i < n429; i++) {
+    codes["429"] += 1;
+    logs.push(requestLine(at(), 429, pageAt(c.done + i).path, 40 + (i % 30), "backing off"));
+  }
+  for (let i = c.done; i < end; i++) {
+    const p = pageAt(i);
+    if (p.kind === "skipped") { at(); continue; } // never requested: shows in the Pages table only
+    for (const h of p.hops) {
+      if (h.side === "server") { codes["3xx"] += 1; logs.push(requestLine(at(), Number(h.via), h.from, Math.round((p.fetchMs ?? 200) / 3), `→ ${h.to}`)); }
+    }
+    const clientHop = p.hops.find((h) => h.side === "client");
+    if (p.kind === "timeout") { codes.timeout += 1; logs.push(requestLine(at(), null, p.path, 30_000, "timed out after 30s")); continue; }
+    if (p.kind === "loop") { logs.push(requestLine(at(), null, p.path, 0, "redirect loop, gave up after 10 hops")); continue; }
+    const status = p.kind === "redirect" ? 200 : (p.status ?? 200);
+    const url = clientHop ? clientHop.from : p.kind === "redirect" ? p.finalPath! : p.path;
+    codes[status >= 500 ? "5xx" : status >= 400 ? "4xx" : "2xx"] += 1;
+    logs.push(requestLine(at(), status, url, p.fetchMs ?? 0,
+      clientHop ? `→ ${clientHop.to}, client-side ${clientHop.via}` : p.kind === "server" ? "after 3 attempts" : undefined));
+  }
+
+  if (tick % 4 === 0) logs.push({ t, level: "info", msg: `Crawled ${end.toLocaleString("en-US")} pages (${Math.round(base)}/s, ${(discovered - done).toLocaleString("en-US")} queued)` });
   if (limited && tick % 3 === 0) logs.push({ t, level: "warn", msg: "Rate limited by shop.example.com (429, backing off 30s, concurrency 64 → 16)" });
   if (scenario === "ratelimited" && Math.abs(t - 720) < DT / 2) logs.push({ t, level: "info", msg: "Resumed full speed (concurrency 64)" });
 
@@ -131,7 +158,7 @@ function stepCrawl(c: CrawlState, t: number, scenario: CrawlScenario): CrawlStat
     done: Math.min(done, c.total),
     discovered,
     codes,
-    logs: logs.slice(-20_000),
+    logs, // every request is kept; the viewer is virtualised
     samples: [...c.samples, { t, pagesPerSec: Math.round(base), queue: Math.max(0, discovered - done), done }],
     status: finished ? "success" : "running",
     endedAt: finished ? t : null,
