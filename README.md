@@ -2,7 +2,7 @@
 
 A Chakra UI v3 prototype of the crawl run page (`/crawls/[crawlId]`), ready to integrate into the app (Chakra frontend + FastAPI backend).
 
-- **[SPEC.md](SPEC.md):** every question asked during design and the decision taken; the UI spec, Postgres data model, FastAPI endpoints (polling, SSE log streaming, pagination) and logging approach.
+- **[SPEC.md](SPEC.md):** every question asked during design and the decision taken; the UI spec; how to instrument the existing crawler (where to add logs and metrics); SQLite storage; FastAPI endpoints (polling, SSE log streaming, pagination).
 - **[SLICES.md](SLICES.md):** the integration broken into 5 slices, with acceptance criteria.
 - **[docs/research-enterprise-pipeline-ui.md](docs/research-enterprise-pipeline-ui.md):** the research on how GitHub Actions, Vercel, Dagster, Buildkite and others show pipeline runs.
 

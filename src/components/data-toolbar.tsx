@@ -35,7 +35,7 @@ export function DataToolbar<V extends string>({
       >
         <Input size="xs" placeholder={placeholder} value={query} onChange={(e) => onQuery(e.target.value)} />
       </InputGroup>
-      <SegmentGroup.Root size="xs" value={value} onValueChange={(e) => onValue(e.value as V)}>
+      <SegmentGroup.Root size="sm" css={{ "& [data-part=item]": { fontSize: "xs" } }} value={value} onValueChange={(e) => onValue(e.value as V)}>
         <SegmentGroup.Indicator />
         <SegmentGroup.Items items={segments} />
       </SegmentGroup.Root>

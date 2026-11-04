@@ -270,9 +270,10 @@ function CrawlTrend({ run }: { run: RunView }) {
   const current = c.endedAt ?? (run.crawlEta != null ? run.state.t + run.crawlEta : run.state.t);
   return (
     <Box px="2">
-      <HStack justify="space-between" textStyle="xs">
-        <Text fontWeight="medium" color="fg.muted">Crawl duration</Text>
-        <Text fontFamily="mono">{live ? "~" : ""}{fmtDur(current)} <Span color="fg.subtle">/ 21m median</Span></Text>
+      {/* One font, one size; only the value is emphasised */}
+      <HStack justify="space-between" textStyle="xs" color="fg.muted" fontVariantNumeric="tabular-nums">
+        <Text>Crawl duration</Text>
+        <Text><Span color="fg">{live ? "~" : ""}{fmtDur(current)}</Span> · median 21m</Text>
       </HStack>
       <HistoryChart compact h="12" current={current} live={live} />
     </Box>
@@ -301,7 +302,7 @@ function StepButton({ step: s, selected, onSelect }: { step: StepInfo; selected:
           <Text textStyle="sm" fontWeight={selected ? "semibold" : "medium"} color={locked ? "fg.muted" : undefined}>{s.name}</Text>
           <Text textStyle="xs" color={s.status === "failed" ? "red.fg" : "fg.muted"} truncate>{s.sub}</Text>
         </Stack>
-        <Text textStyle="xs" color="fg.muted" fontFamily="mono" pt="0.5">{s.dur != null ? fmtDur(s.dur) : `~${fmtDur(s.expected)}`}</Text>
+        <Text textStyle="xs" color="fg.muted" fontVariantNumeric="tabular-nums" pt="0.5">{s.dur != null ? fmtDur(s.dur) : `~${fmtDur(s.expected)}`}</Text>
       </HStack>
       {s.status === "running" && (
         <Progress.Root value={s.progress} size="xs" mt="2" ms="6.5" colorPalette="blue">
@@ -338,11 +339,11 @@ function StepPane({ run, step, onFullLighthouse }: { run: RunView; step: StepInf
               <Badge size="sm" variant="subtle" colorPalette={STATUS[step.status].palette}>{STATUS[step.status].label}</Badge>
             )}
           </HStack>
-          <Text textStyle="sm" color="fg.muted">{step.stage?.description ?? "Fetch each URL, follow redirects, render it in headless Chromium"}</Text>
+          <Text textStyle="sm" color="fg.muted">{step.stage?.description ?? "Fetch and render every URL on the site"}</Text>
         </Stack>
         <HStack gap="5" textStyle="sm" color="fg.muted">
-          {step.startedAt != null && <HStack gap="1.5"><Text>Started</Text><Text color="fg" fontFamily="mono">{fmtClock(step.startedAt)}</Text></HStack>}
-          <HStack gap="1.5"><LuTimer /><Text color="fg" fontFamily="mono">{step.dur != null ? fmtDur(step.dur) : "—"}</Text><Text>/ usual ~{fmtDur(step.expected)}</Text></HStack>
+          {step.startedAt != null && <HStack gap="1.5"><Text>Started</Text><Text color="fg" fontVariantNumeric="tabular-nums">{fmtClock(step.startedAt)}</Text></HStack>}
+          <HStack gap="1.5"><LuTimer /><Text color="fg" fontVariantNumeric="tabular-nums">{step.dur != null ? fmtDur(step.dur) : "—"}</Text><Text>/ usual ~{fmtDur(step.expected)}</Text></HStack>
         </HStack>
       </Flex>
 
@@ -542,20 +543,20 @@ function PageRowView({ p, open, onToggle }: { p: PageRow; open: boolean; onToggl
         _hover={{ bg: "bg.subtle" }} cursor={expandable ? "pointer" : undefined}
         onClick={expandable ? onToggle : undefined} aria-expanded={expandable ? open : undefined}
       >
-        <Text textAlign="right" color="fg.muted" fontFamily="mono">{p.n}</Text>
+        <Text textAlign="right" color="fg.muted" fontVariantNumeric="tabular-nums">{p.n}</Text>
         <Text fontFamily="mono" truncate title={p.path}>{p.path}</Text>
         <Box><Badge size="xs" variant="subtle" colorPalette={status.c}>{status.t}</Badge></Box>
         <HStack gap="1.5">
           {side ? (
             <>
               <Badge size="xs" variant="outline" colorPalette={p.kind === "loop" ? "red" : SIDE_COLOR[side]} textTransform="capitalize">{p.kind === "loop" ? "Loop" : side}</Badge>
-              {expandable && <Text fontFamily="mono" color="fg.muted">{p.hops.length} hops</Text>}
+              {expandable && <Text fontVariantNumeric="tabular-nums" color="fg.muted">{p.hops.length} hops</Text>}
               {expandable && <Box color="fg.subtle" transition="transform 0.15s" transform={open ? "rotate(90deg)" : undefined}><LuChevronRight /></Box>}
             </>
           ) : <Text color="fg.subtle">—</Text>}
         </HStack>
-        <Text textAlign="right" fontFamily="mono" color="fg.muted">{p.fetchMs != null ? `${p.fetchMs}ms` : "—"}</Text>
-        <Text textAlign="right" fontFamily="mono" color="fg.muted">{p.renderMs != null ? `${(p.renderMs / 1000).toFixed(1)}s` : "—"}</Text>
+        <Text textAlign="right" fontVariantNumeric="tabular-nums" color="fg.muted">{p.fetchMs != null ? `${p.fetchMs}ms` : "—"}</Text>
+        <Text textAlign="right" fontVariantNumeric="tabular-nums" color="fg.muted">{p.renderMs != null ? `${(p.renderMs / 1000).toFixed(1)}s` : "—"}</Text>
         <Text color="fg.muted" truncate>
           {p.finalPath ? <><LuArrowRight style={{ display: "inline", verticalAlign: "-2px" }} /> <Span fontFamily="mono">{p.finalPath}</Span></> : p.note ?? ""}
         </Text>
@@ -590,7 +591,7 @@ function Scores({ run, step, onFullLighthouse }: { run: RunView; step: StepInfo;
   return (
     <Stack gap="5">
       <Text textStyle="sm" color="fg.muted">
-        {full ? `Median scores across all ${fmtNum((step.stage as FullJob).pagesTotal)} pages.` : "Median scores across a stratified sample of 200 pages from 14 page templates."}
+        {full ? `Median scores across all ${fmtNum((step.stage as FullJob).pagesTotal)} pages.` : "Median scores across a sample of 200 pages."}
         {!ready && " Scores appear when the audit finishes."}
       </Text>
       <Grid templateColumns="repeat(4, minmax(0, 1fr))" gap="4">
