@@ -4,10 +4,12 @@
 // Same frame as Crawl history: header (scope) → facts row → one data panel (toolbar + filters + table + pagination).
 //
 // Scope: "Crawl" picks the snapshot; "Compared with" picks an older baseline (default: the previous crawl).
-//   Comparing adds the New / Changed / Removed segments and a Change column. Changed = content hash differs.
+//   Comparing adds the segments "All in #A" (every page in crawl A: new + changed + unchanged), New, Changed, Removed
+//   (in the baseline, gone from A; the only rows that aren't in A) and a Change column. Changed = content hash differs.
 // Filters (all combine, all live in the URL so a filtered view can be shared):
 //   search (URL, title, H1) · type (from the URL path) · year (from the URL path) · rule (regex, shows match count)
-//   · issue category (only pages with issues in it, ranked by them) · links to (pages that link to a pasted URL)
+//   · links to (pages that link to a pasted URL). Issue categories are sort options ("Most accessibility issues"),
+//   not a filter: a sort never hides pages, so there's no "has any" vs "has only" ambiguity.
 //
 // PROTOTYPE: data comes from src/lib/site-pages.ts. Rows don't open a page detail yet.
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -28,9 +30,9 @@ import {
 } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
 
-type Sort = "worst" | "changed" | "path" | "matches";
+type Sort = "worst" | `cat:${Category}` | "changed" | "path" | "matches";
 type ChangeFilter = "all" | Exclude<Change, "same">;
-type State = { crawl: string; vs: string; q: string; type: string; year: string; rule: string; cat: string; links: string; sort: Sort; change: ChangeFilter };
+type State = { crawl: string; vs: string; q: string; type: string; year: string; rule: string; links: string; sort: Sort; change: ChangeFilter };
 
 const PAGE_SIZE = 50;
 const CHANGE_BADGE: Record<Change, { label: string; color: string } | null> = {
@@ -50,7 +52,7 @@ function Pages() {
   const sp = useSearchParams();
 
   // Defaults: the latest finished crawl, compared with the one before it
-  const defaults: State = { crawl: crawls[0].id, vs: crawls[1]?.id ?? "none", q: "", type: "all", year: "all", rule: "none", cat: "all", links: "", sort: "worst", change: "all" };
+  const defaults: State = { crawl: crawls[0].id, vs: crawls[1]?.id ?? "none", q: "", type: "all", year: "all", rule: "none", links: "", sort: "worst", change: "all" };
   const [s, setS] = useState<State>(() => {
     const init = { ...defaults };
     for (const k of Object.keys(defaults) as (keyof State)[]) { const v = sp.get(k); if (v != null) (init as Record<string, string>)[k] = v; }
@@ -71,7 +73,8 @@ function Pages() {
   const b = s.vs === "none" ? null : Number(s.vs);
   const all = useMemo(() => pagesFor(site, a, b), [site, a, b]);
   const comparing = b != null;
-  const cat = s.cat === "all" ? null : (s.cat as Category);
+  // Sorting by an issue category ranks pages by that category and shows it in the Issues column; it never hides pages
+  const cat = s.sort.startsWith("cat:") ? (s.sort.slice(4) as Category) : null;
   const rule = s.rule === "none" ? null : (s.rule as RuleId);
   const target = normalizeTarget(s.links);
   const links = useMemo(() => (target ? linksTo(target, all) : null), [target, all]);
@@ -87,9 +90,8 @@ function Pages() {
         (s.type === "all" || p.type === s.type) &&
         (year == null || (year === "none" ? yearOf(p.path) == null : yearOf(p.path) === year)) &&
         (!rule || matches > 0) &&
-        (!cat || (issuesIn(p, cat) ?? 0) > 0) &&
         (!links || links.from.has(p.i)));
-  }, [all, s.q, s.type, s.year, rule, cat, links]);
+  }, [all, s.q, s.type, s.year, rule, links]);
 
   const counts = useMemo(() => {
     const c = { all: 0, new: 0, changed: 0, removed: 0 };
@@ -101,19 +103,21 @@ function Pages() {
     const change = comparing ? s.change : "all";
     const r = filtered.filter(({ p }) => (change === "all" ? p.change !== "removed" : p.change === change));
     const sort = s.sort === "matches" && !rule ? "worst" : s.sort;
-    const by: Record<Sort, (x: (typeof r)[number], y: (typeof r)[number]) => number> = {
-      worst: (x, y) => severity(y.p, cat) - severity(x.p, cat),
+    type Row = (typeof r)[number];
+    const by: Record<"worst" | "cat" | "changed" | "path" | "matches", (x: Row, y: Row) => number> = {
+      worst: (x, y) => severity(y.p, null) - severity(x.p, null),
+      cat: (x, y) => severity(y.p, cat) - severity(x.p, cat),
       changed: (x, y) => (y.p.lastChanged ?? 0) - (x.p.lastChanged ?? 0),
       path: (x, y) => x.p.path.localeCompare(y.p.path),
       matches: (x, y) => y.matches - x.matches,
     };
-    return r.sort((x, y) => by[sort](x, y) || x.p.path.localeCompare(y.p.path));
+    return r.sort((x, y) => by[sort.startsWith("cat:") ? "cat" : (sort as Exclude<Sort, `cat:${Category}`>)](x, y) || x.p.path.localeCompare(y.p.path));
   }, [filtered, comparing, s.change, s.sort, rule, cat]);
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const inCrawl = all.filter((p) => p.change !== "removed");
   const audited = inCrawl.filter((p) => p.perf != null).length;
-  const active = (["q", "type", "year", "rule", "cat", "links"] as const).some((k) => s[k] !== defaults[k]);
+  const active = (["q", "type", "year", "rule", "links"] as const).some((k) => s[k] !== defaults[k]);
   const crawlLabel = (id: string) => { const c = crawls.find((x) => x.id === id); return c ? `#${c.id} · ${fmtDay(c.startedAt)}` : `#${id}`; };
 
   const toCsv = () => ["url,title,type,status,issues,critical,change,last_changed" + (rule ? ",rule_matches" : ""),
@@ -161,7 +165,7 @@ function Pages() {
           <DataToolbar<ChangeFilter>
             query={s.q} onQuery={(q) => set({ q })} placeholder="Search URL, title or H1"
             segments={comparing ? [
-              { value: "all", label: `All ${fmtNum(counts.all)}` },
+              { value: "all", label: `All in #${s.crawl} ${fmtNum(counts.all)}` }, // A's pages = new + changed + unchanged
               { value: "new", label: `New ${fmtNum(counts.new)}` },
               { value: "changed", label: `Changed ${fmtNum(counts.changed)}` },
               { value: "removed", label: `Removed ${fmtNum(counts.removed)}` },
@@ -183,19 +187,17 @@ function Pages() {
             <FilterSelect value={s.rule} onChange={(r) => set({ rule: r, sort: r !== "none" ? "matches" : s.sort === "matches" ? "worst" : s.sort })} w="44" items={[
               { value: "none", label: "Any rule" }, ...RULES.map((r) => ({ value: r.id, label: r.name, hint: r.pattern, mono: true })),
             ]} />
-            <FilterSelect value={s.cat} onChange={(c) => set({ cat: c })} w="44" items={[
-              { value: "all", label: "Any issue category" }, ...CATEGORIES.map((c) => ({ value: c.id, label: c.label })),
-            ]} />
             <InputGroup w="64" startElement={<LuLink />}
               endElement={s.links ? <IconButton aria-label="Clear link target" size="2xs" variant="ghost" onClick={() => set({ links: "" })}><LuX /></IconButton> : undefined}>
               <Input size="xs" placeholder="Links to… paste a URL" value={s.links} onChange={(e) => set({ links: e.target.value })} />
             </InputGroup>
-            {active && <Button size="xs" variant="ghost" onClick={() => set({ q: "", type: "all", year: "all", rule: "none", cat: "all", links: "", sort: s.sort === "matches" ? "worst" : s.sort })}>Clear filters</Button>}
+            {active && <Button size="xs" variant="ghost" onClick={() => set({ q: "", type: "all", year: "all", rule: "none", links: "", sort: s.sort === "matches" ? "worst" : s.sort })}>Clear filters</Button>}
             <HStack gap="2" ms="auto">
               <Text textStyle="xs" color="fg.muted">Sort</Text>
-              <FilterSelect value={s.sort === "matches" && !rule ? "worst" : s.sort} onChange={(v) => set({ sort: v as Sort })} w="40" items={[
+              <FilterSelect value={s.sort === "matches" && !rule ? "worst" : s.sort} onChange={(v) => set({ sort: v as Sort })} w="48" items={[
                 ...(rule ? [{ value: "matches", label: "Most rule matches" }] : []),
-                { value: "worst", label: cat ? "Most issues" : "Worst first" },
+                { value: "worst", label: "Most issues", hint: "All categories, critical first" },
+                ...CATEGORIES.map((c) => ({ value: `cat:${c.id}`, label: `Most ${c.short} issues`, hint: c.label })),
                 { value: "changed", label: "Recently changed" },
                 { value: "path", label: "Path A–Z" },
               ]} />

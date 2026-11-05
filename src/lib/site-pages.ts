@@ -45,11 +45,11 @@ export type RuleId = (typeof RULES)[number]["id"];
 
 // ───────── Issue categories ─────────
 export type Category = "accessibility" | "performance" | "seo" | "security";
-export const CATEGORIES: { id: Category; label: string }[] = [
-  { id: "accessibility", label: "Accessibility" },
-  { id: "performance", label: "Performance" },
-  { id: "seo", label: "SEO & canonicals" },
-  { id: "security", label: "Security & compliance" },
+export const CATEGORIES: { id: Category; label: string; short: string }[] = [
+  { id: "accessibility", label: "Accessibility", short: "accessibility" },
+  { id: "performance", label: "Performance", short: "performance" },
+  { id: "seo", label: "SEO & canonicals", short: "SEO" },
+  { id: "security", label: "Security & compliance", short: "security" },
 ];
 
 // ───────── Generator ─────────
