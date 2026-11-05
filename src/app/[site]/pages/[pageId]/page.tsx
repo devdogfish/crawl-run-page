@@ -13,12 +13,13 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import NextLink from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
-  Box, Breadcrumb, Button, Code, Collapsible, Container, EmptyState, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Link, Menu, Portal,
+  Box, Button, Code, Collapsible, Container, EmptyState, Flex, Grid, HStack, Heading, Icon, IconButton, Input, InputGroup, Link, Menu, Portal,
   SegmentGroup, Span, Stack, Tabs, Text,
 } from "@chakra-ui/react";
 import { LuChevronDown, LuChevronLeft, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuExternalLink, LuFileQuestion, LuFilter, LuLayers, LuLink, LuSearch, LuSparkles, LuTerminal } from "react-icons/lu";
 
 import { AiPanel, type AiReply, type IssueRef } from "@/components/ai-panel";
+import { BackLink, RuleGuide, RuleMeta, RuleTitle } from "@/components/rule-ui";
 import { PagePreview, type Layer } from "@/components/page-preview";
 import { useSite } from "@/components/site-context";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -187,20 +188,15 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
     <Box pe={{ lg: ai ? "380px" : 0 }}>
       <Box borderBottomWidth="1px">
         <Container maxW="7xl" pt="5" pb="4">
-          <Breadcrumb.Root size="sm" mb="2">
-            <Breadcrumb.List>
-              <Breadcrumb.Item><Breadcrumb.Link asChild><NextLink href={pagesHref}>Pages</NextLink></Breadcrumb.Link></Breadcrumb.Item>
-              <Breadcrumb.Separator />
-              <Breadcrumb.Item><Breadcrumb.CurrentLink maxW="md" truncate>{p.title}</Breadcrumb.CurrentLink></Breadcrumb.Item>
-            </Breadcrumb.List>
-          </Breadcrumb.Root>
+          <BackLink href={pagesHref}>Pages</BackLink>
           <Flex justify="space-between" align="start" gap="4">
-            <Stack gap="0.5" minW="0">
-              <Heading size="lg" fontWeight="semibold" truncate>{p.title}</Heading>
-              <Link href={`${SITES[site].url}${p.path}`} target="_blank" rel="noopener noreferrer" textStyle="xs" fontFamily="mono" color="fg.muted" w="fit-content">
-                {p.path}<LuExternalLink />
+            {/* The title is the link to the live page: icon on it, underline on hover, full URL in the tooltip */}
+            <Tooltip content={`${SITES[site].url}${p.path}`} positioning={{ placement: "bottom-start" }} openDelay={300}>
+              <Link href={`${SITES[site].url}${p.path}`} target="_blank" rel="noopener noreferrer" color="fg" minW="0" maxW="full" gap="2" _hover={{ textDecoration: "underline" }}>
+                <Heading as="span" size="lg" fontWeight="semibold" truncate>{p.title}</Heading>
+                <Icon as={LuExternalLink} boxSize="4" color="fg.muted" flexShrink={0} />
               </Link>
-            </Stack>
+            </Tooltip>
             <Button size="sm" variant="ghost" onClick={() => setAi((x) => !x)} flexShrink={0}><LuSparkles />Ask AI</Button>
           </Flex>
         </Container>
@@ -233,7 +229,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                   {comparing && (
                     <SegmentGroup.Root size="xs" value={seg} onValueChange={(e) => setSeg(e.value as Seg)} w="full">
                       <SegmentGroup.Indicator />
-                      <SegmentGroup.Items flex="1" items={[{ value: "all", label: `All ${counts.all}` }, { value: "new", label: `New ${counts.new}` }, { value: "fixed", label: `Fixed ${counts.fixed}` }]} />
+                      <SegmentGroup.Items flex="1" items={[{ value: "all", label: `All (${counts.all})` }, { value: "new", label: `New (${counts.new})` }, { value: "fixed", label: `Fixed (${counts.fixed})` }]} />
                     </SegmentGroup.Root>
                   )}
                 </Stack>
@@ -258,7 +254,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
 
               <Box minW="0" borderStartWidth={{ md: "1px" }} ps={{ md: "8" }}>
                 {current
-                  ? <IssueView it={current} siblings={siblings} html={html} origin={origin} page={p} fix={fixes.has(current.k)} prio={prio} link={linkTo(current)}
+                  ? <IssueView it={current} siblings={siblings} html={html} origin={origin} page={p} fix={fixes.has(current.k)} link={linkTo(current)}
                       onFix={() => setFixes((s) => new Set(s).add(current.k))} onSelect={setSelected}
                       onShow={() => { setTab("preview"); setHighlightRule(current.rule); }} onAsk={() => askAi("How do I fix this?", current)} />
                   : <Text textStyle="sm" color="fg.muted">No issues match.</Text>}
@@ -350,23 +346,20 @@ function RuleList({ title, groups, selected, onSelect, prio, empty }: {
 }
 
 // ───────── Selected issue ─────────
-function IssueView({ it, siblings, html, origin, page, fix, onFix, onSelect, onShow, onAsk, prio, link }: {
+function IssueView({ it, siblings, html, origin, page, fix, onFix, onSelect, onShow, onAsk, link }: {
   it: Instance; siblings: Instance[]; html: string; origin: string; page: PageV; fix: boolean;
-  onFix: () => void; onSelect: (k: number) => void; onShow: () => void; onAsk: () => void; prio: (s: string) => string; link: string;
+  onFix: () => void; onSelect: (k: number) => void; onShow: () => void; onAsk: () => void; link: string;
 }) {
   const r = RULE_CATALOG[it.rule];
   const idx = siblings.findIndex((x) => x.k === it.k);
-  const cat = CATEGORIES.find((c) => c.id === r.category)!.label;
   return (
     <Stack gap="6" maxW="3xl">
       <Stack gap="1.5">
-        <HStack gap="2" textStyle="xs" color="fg.muted">
-          <SevDot sev={r.severity} /><Text><Span fontWeight="medium" color="fg">{prio(r.severity)}</Span> · {SEV[r.severity].label} · {cat}{r.criterion ? ` · WCAG ${r.criterion.split(" ")[0]}` : ""}</Text>
+        <RuleTitle rule={r} size="md" />
+        <RuleMeta rule={r}>
           {it.status === "new" && <Text color="green.fg">· New in this crawl</Text>}
           {it.status === "fixed" && <Text>· Fixed in this crawl</Text>}
-        </HStack>
-        <Heading size="md" fontWeight="semibold">{r.title}</Heading>
-        <Text textStyle="sm" color="fg.muted">{r.why}</Text>
+        </RuleMeta>
       </Stack>
 
       {/* The element */}
@@ -391,17 +384,10 @@ function IssueView({ it, siblings, html, origin, page, fix, onFix, onSelect, onS
         </HStack>
       </Stack>
 
-      {/* How to fix */}
-      <Stack gap="2.5">
-        <Text textStyle="sm" fontWeight="medium">How to fix</Text>
-        <Text textStyle="sm">{r.howToFix}</Text>
+      <RuleGuide rule={r} actions={<>
         {fix && it.status !== "fixed" && <Diff before={it.snippet} after={r.fix(it.snippet)} />}
         {it.status !== "fixed" && <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} link={link} size="sm" />}
-      </Stack>
-
-      <HStack gap="4" textStyle="xs" wrap="wrap" color="fg.muted">
-        {r.refs.map((ref) => <Link key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" color="fg.muted" _hover={{ color: "fg" }}>{ref.label}<LuExternalLink /></Link>)}
-      </HStack>
+      </>} />
     </Stack>
   );
 }

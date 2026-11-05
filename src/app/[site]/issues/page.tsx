@@ -10,12 +10,15 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import NextLink from "next/link";
-import { Box, Button, Container, Flex, Grid, HStack, Heading, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, CloseButton, Container, Flex, Grid, HStack, Heading, Stack, Text } from "@chakra-ui/react";
+import { LuPlus } from "react-icons/lu";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { FilterSelect } from "@/components/filter-select";
+import { RuleDialog } from "@/components/rule-dialog";
 import { CrawlScope } from "@/components/scope-select";
 import { useSite } from "@/components/site-context";
+import { SCOPES, loadRules, saveRules, type CustomRule } from "@/lib/custom-rules";
 import { PRIORITIES, PRIORITY, PRIORITY_COLOR } from "@/lib/priority";
 import { byRule, hitsFor, rulesPrompt, type RuleRow, type Seg } from "@/lib/site-issues";
 import { CATEGORIES, defaultScope, LH_SAMPLE, PAGE_TYPES, fullLighthouse } from "@/lib/site-pages";
@@ -32,6 +35,10 @@ export default function IssuesPage() {
 
 function Issues() {
   const site = useSite();
+  const [ruleOpen, setRuleOpen] = useState(false);
+  const [custom, setCustom] = useState<CustomRule[]>([]);
+  useEffect(() => setCustom(loadRules(site)), [site]);
+  const updateCustom = (next: CustomRule[]) => { setCustom(next); saveRules(site, next); };
   const sp = useSearchParams();
 
   const defaults: State = { ...defaultScope(site), q: "", cat: "all", pri: "all", markup: "all", type: "all", sort: "priority", seg: "all" };
@@ -97,19 +104,36 @@ function Issues() {
         <Container maxW="7xl" pt="7" pb="5">
           <Flex justify="space-between" align={{ base: "start", md: "center" }} direction={{ base: "column", md: "row" }} gap="4">
             <Heading size="xl" fontWeight="semibold">Issues</Heading>
-            <CrawlScope crawl={s.crawl} vs={s.vs} onChange={(crawl, vs) => set({ crawl, vs, ...(vs === "none" ? { seg: "all" as Seg } : {}) })} />
+            <HStack gap="3">
+              <CrawlScope crawl={s.crawl} vs={s.vs} onChange={(crawl, vs) => set({ crawl, vs, ...(vs === "none" ? { seg: "all" as Seg } : {}) })} />
+              <Button size="sm" variant="outline" onClick={() => setRuleOpen(true)}><LuPlus />New rule</Button>
+            </HStack>
           </Flex>
         </Container>
       </Box>
 
+      <RuleDialog open={ruleOpen} onOpenChange={setRuleOpen} onCreate={(r) => updateCustom([...custom, r])} />
       <Container maxW="7xl" py="6">
+        {custom.length > 0 && (
+          <Stack gap="0" mb="4" borderWidth="1px" rounded="l2" textStyle="sm">
+            <Text px="3" py="2" textStyle="xs" fontWeight="medium" color="fg.muted" borderBottomWidth="1px" bg="bg.subtle">Custom rules · run on the next crawl</Text>
+            {custom.map((r) => (
+              <HStack key={r.id} px="3" py="1.5" gap="3" borderBottomWidth="1px" borderColor="border.muted" _last={{ borderBottomWidth: 0 }}>
+                <Text fontWeight="medium" color={PRIORITY_COLOR[r.priority]}>{r.priority}</Text>
+                <Text flex="1" truncate>{r.name}</Text>
+                <Text textStyle="xs" color="fg.muted" truncate maxW="xs">{SCOPES.find((o) => o.value === r.scope)!.label} · {r.when === "found" ? "found" : "missing"}: {r.pattern}</Text>
+                <CloseButton size="2xs" aria-label={`Delete ${r.name}`} onClick={() => updateCustom(custom.filter((x) => x.id !== r.id))} />
+              </HStack>
+            ))}
+          </Stack>
+        )}
         <Flex direction="column" borderWidth="1px" rounded="l2" overflow="hidden">
           <DataToolbar<Seg>
             query={s.q} onQuery={(q) => set({ q })} placeholder="Search rule or element"
             segments={counts ? [
-              { value: "all", label: `All in #${s.crawl} ${fmtNum(counts.all)}` },
-              { value: "new", label: `New ${fmtNum(counts.new)}` },
-              { value: "fixed", label: `Fixed ${fmtNum(counts.fixed)}` },
+              { value: "all", label: `All in #${s.crawl} (${fmtNum(counts.all)})` },
+              { value: "new", label: `New (${fmtNum(counts.new)})` },
+              { value: "fixed", label: `Fixed (${fmtNum(counts.fixed)})` },
             ] : undefined}
             value={seg} onValue={(v) => set({ seg: v })}
             count={`${rows.length} rule${rows.length === 1 ? "" : "s"}${comparing ? "" : ` · ${n(issues)} issues`}`}
