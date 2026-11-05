@@ -25,7 +25,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import {
   OWNER_LABEL, RULE_CATALOG, SEVERITIES, apiRequest, batchPrompt, issuePrompt, issuesJson, localCheck, pageIssues, sevRank, sourceLines, sourceOf, type Instance,
 } from "@/lib/page-issues";
-import { PRIORITIES, usePriorityMap, type Priority } from "@/lib/priority";
+import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
 import { downloadText } from "@/components/data-toolbar";
 import { CATEGORIES, crawlChoices, pageView, siteSize } from "@/lib/site-pages";
 import { SITES, type SiteId } from "@/lib/sites";
@@ -76,8 +76,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const [cats, setCats] = useState<string[]>(list("cat"));
   const [sharedOpen, setSharedOpen] = useState(false);
   const [selected, setSelected] = useState<number | null>(sp.get("issue") ? Number(sp.get("issue")) - 1 : null);
-  const pmap = usePriorityMap();
-  const prio = (sev: string) => pmap[sev as keyof typeof pmap];
+  const prio = (sev: string) => PRIORITY[sev as keyof typeof PRIORITY];
   const [highlightRule, setHighlightRule] = useState<string | null>(null);
   const [fixes, setFixes] = useState<Set<number>>(new Set());
   const [ai, setAi] = useState(false);
@@ -91,10 +90,10 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
     const t = q.trim().toLowerCase();
     return instances.filter((it) => {
       const r = RULE_CATALOG[it.rule];
-      return (seg === "all" ? it.status !== "fixed" : it.status === seg) && (!pri.length || pri.includes(pmap[r.severity])) && (!cats.length || cats.includes(r.category)) &&
+      return (seg === "all" ? it.status !== "fixed" : it.status === seg) && (!pri.length || pri.includes(PRIORITY[r.severity])) && (!cats.length || cats.includes(r.category)) &&
         (!t || [it.rule, r.title, it.selector, it.snippet].some((x) => x.toLowerCase().includes(t)));
     });
-  }, [instances, q, seg, pri, cats, pmap]);
+  }, [instances, q, seg, pri, cats]);
 
   // One row per rule, worst first; split into "this page" and "shared"
   const byRule = (list: Instance[]) => {

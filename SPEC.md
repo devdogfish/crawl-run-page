@@ -656,7 +656,7 @@ Goal: a developer can take the issues for a page into their own tools without co
   "how_to_fix": "…", "references": ["https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html"] }
 ```
 
-- **Priority** is mapped from severity per site (Settings → Issue priority; default Critical P1, Serious P2, Moderate P3, Minor P4). Store it as a site setting so API, exports and UI agree.
+- **Priority** is fixed per severity and not configurable: Critical P1, Serious P2, Moderate P3, Minor P4.
 - **Owner and source** (who fixes it, and where):
   - `template` when the selector + HTML hash is seen on many pages (header, footer, banners) → the template file;
   - `content` when the element sits in CMS-rendered rich text. The CMS adds `data-cms-entry` / `data-cms-field` attributes; the crawler reads the nearest ones → link to the CMS entry;
