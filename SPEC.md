@@ -642,6 +642,45 @@ Filters:
 | `POST /api/crawls/{id}/jobs` `{ "type": "lighthouse_full" }` | `202`; the job appears in `steps` as `kind: "job"`. `409` if one is already running or the crawl hasn't succeeded. |
 | `GET /api/crawls/{id}/lighthouse?scope=sample\|full` | `{ "pages": 200, "median": { "performance": 72, "accessibility": 91, "best_practices": 96, "seo": 98 } }` |
 
+### 6.6 Developer handoff (proposed; the page detail UI already shows these)
+
+Goal: a developer can take the issues for a page into their own tools without copying from several places.
+
+**Issue shape.** Every issue, whatever produced it (axe-core, Lighthouse, a custom check), is returned the same way:
+
+```json
+{ "id": "9155-18", "rule": "image-alt", "title": "Image has no text alternative",
+  "priority": "P1", "severity": "critical", "category": "accessibility", "wcag": "1.1.1 Non-text Content · A",
+  "status": "existing", "owner": "content", "source": "CMS entry 9155 · Body",
+  "selector": "article figure.chart:nth-of-type(1) img", "html": "<img src=…>",
+  "how_to_fix": "…", "references": ["https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html"] }
+```
+
+- **Priority** is mapped from severity per site (Settings → Issue priority; default Critical P1, Serious P2, Moderate P3, Minor P4). Store it as a site setting so API, exports and UI agree.
+- **Owner and source** (who fixes it, and where):
+  - `template` when the selector + HTML hash is seen on many pages (header, footer, banners) → the template file;
+  - `content` when the element sits in CMS-rendered rich text. The CMS adds `data-cms-entry` / `data-cms-field` attributes; the crawler reads the nearest ones → link to the CMS entry;
+  - `code` when it's rendered by a component. Components add `data-component="NewsletterForm"` (or use source maps on dev builds) → the repo file.
+  - The crawler stores `owner`, `source_label`, `source_url` per issue instance.
+
+**API.**
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/pages/{page_id}/issues?crawl=811&priority=P1,P2&category=accessibility&status=new&owner=code` | `{ page, issues: [Issue] }`, the same filters as the UI |
+| `GET /api/issues/{issue_id}` | one `Issue` with `elements[]` (all instances of the rule on that page) |
+
+Links: the page detail URL carries the view (`?crawl=811&issue=18&pri=P1&cat=accessibility`), so any issue or filtered list can be linked to.
+
+**Exports** (Issues tab → Export): copy as one prompt (grouped by rule, one line per element with its source), download JSON (the shape above), copy the API request, copy a link to the view.
+
+**MCP server** (thin wrapper over the API, so an AI coding tool can pull issues itself):
+- `list_issues(page, crawl?, priority?, category?, owner?, status?)` → `Issue[]`
+- `get_issue(issue_id)` → `Issue` with elements
+- `find_pages(url_contains?, rule?, priority?)` → pages with issue counts
+
+**Local check CLI** (check a fix before the next crawl): `npx @rbc/crawler check <url> [--rule image-alt] [--selector "…"]` runs the same rules (axe-core with the same config, the custom checks) against any URL, including `http://localhost:3000`, and prints issues in the same shape. Each issue has "Copy local check command" in its menu.
+
 ---
 
 ## 7. Frontend integration notes
@@ -660,5 +699,4 @@ Filters:
 ## 8. Out of scope / later
 - Changes to how the crawler crawls. This spec only defines what it reports.
 - The crawl list page (`/[site]/crawls`).
-- An accessibility (axe) results UI.
 - Permalinks to log lines, cancel, notifications.

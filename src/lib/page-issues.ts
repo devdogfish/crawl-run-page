@@ -395,3 +395,62 @@ export function issuePrompt(p: PageView, it: Instance) {
     "Return the corrected HTML for this element only.",
   ].join("\n");
 }
+
+// ───────── Who fixes it, and where ─────────
+// Real app: template = markup hash seen on many pages; content = element inside a CMS rich-text field
+// (the CMS renders data-cms-entry / data-cms-field on it); code = element rendered by a component
+// (data-component, or source maps in dev builds). See SPEC.md, Developer handoff.
+export type Owner = "code" | "template" | "content";
+export const OWNER_LABEL: Record<Owner, string> = { code: "Code", template: "Template", content: "Content (CMS)" };
+export function sourceOf(it: Instance, p: PageView): { owner: Owner; label: string; href: string } {
+  const repo = "https://github.com/rbc/rbccm-web/blob/main/";
+  const cms = `https://cms.rbccm.com/entries/${p.i}`;
+  if (it.shared != null) {
+    const file = it.rule === "link-name" ? "templates/partials/header.njk" : it.rule === "region" ? "templates/partials/cookie-banner.njk" : it.selector.startsWith("head") ? "templates/layouts/base.njk" : "templates/partials/footer.njk";
+    return { owner: "template", label: file, href: repo + file };
+  }
+  if (["label", "button-name"].includes(it.rule)) return { owner: "code", label: "src/components/NewsletterForm.tsx", href: repo + "src/components/NewsletterForm.tsx" };
+  if (["canonical", "hreflang", "render-blocking-resources", "unused-javascript"].includes(it.rule)) return { owner: "code", label: "src/layouts/ArticleLayout.tsx", href: repo + "src/layouts/ArticleLayout.tsx" };
+  const field = it.rule === "meta-description" ? "SEO description" : it.rule === "modern-image-formats" ? "Hero image" : "Body";
+  return { owner: "content", label: `CMS entry ${p.i} · ${field}`, href: cms };
+}
+
+// ───────── Handoff: the filtered list as JSON, one prompt, an API request, a local check ─────────
+export function issuesJson(p: PageView, crawl: number, list: Instance[], priority: (s: Severity) => string) {
+  return JSON.stringify({
+    page: { id: p.i, url: `https://www.rbccm.com${p.path}`, crawl },
+    issues: list.map((it) => {
+      const r = RULE_CATALOG[it.rule];
+      const src = sourceOf(it, p);
+      return {
+        id: `${p.i}-${it.k + 1}`, rule: r.id, title: r.title, priority: priority(r.severity), severity: r.severity, category: r.category,
+        wcag: r.criterion ?? null, status: it.status, owner: src.owner, source: src.label, selector: it.selector, html: it.snippet,
+        how_to_fix: r.howToFix, references: r.refs.map((x) => x.url),
+      };
+    }),
+  }, null, 2);
+}
+
+export function batchPrompt(p: PageView, list: Instance[], priority: (s: Severity) => string) {
+  const byRule = new Map<string, Instance[]>();
+  for (const it of list) byRule.set(it.rule, [...(byRule.get(it.rule) ?? []), it]);
+  return [
+    `Fix these ${list.length} issues on https://www.rbccm.com${p.path}. Return a patch per file.`, "",
+    ...[...byRule.entries()].flatMap(([rule, items]) => {
+      const r = RULE_CATALOG[rule];
+      return [
+        `## ${priority(r.severity)} ${r.title} (${r.id}${r.criterion ? `, WCAG ${r.criterion.split(" ")[0]}` : ""}), ${items.length} element${items.length > 1 ? "s" : ""}`,
+        `How to fix: ${r.howToFix}`,
+        ...items.map((it) => `- ${sourceOf(it, p).label} · ${it.selector}\n  \`${it.snippet.replace(/\n/g, " ")}\``), "",
+      ];
+    }),
+  ].join("\n");
+}
+
+export const apiRequest = (pageId: number, crawl: number, filters: Record<string, string[]>) => {
+  const qs = Object.entries(filters).filter(([, v]) => v.length).map(([k, v]) => `${k}=${v.join(",")}`).join("&");
+  return `curl -s "https://crawler.rbccm.com/api/pages/${pageId}/issues?crawl=${crawl}${qs ? `&${qs}` : ""}"`;
+};
+
+export const localCheck = (p: PageView, it: Instance) =>
+  `npx @rbc/crawler check http://localhost:3000${p.path} --rule ${it.rule} --selector "${it.selector}"`;

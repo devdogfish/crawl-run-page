@@ -16,13 +16,17 @@ import {
   Box, Breadcrumb, Button, Code, Collapsible, Container, EmptyState, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Link, Menu, Portal,
   SegmentGroup, Span, Stack, Tabs, Text,
 } from "@chakra-ui/react";
-import { LuChevronDown, LuChevronLeft, LuChevronRight, LuCopy, LuEllipsis, LuExternalLink, LuFileQuestion, LuLayers, LuSearch, LuSparkles } from "react-icons/lu";
+import { LuChevronDown, LuChevronLeft, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuExternalLink, LuFileQuestion, LuFilter, LuLayers, LuLink, LuSearch, LuSparkles, LuTerminal } from "react-icons/lu";
 
 import { AiPanel, type AiReply, type IssueRef } from "@/components/ai-panel";
 import { PagePreview, type Layer } from "@/components/page-preview";
 import { useSite } from "@/components/site-context";
 import { Tooltip } from "@/components/ui/tooltip";
-import { RULE_CATALOG, SEVERITIES, issuePrompt, pageIssues, sevRank, sourceLines, type Instance } from "@/lib/page-issues";
+import {
+  OWNER_LABEL, RULE_CATALOG, SEVERITIES, apiRequest, batchPrompt, issuePrompt, issuesJson, localCheck, pageIssues, sevRank, sourceLines, sourceOf, type Instance,
+} from "@/lib/page-issues";
+import { PRIORITIES, usePriorityMap, type Priority } from "@/lib/priority";
+import { downloadText } from "@/components/data-toolbar";
 import { CATEGORIES, crawlChoices, pageView, siteSize } from "@/lib/site-pages";
 import { SITES, type SiteId } from "@/lib/sites";
 
@@ -63,10 +67,17 @@ function PageDetail() {
 function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site: SiteId }) {
   const { instances, html } = useMemo(() => pageIssues(p, a, b, siteSize(site)), [p, a, b, site]);
   const [tab, setTab] = useState<"issues" | "preview" | "source">("issues");
-  const [q, setQ] = useState("");
-  const [seg, setSeg] = useState<Seg>("all");
+  // Shareable state lives in the URL: ?issue=18&pri=P1&cat=accessibility&q=…&seg=new
+  const sp = useSearchParams();
+  const list = (k: string) => (sp.get(k) ? sp.get(k)!.split(",") : []);
+  const [q, setQ] = useState(sp.get("q") ?? "");
+  const [seg, setSeg] = useState<Seg>((sp.get("seg") as Seg) ?? "all");
+  const [pri, setPri] = useState<Priority[]>(list("pri") as Priority[]);
+  const [cats, setCats] = useState<string[]>(list("cat"));
   const [sharedOpen, setSharedOpen] = useState(false);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<number | null>(sp.get("issue") ? Number(sp.get("issue")) - 1 : null);
+  const pmap = usePriorityMap();
+  const prio = (sev: string) => pmap[sev as keyof typeof pmap];
   const [highlightRule, setHighlightRule] = useState<string | null>(null);
   const [fixes, setFixes] = useState<Set<number>>(new Set());
   const [ai, setAi] = useState(false);
@@ -78,9 +89,12 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
 
   const visible = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return instances.filter((it) => (seg === "all" ? it.status !== "fixed" : it.status === seg) &&
-      (!t || [it.rule, RULE_CATALOG[it.rule].title, it.selector, it.snippet].some((x) => x.toLowerCase().includes(t))));
-  }, [instances, q, seg]);
+    return instances.filter((it) => {
+      const r = RULE_CATALOG[it.rule];
+      return (seg === "all" ? it.status !== "fixed" : it.status === seg) && (!pri.length || pri.includes(pmap[r.severity])) && (!cats.length || cats.includes(r.category)) &&
+        (!t || [it.rule, r.title, it.selector, it.snippet].some((x) => x.toLowerCase().includes(t)));
+    });
+  }, [instances, q, seg, pri, cats, pmap]);
 
   // One row per rule, worst first; split into "this page" and "shared"
   const byRule = (list: Instance[]) => {
@@ -94,11 +108,24 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
 
   // The selected issue, or the first one in the list when nothing visible is selected
   const current = visible.find((it) => it.k === selected) ?? (local[0] ?? shared[0])?.items[0];
+  useEffect(() => { if (current?.shared != null) setSharedOpen(true); }, [current?.k]); // eslint-disable-line react-hooks/exhaustive-deps
   const siblings = current ? visible.filter((it) => it.rule === current.rule && (it.shared == null) === (current.shared == null)) : [];
 
   const now = instances.filter((it) => it.status !== "fixed");
   const counts = { all: now.length, new: instances.filter((it) => it.status === "new").length, fixed: instances.filter((it) => it.status === "fixed").length };
   const pagesHref = `/${site}/pages?crawl=${a}${b != null ? `&vs=${b}` : ""}`;
+
+  // Mirror the view into the URL (no navigation), so any issue or filtered list can be linked to
+  useEffect(() => {
+    const u = new URLSearchParams({ crawl: String(a), ...(b != null ? { vs: String(b) } : {}) });
+    if (current) u.set("issue", String(current.k + 1));
+    if (q) u.set("q", q);
+    if (seg !== "all") u.set("seg", seg);
+    if (pri.length) u.set("pri", pri.join(","));
+    if (cats.length) u.set("cat", cats.join(","));
+    window.history.replaceState(null, "", `${window.location.pathname}?${u}`);
+  }, [current?.k, q, seg, pri, cats, a, b]); // eslint-disable-line react-hooks/exhaustive-deps
+  const linkTo = (it: Instance) => typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}?crawl=${a}${b != null ? `&vs=${b}` : ""}&issue=${it.k + 1}`;
 
   // ───────── Ask AI: one conversation per page; each message links to the issue it's about ─────────
   const refOf = (it: Instance): IssueRef => {
@@ -192,9 +219,17 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
             <Grid templateColumns={{ base: "1fr", md: "300px 1fr" }} gap={{ base: "6", md: "8" }} alignItems="start">
               <Stack gap="4" position={{ md: "sticky" }} top={{ md: "calc(var(--sticky-top, 4rem) + 1rem)" }}>
                 <Stack gap="2">
-                  <InputGroup startElement={<LuSearch />}>
-                    <Input size="sm" placeholder="Search issues" value={q} onChange={(e) => setQ(e.target.value)} />
-                  </InputGroup>
+                  <HStack gap="1.5">
+                    <InputGroup startElement={<LuSearch />} flex="1">
+                      <Input size="sm" placeholder="Search issues" value={q} onChange={(e) => setQ(e.target.value)} />
+                    </InputGroup>
+                    <FilterMenu pri={pri} setPri={setPri} cats={cats} setCats={setCats} />
+                    <ExportMenu count={visible.filter((it) => it.status !== "fixed").length}
+                      onPrompt={() => navigator.clipboard.writeText(batchPrompt(p, visible.filter((it) => it.status !== "fixed"), prio))}
+                      onJson={() => downloadText(issuesJson(p, a, visible, prio), `issues-${p.i}-${a}.json`, "application/json")}
+                      onApi={() => navigator.clipboard.writeText(apiRequest(p.i, a, { priority: pri, category: cats, ...(seg !== "all" ? { status: [seg] } : {}) }))}
+                      onLink={() => navigator.clipboard.writeText(window.location.href)} />
+                  </HStack>
                   {comparing && (
                     <SegmentGroup.Root size="xs" value={seg} onValueChange={(e) => setSeg(e.value as Seg)} w="full">
                       <SegmentGroup.Indicator />
@@ -203,7 +238,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                   )}
                 </Stack>
 
-                <RuleList title="On this page" groups={local} selected={current} onSelect={setSelected} empty="Nothing on this page." />
+                <RuleList title="On this page" groups={local} selected={current} onSelect={setSelected} prio={prio} empty="Nothing on this page." />
 
                 {shared.length > 0 && (
                   <Collapsible.Root open={sharedOpen} onOpenChange={(e) => setSharedOpen(e.open)}>
@@ -216,7 +251,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                     </Collapsible.Trigger>
                     <Collapsible.Content>
                       <Text textStyle="xs" color="fg.subtle" mt="1" mb="2" ps="5">Header, footer and banners. Fixed once in the template.</Text>
-                      <RuleList groups={shared} selected={current} onSelect={setSelected} />
+                      <RuleList groups={shared} selected={current} onSelect={setSelected} prio={prio} />
                     </Collapsible.Content>
                   </Collapsible.Root>
                 )}
@@ -224,7 +259,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
 
               <Box minW="0" borderStartWidth={{ md: "1px" }} ps={{ md: "8" }}>
                 {current
-                  ? <IssueView it={current} siblings={siblings} html={html} page={p} fix={fixes.has(current.k)}
+                  ? <IssueView it={current} siblings={siblings} html={html} page={p} fix={fixes.has(current.k)} prio={prio} link={linkTo(current)}
                       onFix={() => setFixes((s) => new Set(s).add(current.k))} onSelect={setSelected}
                       onShow={() => { setTab("preview"); setHighlightRule(current.rule); }} onAsk={() => askAi("How do I fix this?", current)} />
                   : <Text textStyle="sm" color="fg.muted">No issues match.</Text>}
@@ -265,7 +300,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
               <PagePreview html={html} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
                 onSelect={setSelected} mode={mode} viewport={mode === "live" ? viewport : 1280} layers={layers}
                 card={current && (
-                  <ElementCard it={current} siblings={siblings} fix={fixes.has(current.k)} page={p} onSelect={setSelected}
+                  <ElementCard it={current} siblings={siblings} fix={fixes.has(current.k)} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)}
                     onFix={() => setFixes((f) => new Set(f).add(current.k))} onAsk={() => askAi("How do I fix this?", current)} onDetails={() => setTab("issues")} />
                 )} />
             </Box>
@@ -286,8 +321,8 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
 }
 
 // ───────── List ─────────
-function RuleList({ title, groups, selected, onSelect, empty }: {
-  title?: string; groups: { rule: string; items: Instance[] }[]; selected?: Instance; onSelect: (k: number) => void; empty?: string;
+function RuleList({ title, groups, selected, onSelect, prio, empty }: {
+  title?: string; groups: { rule: string; items: Instance[] }[]; selected?: Instance; onSelect: (k: number) => void; prio: (s: string) => string; empty?: string;
 }) {
   return (
     <Stack gap="1">
@@ -302,8 +337,9 @@ function RuleList({ title, groups, selected, onSelect, empty }: {
         const on = selected?.rule === rule && items.some((it) => it.k === selected.k);
         return (
           <HStack key={rule} as="button" gap="2.5" px="2.5" py="2" mx="-2.5" rounded="l2" textAlign="start"
-            bg={on ? "bg.muted" : undefined} _hover={{ bg: "bg.muted" }} onClick={() => onSelect(items[0].k)}>
-            <SevDot sev={r.severity} />
+            bg={on ? "bg.muted" : undefined} _hover={{ bg: "bg.muted" }} onClick={() => onSelect(items[0].k)} aria-current={on || undefined}
+            aria-label={`${prio(r.severity)}, ${SEV[r.severity].label}: ${r.title}, ${items.length} element${items.length > 1 ? "s" : ""}${items[0].status === "new" ? ", new" : ""}`}>
+            <Text textStyle="xs" fontWeight="medium" color={r.severity === "critical" ? "red.fg" : r.severity === "serious" ? "orange.fg" : "fg.muted"} w="5" flexShrink={0} fontVariantNumeric="tabular-nums">{prio(r.severity)}</Text>
             <Text textStyle="sm" flex="1" truncate fontWeight={on ? "medium" : undefined}>{r.title}</Text>
             {items[0].status === "new" && <Text textStyle="xs" color="green.fg">New</Text>}
             <Text textStyle="xs" color="fg.muted" fontVariantNumeric="tabular-nums">{items.length}</Text>
@@ -315,10 +351,11 @@ function RuleList({ title, groups, selected, onSelect, empty }: {
 }
 
 // ───────── Selected issue ─────────
-function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onAsk }: {
+function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onAsk, prio, link }: {
   it: Instance; siblings: Instance[]; html: string; page: PageV; fix: boolean;
-  onFix: () => void; onSelect: (k: number) => void; onShow: () => void; onAsk: () => void;
+  onFix: () => void; onSelect: (k: number) => void; onShow: () => void; onAsk: () => void; prio: (s: string) => string; link: string;
 }) {
+  const src = sourceOf(it, page);
   const r = RULE_CATALOG[it.rule];
   const idx = siblings.findIndex((x) => x.k === it.k);
   const cat = CATEGORIES.find((c) => c.id === r.category)!.label;
@@ -326,7 +363,7 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
     <Stack gap="6" maxW="3xl">
       <Stack gap="1.5">
         <HStack gap="2" textStyle="xs" color="fg.muted">
-          <SevDot sev={r.severity} /><Text>{SEV[r.severity].label} · {cat}{r.criterion ? ` · WCAG ${r.criterion.split(" ")[0]}` : ""}</Text>
+          <SevDot sev={r.severity} /><Text><Span fontWeight="medium" color="fg">{prio(r.severity)}</Span> · {SEV[r.severity].label} · {cat}{r.criterion ? ` · WCAG ${r.criterion.split(" ")[0]}` : ""}</Text>
           {it.status === "new" && <Text color="green.fg">· New in this crawl</Text>}
           {it.status === "fixed" && <Text>· Fixed in this crawl</Text>}
         </HStack>
@@ -351,7 +388,11 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
           {it.onPage && <Box borderBottomWidth="1px"><PagePreview html={html} instances={[it]} selected={it.k} mode="screenshot" crop={it.k} height={140} /></Box>}
           <Code display="block" whiteSpace="pre-wrap" wordBreak="break-all" px="3" py="2.5" textStyle="xs" bg="bg.subtle" rounded="0">{it.snippet}</Code>
         </Box>
-        {it.shared != null && <Text textStyle="xs" color="fg.muted">Same markup on {it.shared.toLocaleString("en-US")} pages. Fix it in the template.</Text>}
+        <HStack gap="1.5" textStyle="xs" color="fg.muted" wrap="wrap">
+          <Text>Fix in <Span color="fg" fontWeight="medium">{OWNER_LABEL[src.owner]}</Span></Text>
+          <Link href={src.href} target="_blank" rel="noopener noreferrer" fontFamily="mono" color="fg.muted" _hover={{ color: "fg" }}>{src.label}<LuExternalLink /></Link>
+          {it.shared != null && <Text>· same markup on {it.shared.toLocaleString("en-US")} pages</Text>}
+        </HStack>
       </Stack>
 
       {/* How to fix */}
@@ -359,7 +400,7 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
         <Text textStyle="sm" fontWeight="medium">How to fix</Text>
         <Text textStyle="sm">{r.howToFix}</Text>
         {fix && it.status !== "fixed" && <Diff before={it.snippet} after={r.fix(it.snippet)} />}
-        {it.status !== "fixed" && <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} size="sm" />}
+        {it.status !== "fixed" && <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} link={link} size="sm" />}
       </Stack>
 
       <HStack gap="4" textStyle="xs" wrap="wrap" color="fg.muted">
@@ -369,9 +410,56 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
   );
 }
 
+// Filter: priority and category, as checkboxes in one menu (empty = everything)
+function FilterMenu({ pri, setPri, cats, setCats }: { pri: Priority[]; setPri: (v: Priority[]) => void; cats: string[]; setCats: (v: string[]) => void }) {
+  const n = pri.length + cats.length;
+  const toggle = <T,>(list: T[], v: T, set: (x: T[]) => void) => set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  return (
+    <Menu.Root closeOnSelect={false} positioning={{ placement: "bottom-end" }}>
+      <Menu.Trigger asChild>
+        <Button size="sm" variant={n ? "subtle" : "outline"} px="2.5" aria-label={`Filter${n ? `, ${n} active` : ""}`}><LuFilter />{n ? n : null}</Button>
+      </Menu.Trigger>
+      <Portal><Menu.Positioner><Menu.Content minW="52">
+        <Menu.ItemGroup>
+          <Menu.ItemGroupLabel>Priority</Menu.ItemGroupLabel>
+          {PRIORITIES.map((p) => (
+            <Menu.CheckboxItem key={p} value={p} checked={pri.includes(p)} onCheckedChange={() => toggle(pri, p, setPri)}>{p}<Menu.ItemIndicator /></Menu.CheckboxItem>
+          ))}
+        </Menu.ItemGroup>
+        <Menu.Separator />
+        <Menu.ItemGroup>
+          <Menu.ItemGroupLabel>Category</Menu.ItemGroupLabel>
+          {CATEGORIES.map((c) => (
+            <Menu.CheckboxItem key={c.id} value={c.id} checked={cats.includes(c.id)} onCheckedChange={() => toggle(cats, c.id, setCats)}>{c.label}<Menu.ItemIndicator /></Menu.CheckboxItem>
+          ))}
+        </Menu.ItemGroup>
+        {n > 0 && <><Menu.Separator /><Menu.Item value="clear" onClick={() => { setPri([]); setCats([]); }}>Clear filters</Menu.Item></>}
+      </Menu.Content></Menu.Positioner></Portal>
+    </Menu.Root>
+  );
+}
+
+// Export: the issues currently in the list, for handing off to a person, an AI tool or a script
+function ExportMenu({ count, onPrompt, onJson, onApi, onLink }: { count: number; onPrompt: () => void; onJson: () => void; onApi: () => void; onLink: () => void }) {
+  return (
+    <Menu.Root positioning={{ placement: "bottom-end" }}>
+      <Menu.Trigger asChild><IconButton size="sm" variant="outline" aria-label="Export these issues"><LuDownload /></IconButton></Menu.Trigger>
+      <Portal><Menu.Positioner><Menu.Content minW="60">
+        <Menu.ItemGroup>
+          <Menu.ItemGroupLabel>{count} issue{count === 1 ? "" : "s"} in this list</Menu.ItemGroupLabel>
+          <Menu.Item value="prompt" onClick={onPrompt}><LuSparkles />Copy as one prompt</Menu.Item>
+          <Menu.Item value="json" onClick={onJson}><LuDownload />Download JSON</Menu.Item>
+          <Menu.Item value="api" onClick={onApi}><LuTerminal />Copy API request</Menu.Item>
+          <Menu.Item value="link" onClick={onLink}><LuLink />Copy link to this view</Menu.Item>
+        </Menu.ItemGroup>
+      </Menu.Content></Menu.Positioner></Portal>
+    </Menu.Root>
+  );
+}
+
 // The actions on an issue, the same in the Issues tab and on the element in Preview
-function IssueActions({ it, page, fix, onFix, onAsk, size, children }: {
-  it: Instance; page: PageV; fix: boolean; onFix: () => void; onAsk: () => void; size: "xs" | "sm"; children?: React.ReactNode;
+function IssueActions({ it, page, fix, onFix, onAsk, link, size, children }: {
+  it: Instance; page: PageV; fix: boolean; onFix: () => void; onAsk: () => void; link: string; size: "xs" | "sm"; children?: React.ReactNode;
 }) {
   return (
     <HStack gap="1.5">
@@ -381,7 +469,9 @@ function IssueActions({ it, page, fix, onFix, onAsk, size, children }: {
       <Menu.Root>
         <Menu.Trigger asChild><IconButton size={size} variant="ghost" aria-label="More actions"><LuEllipsis /></IconButton></Menu.Trigger>
         <Portal><Menu.Positioner><Menu.Content>
+          <Menu.Item value="link" onClick={() => navigator.clipboard.writeText(link)}><LuLink />Copy link to this issue</Menu.Item>
           <Menu.Item value="copy" onClick={() => navigator.clipboard.writeText(issuePrompt(page, it))}><LuCopy />Copy as prompt</Menu.Item>
+          <Menu.Item value="check" onClick={() => navigator.clipboard.writeText(localCheck(page, it))}><LuTerminal />Copy local check command</Menu.Item>
         </Menu.Content></Menu.Positioner></Portal>
       </Menu.Root>
     </HStack>
@@ -389,8 +479,9 @@ function IssueActions({ it, page, fix, onFix, onAsk, size, children }: {
 }
 
 // Card attached to the selected element in Preview (like a design tool's selection toolbar)
-function ElementCard({ it, siblings, fix, page, onSelect, onFix, onAsk, onDetails }: {
+function ElementCard({ it, siblings, fix, page, onSelect, onFix, onAsk, onDetails, prio, link }: {
   it: Instance; siblings: Instance[]; fix: boolean; page: PageV; onSelect: (k: number) => void; onFix: () => void; onAsk: () => void; onDetails: () => void;
+  prio: (s: string) => string; link: string;
 }) {
   const r = RULE_CATALOG[it.rule];
   const idx = siblings.findIndex((x) => x.k === it.k);
@@ -400,7 +491,7 @@ function ElementCard({ it, siblings, fix, page, onSelect, onFix, onAsk, onDetail
         <Box mt="1.5"><SevDot sev={r.severity} /></Box>
         <Stack gap="0" flex="1" minW="0">
           <Text textStyle="sm" fontWeight="medium" lineClamp={2}>{r.title}</Text>
-          <Text textStyle="xs" color="fg.muted">{SEV[r.severity].label}{r.criterion ? ` · WCAG ${r.criterion.split(" ")[0]}` : ""}</Text>
+          <Text textStyle="xs" color="fg.muted">{prio(r.severity)} · {SEV[r.severity].label} · {OWNER_LABEL[sourceOf(it, page).owner]}</Text>
         </Stack>
         {siblings.length > 1 && (
           <HStack gap="0" flexShrink={0} textStyle="xs" color="fg.muted">
@@ -411,7 +502,7 @@ function ElementCard({ it, siblings, fix, page, onSelect, onFix, onAsk, onDetail
         )}
       </HStack>
       {fix && <Diff before={it.snippet} after={r.fix(it.snippet)} />}
-      <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} size="xs">
+      <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} link={link} size="xs">
         <Button size="xs" variant="ghost" onClick={onDetails}>Details</Button>
       </IssueActions>
     </Stack>
