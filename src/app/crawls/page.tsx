@@ -12,7 +12,8 @@ import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { StageIcon } from "@/components/step-ui";
-import { CRAWLS, type CrawlListStatus, type CrawlRow } from "@/lib/crawls-list";
+import { crawlsFor, type CrawlListStatus, type CrawlRow } from "@/lib/crawls-list";
+import { useSite } from "@/components/site-context";
 import { ENVIRONMENTS, hostOf, type Environment } from "@/lib/settings";
 import { fmtDur, fmtNum, type StageStatus } from "@/lib/types";
 
@@ -33,16 +34,18 @@ const fmtDate = (d: Date) =>
   d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
 
 export default function CrawlsPage() {
+  const { site } = useSite();
+  const CRAWLS = useMemo(() => crawlsFor(site), [site]);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
-  const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.v, CRAWLS.filter(f.match).length])), []);
+  const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.v, CRAWLS.filter(f.match).length])), [CRAWLS]);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const f = FILTERS.find((x) => x.v === filter)!;
     return CRAWLS.filter((c) => f.match(c) && (!q || c.id.includes(q) || c.url.includes(q) || c.environment.includes(q)));
-  }, [filter, query]);
+  }, [CRAWLS, filter, query]);
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Facts: last 30 days
@@ -77,7 +80,7 @@ export default function CrawlsPage() {
             value={filter} onValue={(v) => { setFilter(v); setPage(1); }}
             count={query ? `${rows.length} matches` : ""}
             copyLabel="Copy visible crawl IDs" onCopy={() => navigator.clipboard.writeText(pageRows.map((c) => c.id).join("\n"))}
-            downloadLabel="Download crawls (.csv)" onDownload={() => downloadText(toCsv(), "crawls.csv", "text/csv")}
+            downloadLabel="Download crawls (.csv)" onDownload={() => downloadText(toCsv(), `crawls-${site}.csv`, "text/csv")}
           />
           <Box overflowX="auto">
             <Box minW="980px">

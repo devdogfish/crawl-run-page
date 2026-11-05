@@ -32,11 +32,13 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 **Backend**
 - Create the SQLite schema (SPEC §5.2) with the pragmas (§5.1).
 - Writer handlers for `crawl_started`, `step_started`, `step_finished` and `step_failed`. When a crawl starts, compute `expected_sec` per step (§5.4).
-- `GET /api/crawls` (SPEC §6.0): list with status/search/environment filters, counts, facts and pagination.
+- Table `sites` + `GET /api/sites` (SPEC §5.2, §6.0); seed RBC CM and RBC ITS with their environment URLs.
+- `GET /api/crawls?site=` (SPEC §6.0): list with status/search/environment filters, counts, facts and pagination.
 - `GET /api/crawls/{crawl_id}` (SPEC §6.1): id, environment, url, status, trigger, settings, timestamps, `elapsed_sec` and `steps[]`. Leave `progress_pct`, `eta_at`, `pages` and `history` null until slice 3. Use read-only connections, plus `ETag`/`304`.
 
 **Frontend**
 - Move `src/app/crawls/page.tsx` and `src/app/crawls/[crawlId]/page.tsx` into your app at the same routes. Copy `src/components/*`, `src/lib/types.ts` and `src/lib/settings.ts`.
+- **Navbar:** mount `AppNavbar` inside `SiteProvider` (see `src/app/layout.tsx`). Load the sites from `GET /api/sites` instead of `src/lib/sites.ts`, and put the official logo files in `/public/sites/`.
 - **Crawls page:** replace `CRAWLS` (from `src/lib/crawls-list.ts`) with a `useCrawls({ status, q, page })` query. Leave the **New crawl** button disabled until slice 5.
 - **Run page:** **delete** `PrototypeBar`, `SCENARIOS`, the `?settings=` / `CRAWLS` lookup and the `useCrawlRun` simulator usage.
 - Add a `useCrawl(crawlId)` hook that polls the summary every 2s while `status === "running"`. Map `steps[]` to the existing `StepInfo` shape in `useSteps`.
@@ -44,7 +46,8 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 - Tabs show their empty states until slices 2–4.
 
 **Acceptance**
-- [ ] `/crawls` shows real crawls with working search, status filters, counts, pagination and CSV; a row opens its run page.
+- [ ] The site switcher lists RBC CM and RBC ITS with their logos; switching changes the crawls list and facts, and is remembered after a reload.
+- [ ] `/crawls` shows the current site's real crawls with working search, status filters, counts, pagination and CSV; a row opens its run page.
 - [ ] `/crawls/<real id>` shows the correct status badge, Started, Duration, Target and step list.
 - [ ] While a crawl runs, step statuses change within ~2s, without a reload.
 - [ ] After a failure, the failed step is selected and the later steps show "Not run · an earlier step failed".
@@ -177,7 +180,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 - How pages are picked and audited is unchanged.
 
 **Backend**
-- `GET /api/environments` and `POST /api/crawls` (SPEC §6.0) to start a crawl from the dialog.
+- `POST /api/crawls` with `site` (SPEC §6.0) to start a crawl from the dialog.
 - `POST …/pause`, `POST …/resume` and `PATCH …/settings` (SPEC §6.5). The settings endpoint accepts **only** the editable keys and only while paused. Each action writes its `—   PAUSE` / `UPDATE` / `RESUME` log line.
 - Elapsed time and the ETA exclude `paused_sec`.
 - A writer handler for `lighthouse`. The summary includes the full-site job's derived status (SPEC §6.1).
@@ -191,7 +194,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
   - asks your orchestrator to resume from that step.
 
 **Frontend**
-- **New crawl** on `/crawls`: `CrawlSettingsDialog mode="create"` → `POST /crawls` → navigate to the new crawl.
+- **New crawl** in the navbar: `CrawlSettingsDialog mode="create"` for the current site → `POST /crawls` → navigate to the new crawl.
 - **Run page header:** `Pause` while running; `Settings` + `Resume` while paused. `Settings` opens `CrawlSettingsDialog mode="paused"`: Target and Discovery locked, Throughput editable. Save calls `PATCH /settings`; "Save and resume" also calls `/resume`. The `⋯` menu opens the dialog read-only (`mode="view"`) at other times.
 - **Scores tab** on `lighthouse` and `lighthouse_full`, from `/lighthouse`.
 - **Last row of the step list:**
@@ -202,7 +205,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 - **`Retry from {step}`** in the header calls `POST /retry`.
 
 **Acceptance**
-- [ ] New crawl: picking an environment fills its URL; Start crawl opens the new run page.
+- [ ] New crawl: picking an environment fills the current site's URL; Start crawl opens the new run page.
 - [ ] Pause stops new requests within about a second, the badge shows Paused and the clock stops. Resume continues from where it stopped.
 - [ ] While paused, Target and Discovery can't be changed (UI locked, API `422`). Delay, timeout, concurrency, retries and Lighthouse sample can, and the change is visible in the log and in the crawl rate after resuming.
 - [ ] A normal crawl ends with sample scores coloured on Lighthouse's scale.

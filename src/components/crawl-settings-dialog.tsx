@@ -12,6 +12,7 @@ import {
 import { LuLock } from "react-icons/lu";
 
 import { DISCOVERY, ENVIRONMENTS, type CrawlSettings, type Discovery, type Environment } from "@/lib/settings";
+import { SITES, envUrl } from "@/lib/sites";
 
 export type SettingsMode = "create" | "paused" | "view";
 
@@ -68,12 +69,12 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
 
           <Section title="Target" locked={lockedFixed}>
             <Field.Root disabled={lockedFixed}>
-              <Field.Label>Environment and URL</Field.Label>
+              <Field.Label>{SITES[s.site].name} · environment and URL</Field.Label>
               <Group attached w="full">
                 <NativeSelect.Root size="sm" w="40" flexShrink={0} disabled={lockedFixed}>
                   <NativeSelect.Field
                     value={s.environment}
-                    onChange={(e) => { const env = e.target.value as Environment; setS((x) => ({ ...x, environment: env, url: ENVIRONMENTS[env].url })); }}
+                    onChange={(e) => { const env = e.target.value as Environment; setS((x) => ({ ...x, environment: env, url: envUrl(x.site, env) })); }}
                   >
                     {(Object.keys(ENVIRONMENTS) as Environment[]).map((env) => <option key={env} value={env}>{ENVIRONMENTS[env].label}</option>)}
                   </NativeSelect.Field>
@@ -81,7 +82,7 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
                 </NativeSelect.Root>
                 <Input size="sm" value={s.url} onChange={(e) => set("url", e.target.value)} />
               </Group>
-              <Field.HelperText>{lockedFixed ? "A crawl always keeps the site it started on. Start a new crawl to crawl another environment." : "Choosing an environment fills in its URL."}</Field.HelperText>
+              <Field.HelperText>{lockedFixed ? "A crawl always keeps the site it started on. Start a new crawl to crawl another environment." : "Choosing an environment fills in its URL. Switch sites in the top-left."}</Field.HelperText>
             </Field.Root>
           </Section>
 

@@ -30,6 +30,9 @@ A simulated run takes about a minute; the full-site Lighthouse job takes about 1
 | `src/app/crawls/[crawlId]/page.tsx` | The run page: header, facts row, step list, step pane, Pages table, Lighthouse scores | Yes (swap the data source) |
 | `src/components/log-viewer.tsx` | Virtualized log viewer: follow mode, search, line selection, copy, download | Yes |
 | `src/components/data-toolbar.tsx` | Toolbar shared by Logs, Pages and the crawls list | Yes |
+| `src/components/app-navbar.tsx` | Navbar: site switcher (logo) on the left, New crawl on the right | Yes |
+| `src/components/site-context.tsx` | Current site, remembered per browser | Yes |
+| `src/lib/sites.ts` | **Sites config** (RBC CM, RBC ITS): names, logos, environment URLs. Staging/dev URLs are placeholders, and logos fall back to a lettered mark until `logo` is set | Replace with `GET /api/sites` |
 | `src/components/crawl-settings-dialog.tsx` | New crawl / paused settings / read-only settings dialog | Yes |
 | `src/lib/settings.ts` | Settings model: environments, locked vs editable fields | Yes (align with the API) |
 | `src/components/crawl-charts.tsx` | Crawl throughput/queue chart, response-code bar, duration sparkline | Yes |

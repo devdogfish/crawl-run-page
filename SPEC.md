@@ -72,6 +72,7 @@ Step ids and names are examples; use your pipeline's own. The UI reads whatever 
 | D30 | Add a crawls page in the same enterprise style. | `/crawls`: title + **New crawl** → facts row (running now, crawls in the last 30 days, success rate, median production duration) → one data panel with the shared toolbar (search, status segments, copy, CSV), a table and pagination. Rows open `/crawls/{id}`. |
 | D31 | Pause at any point; Pause turns into Resume; when paused, open the crawl settings. Immutable settings are locked; request delay and timeout are mutable. What else? | **Pause** (any time while the run is active) → status **Paused** (yellow), the clock stops, and the actions become **Settings** + **Resume**. In the settings dialog, **Target** (environment + URL) and **Discovery** (sources, exclude paths, render JS, robots.txt) are **locked**, because they define *what* is crawled and changing them mid-run would mix results. **Throughput** is editable: request delay, request timeout, **concurrency**, **max retries** and **Lighthouse sample size** (that step hasn't run yet). Save, or Save and resume. Each change is logged (`—   UPDATE settings (delay 250 → 500 ms, timeout 30 → 20 s)`). While running or finished, the same dialog opens read-only from the `⋯` menu. |
 | D32 | The environment is attached to the URL input; changing it changes the URL. Disabled for an existing crawl, enabled when creating one. | An attached select + input (`Group attached`): picking Production / Staging / Development fills in that environment's base URL. In **New crawl** both are editable; for an existing crawl both are disabled, with the hint "Start a new crawl to crawl another environment". |
+| D33 | The top-left should be the RBC CM logo, and I want to crawl other websites too (e.g. RBC ITS), switching there. | A **navbar** on every page: a **site switcher** on the left (logo + short name; the menu lists every site with its full name) and **New crawl** on the right. The page title and subtitle were dropped; the navbar carries the context. Everything is scoped to the selected site: the crawls list and facts, New crawl (environments fill in that site's URLs), and the run page (opening a crawl selects its site). Switching site on a run page goes to that site's crawls list. Sites live in one config (`src/lib/sites.ts` / `GET /api/sites`), so adding a website is one entry. |
 
 ---
 
@@ -79,15 +80,19 @@ Step ids and names are examples; use your pipeline's own. The UI reads whatever 
 
 Routes: **`/crawls`** (`src/app/crawls/page.tsx`) and **`/crawls/[crawlId]`** (`src/app/crawls/[crawlId]/page.tsx`).
 
-### 3.0 Crawls page (`/crawls`)
-- **Header:** title "Crawls", a one-line description, and a primary **New crawl** button that opens the settings dialog in *create* mode (§3.5).
-- **Facts row:** Running now · Crawls, last 30 days · Success rate · Median duration (production).
+### 3.0 Navbar (every page)
+- **Left, site switcher:** the current site's logo (or a lettered mark until a logo file is set), its short name ("RBC CM") and a chevron. The menu lists every site (mark, short name, full name, a check on the current one). The choice is remembered per browser.
+- **Right:** **New crawl**, which opens the settings dialog in *create* mode (§3.6) for the current site.
+
+### 3.1 Crawls page (`/crawls`)
+- Shows the **current site's** crawls only. No page title (D33).
+- **Facts row** (for the current site): Running now · Crawls, last 30 days · Success rate · Median duration (production).
 - **Data panel:**
   - the shared `DataToolbar` with search (id, URL, environment), segments **All · Running · Failed · Succeeded** with counts, copy IDs and CSV download;
   - columns: Crawl (id) · Target (host) · Environment (outline badge: Production gray, Staging purple, Development teal) · Status (icon + label; running/paused rows add a tiny progress bar) · Pages · Errors · Duration · Started (UTC) · Trigger (Schedule / Manual);
   - 20 rows per page; each row links to the run page.
 
-### 3.1 Header
+### 3.2 Run page header
 - **Breadcrumb:** `Crawls › {crawl_id}`.
 - **Title:** "Crawl {crawl_id}" plus **one** status badge: Crawling, Processing, **Paused** (yellow), Succeeded or Failed (a pulsing dot while running).
 - **Actions** (right):
@@ -105,9 +110,9 @@ Routes: **`/crawls`** (`src/app/crawls/page.tsx`) and **`/crawls/[crawlId]`** (`
 | Elapsed / Duration | Plus "· done ~HH:MM" while running, or "· paused". Paused time doesn't count. | `elapsed_sec`, `eta_at` |
 | Pages | Fetched; while crawling "/ ~48.2K", with a tooltip "median of the last 5 crawls". | `pages.done`, `crawls.expected_pages` |
 | Errors | % of fetched, plus the count. | crawl `counters.codes` |
-| Target | Host · environment, with a tooltip of the throughput settings. | `crawls.url`, `crawls.environment`, `crawls.settings` |
+| Target | Site · environment ("RBC CM · Production"), with a tooltip of the host and throughput settings. | `crawls.site`, `crawls.environment`, `crawls.url`, `crawls.settings` |
 
-### 3.2 Step list (left, sticky)
+### 3.3 Step list (left, sticky)
 - **Row content:** icon, name, one-line subtitle, and duration (or `~usual` if not started). Running rows add a thin progress bar.
 - **Statuses:** `pending`, `waiting`, `running`, `paused` (pause icon, yellow), `success`, `failed` and `blocked` ("Not run · an earlier step failed").
 - **Selection:**
@@ -120,7 +125,7 @@ Routes: **`/crawls`** (`src/app/crawls/page.tsx`) and **`/crawls/[crawlId]`** (`
   - once started: a normal row.
 - **Below the list:** the crawl-duration sparkline (D9).
 
-### 3.3 Step pane (right)
+### 3.4 Step pane (right)
 - **Header:** icon, name, a badge only for non-running/non-success states, description, `Started HH:MM:SS`, duration / usual.
 - **Progress line:** a thin striped bar at the top while running.
 - **Alerts:** a failure alert with the error message; a rate-limit warning on the crawl while it backs off.
@@ -133,7 +138,7 @@ Routes: **`/crawls`** (`src/app/crawls/page.tsx`) and **`/crawls/[crawlId]`** (`
 | Pages (count) | crawl | Paginated table (D11–D14) |
 | Scores | Lighthouse steps | 4 Lighthouse scores as `ProgressCircle`s, coloured on Lighthouse's scale (≥90 green, ≥50 orange, else red). The sample step offers "Run full audit". |
 
-### 3.4 Pages table
+### 3.5 Pages table
 - **Toolbar:** `DataToolbar` with
   - URL search;
   - filters with counts: **All · Errors · Redirects · Client-side · Skipped**;
@@ -146,18 +151,18 @@ Routes: **`/crawls`** (`src/app/crawls/page.tsx`) and **`/crawls/[crawlId]`** (`
 - **Status semantics:** a client-side redirect shows `200`. Loops count as Errors.
 - **Pagination:** 50 rows per page (Chakra `Pagination`). Changing the filter or search resets to page 1.
 
-### 3.5 Crawl settings dialog
+### 3.6 Crawl settings dialog
 One component (`src/components/crawl-settings-dialog.tsx`) with three modes:
 
 | Section | Fields | create | paused | running / finished |
 |---|---|---|---|---|
-| Target | Environment + URL (attached; picking an environment fills its URL) | editable | 🔒 locked | read-only |
+| Target | Site (from the switcher) + environment + URL (attached; picking an environment fills that site's URL) | editable | 🔒 locked | read-only |
 | Discovery | Find pages from (sitemap and links / sitemap only / links only), exclude paths, render JavaScript, respect robots.txt | editable | 🔒 locked | read-only |
 | Throughput | Request delay (ms), request timeout (s), concurrency (workers), max retries (per URL), Lighthouse sample (pages) | editable | **editable** | read-only |
 
 Footer: **create** → Cancel / Start crawl · **paused** → Cancel / Save / **Save and resume** · **view** → Close. A short alert at the top explains the mode.
 
-### 3.6 Visual rules
+### 3.7 Visual rules
 - Each fact once (D6). Badges only where they add something.
 - **Typography (D25):**
   - monospace only for URLs, log lines and commands;
@@ -326,7 +331,7 @@ Built by `log_line()` / `log_request()` / `log_event()` (§4.1). Never format me
 
 | Step | Lines |
 |---|---|
-| Crawl | `—   START crawl https://shop.example.com (64 workers, delay 250 ms, timeout 30 s)` · `—   SEED 1,200 URLs from sitemap.xml (expecting ~48,200 pages)` · `200 GET /product/10065 (412 ms)` · `301 GET /p/10065 → /product/10065 (88 ms)` · `200 GET /m/product/1 → /product/1 (595 ms, client-side JavaScript)` · `404 GET /product/10066 (120 ms)` · `429 GET /product/10067 (41 ms, will retry)` · `503 GET /product/10068 (900 ms, after 3 attempts)` · `ERR GET /search?q=1 (30.0 s, timed out)` · `ERR GET /product/10069 (redirect loop after 10 hops)` · `—   THROTTLE shop.example.com (429 responses, 64 → 16 workers, backing off 30 s)` · `—   PROGRESS 10,512 pages (39/s, 6,120 queued)` · `OK  DONE crawl (23m 23s, 49,350 pages, +2.4% vs expected)` |
+| Crawl | `—   START crawl https://www.rbccm.com (64 workers, delay 250 ms, timeout 30 s)` · `—   SEED 1,200 URLs from sitemap.xml (expecting ~48,200 pages)` · `200 GET /product/10065 (412 ms)` · `301 GET /p/10065 → /product/10065 (88 ms)` · `200 GET /m/product/1 → /product/1 (595 ms, client-side JavaScript)` · `404 GET /product/10066 (120 ms)` · `429 GET /product/10067 (41 ms, will retry)` · `503 GET /product/10068 (900 ms, after 3 attempts)` · `ERR GET /search?q=1 (30.0 s, timed out)` · `ERR GET /product/10069 (redirect loop after 10 hops)` · `—   THROTTLE www.rbccm.com (429 responses, 64 → 16 workers, backing off 30 s)` · `—   PROGRESS 10,512 pages (39/s, 6,120 queued)` · `OK  DONE crawl (23m 23s, 49,350 pages, +2.4% vs expected)` |
 | Parse | `—   START parse (49,350 pages)` · `OK  PARSE pages 1–10,000 (11.0 s, 9,754 products, 246 skipped)` · `OK  DONE parse (52.5 s, 48,146 products, 1,204 skipped)` |
 | Transform | `OK  BUILD table int_price_history (21.4 s)` · `ERR BUILD table fct_prices (14.0 s, Numeric value '1.299,00' is not recognized, 3,412 prices use a comma decimal separator)` · `ERR STOP transform (52.5 s, 1 model failed, later steps not run)` |
 | Load | `OK  UPSERT table PRODUCTS (12.3 s, 48,146 rows)` · `OK  INSERT audit row (100 ms)` |
@@ -358,6 +363,7 @@ PRAGMA foreign_keys = ON;
 ```sql
 CREATE TABLE crawls (
   id                 TEXT PRIMARY KEY,                 -- shown in the breadcrumb
+  site               TEXT NOT NULL REFERENCES sites(id), -- rbccm | rbcits | … (locked after start)
   environment        TEXT NOT NULL,                    -- production | staging | development (locked after start)
   url                TEXT NOT NULL,                    -- base URL (locked after start)
   status             TEXT NOT NULL CHECK (status IN ('running','paused','success','failed','cancelled')),
@@ -371,8 +377,17 @@ CREATE TABLE crawls (
   started_at         TEXT NOT NULL,
   finished_at        TEXT
 );
-CREATE INDEX crawls_env_started ON crawls (environment, started_at);
+CREATE INDEX crawls_site_started ON crawls (site, started_at);
+CREATE INDEX crawls_env_started ON crawls (site, environment, started_at);
 CREATE INDEX crawls_status ON crawls (status, started_at);
+
+CREATE TABLE sites (                                   -- websites that can be crawled (the navbar switcher)
+  id           TEXT PRIMARY KEY,                       -- rbccm, rbcits
+  name         TEXT NOT NULL,                          -- "RBC Capital Markets"
+  short        TEXT NOT NULL,                          -- "RBC CM"
+  logo_url     TEXT,                                   -- served from the frontend's /public or a CDN
+  environments TEXT NOT NULL                           -- JSON {"production": "https://www.rbccm.com", "staging": "…", "development": "…"}
+);
 
 CREATE TABLE crawl_steps (                             -- one row per step AND per follow-up job
   crawl_id     TEXT NOT NULL REFERENCES crawls(id) ON DELETE CASCADE,
@@ -482,7 +497,7 @@ Flush the queue on shutdown (`atexit`), so the last lines and the final status a
 ```sql
 -- expected_pages: median pages of the last 5 successful crawls of this site
 SELECT items_done FROM crawl_steps s JOIN crawls c ON c.id = s.crawl_id
-WHERE c.environment = :environment AND c.status = 'success' AND s.step_id = 'crawl'
+WHERE c.site = :site AND c.environment = :environment AND c.status = 'success' AND s.step_id = 'crawl'
 ORDER BY c.started_at DESC LIMIT 5;          -- take the median in Python: statistics.median(rows)
 
 -- expected_sec per step: same query over the last 10 crawls, (julianday(finished_at) - julianday(started_at)) * 86400
@@ -534,17 +549,17 @@ All under `/api`. Times are ISO 8601 UTC. Pydantic models mirror the payloads be
 ### 6.0 Crawls list and create
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/crawls?status=running,paused&q=&environment=&page=1&page_size=20` | `{ "items": [CrawlRow], "total": 64, "counts": { "all": 64, "running": 1, "failed": 4, "success": 58 }, "facts": { "running": 1, "last_30_days": 50, "success_rate": 96, "median_duration_sec": { "production": 1465 } } }` |
-| `GET /api/environments` | `[{ "id": "production", "label": "Production", "url": "https://shop.example.com" }, …]`, so the dialog can fill in the URL |
-| `POST /api/crawls` `{ environment, url, settings }` | Validates and starts a crawl → `201 { "id": "813" }`; the UI navigates to `/crawls/813` |
+| `GET /api/sites` | `[{ "id": "rbccm", "name": "RBC Capital Markets", "short": "RBC CM", "logo_url": "/sites/rbccm.svg", "environments": { "production": "https://www.rbccm.com", … } }, …]` (navbar switcher + dialog URLs) |
+| `GET /api/crawls?site=rbccm&status=running,paused&q=&environment=&page=1&page_size=20` | `{ "items": [CrawlRow], "total": 64, "counts": { "all": 64, "running": 1, "failed": 4, "success": 58 }, "facts": { "running": 1, "last_30_days": 50, "success_rate": 96, "median_duration_sec": { "production": 1465 } } }` |
+| `POST /api/crawls` `{ site, environment, url, settings }` | Validates and starts a crawl → `201 { "id": "813" }`; the UI navigates to `/crawls/813` |
 
-`CrawlRow`: `{ "id", "environment", "url", "status", "progress_pct", "pages", "error_pct", "duration_sec", "started_at", "trigger" }`
+`CrawlRow`: `{ "id", "site", "environment", "url", "status", "progress_pct", "pages", "error_pct", "duration_sec", "started_at", "trigger" }`
 
 ### 6.1 Crawl summary: polled every 2s while running
 `GET /api/crawls/{crawl_id}`
 ```json
 {
-  "id": "812", "environment": "production", "url": "https://shop.example.com", "status": "running", "trigger": "schedule",
+  "id": "812", "site": "rbccm", "environment": "production", "url": "https://www.rbccm.com", "status": "running", "trigger": "schedule",
   "settings": { "discovery": "sitemap+links", "exclude": ["/search", "/cart"], "render_js": true, "respect_robots": true,
                 "delay_ms": 250, "timeout_s": 30, "concurrency": 64, "max_retries": 2, "lighthouse_sample": 200 },
   "paused_at": null,

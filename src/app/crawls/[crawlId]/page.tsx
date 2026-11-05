@@ -9,7 +9,7 @@
 //
 // PROTOTYPE: data comes from the simulator in src/lib/crawl.ts and src/lib/pages.ts.
 // SLICES.md describes how to replace it with the FastAPI endpoints in SPEC.md.
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import {
   Alert, Badge, Box, Breadcrumb, Button, ButtonGroup, Container, DataList, EmptyState, Flex, Grid, HStack, Heading, IconButton,
@@ -27,7 +27,9 @@ import NextLink from "next/link";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { CRAWLS, type CrawlRow } from "@/lib/crawls-list";
-import { DEFAULT_SETTINGS, ENVIRONMENTS, hostOf, type CrawlSettings } from "@/lib/settings";
+import { DEFAULT_SETTINGS, ENVIRONMENTS, defaultSettings, hostOf, type CrawlSettings } from "@/lib/settings";
+import { SITES } from "@/lib/sites";
+import { useSite } from "@/components/site-context";
 import { ESTIMATED_PAGES, FULL_LH_SEC, PREVIOUS_CRAWLS, useCrawlRun, type CrawlScenario, type FullJob } from "@/lib/crawl";
 import { PAGE_FILTERS, matches, pageAt, redirectSide, type PageFilter, type PageRow } from "@/lib/pages";
 import { fmtClock, fmtDur, fmtNum, stageDuration, type LogLine, type Stage, type StageStatus } from "@/lib/types";
@@ -42,13 +44,16 @@ const SCENARIOS: { v: CrawlScenario; label: string }[] = [
 function useInitialSettings(row: CrawlRow | undefined): CrawlSettings {
   const raw = useSearchParams().get("settings");
   try { if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }; } catch { /* fall through */ }
-  return row ? { ...DEFAULT_SETTINGS, environment: row.environment, url: row.url } : DEFAULT_SETTINGS;
+  return row ? { ...defaultSettings(row.site), environment: row.environment, url: row.url } : DEFAULT_SETTINGS;
 }
 
 export default function CrawlRunPage() {
   const crawlId = useCrawlId();
   const row = CRAWLS.find((c) => c.id === crawlId);
   const settings = useInitialSettings(row);
+  // Opening a crawl selects its site in the switcher
+  const { site, setSite } = useSite();
+  useEffect(() => { if (settings.site !== site) setSite(settings.site); }, [settings.site]); // eslint-disable-line react-hooks/exhaustive-deps
   const finished = !!row && row.status !== "running" && row.status !== "paused";
   const [scenario, setScenario] = useState<CrawlScenario>(row?.status === "failed" ? "failure" : "healthy");
   const [replay, setReplay] = useState(false); // prototype bar restarts a finished crawl live
@@ -242,8 +247,8 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
             <Span color="fg.muted"> · {fmtNum(run.errors)}</Span>
           </Fact>
           <Fact label="Target">
-            <Tooltip content={`${state.settings.concurrency} workers · delay ${state.settings.delayMs} ms · timeout ${state.settings.timeoutS} s`} showArrow>
-              <Span>{hostOf(state.settings.url)} <Span color="fg.muted">· {ENVIRONMENTS[state.settings.environment].label}</Span></Span>
+            <Tooltip content={`${hostOf(state.settings.url)} · ${state.settings.concurrency} workers · delay ${state.settings.delayMs} ms · timeout ${state.settings.timeoutS} s`} showArrow>
+              <Span>{SITES[state.settings.site].short} <Span color="fg.muted">· {ENVIRONMENTS[state.settings.environment].label}</Span></Span>
             </Tooltip>
           </Fact>
         </DataList.Root>

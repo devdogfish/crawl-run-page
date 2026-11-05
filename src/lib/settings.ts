@@ -2,12 +2,15 @@
 // them mid-run would make the results inconsistent); others only control HOW FAST/HOW HARD it crawls
 // and can be changed while the crawl is paused.
 
+import { DEFAULT_SITE, envUrl, type SiteId } from "@/lib/sites";
+
 export type Environment = "production" | "staging" | "development";
 
-export const ENVIRONMENTS: Record<Environment, { label: string; url: string }> = {
-  production: { label: "Production", url: "https://shop.example.com" },
-  staging: { label: "Staging", url: "https://staging.shop.example.com" },
-  development: { label: "Development", url: "https://dev.shop.example.com" },
+// Environment names. Each site defines its own URL per environment (src/lib/sites.ts).
+export const ENVIRONMENTS: Record<Environment, { label: string }> = {
+  production: { label: "Production" },
+  staging: { label: "Staging" },
+  development: { label: "Development" },
 };
 
 export type Discovery = "sitemap+links" | "sitemap" | "links";
@@ -19,6 +22,7 @@ export const DISCOVERY: Record<Discovery, string> = {
 
 export type CrawlSettings = {
   // Locked after start
+  site: SiteId;
   environment: Environment;
   url: string;
   discovery: Discovery;
@@ -33,11 +37,12 @@ export type CrawlSettings = {
   lighthouseSample: number; // pages audited after the crawl (step hasn't run yet)
 };
 
-export const DEFAULT_SETTINGS: CrawlSettings = {
+export const defaultSettings = (site: SiteId): CrawlSettings => ({
+  site,
   environment: "production",
-  url: ENVIRONMENTS.production.url,
+  url: envUrl(site, "production"),
   discovery: "sitemap+links",
-  exclude: "/search, /cart, /account",
+  exclude: "/search, /login",
   renderJs: true,
   respectRobots: true,
   delayMs: 250,
@@ -45,7 +50,8 @@ export const DEFAULT_SETTINGS: CrawlSettings = {
   concurrency: 64,
   maxRetries: 2,
   lighthouseSample: 200,
-};
+});
+export const DEFAULT_SETTINGS = defaultSettings(DEFAULT_SITE);
 
 export const EDITABLE_WHILE_PAUSED = ["delayMs", "timeoutS", "concurrency", "maxRetries", "lighthouseSample"] as const;
 export type EditableKey = (typeof EDITABLE_WHILE_PAUSED)[number];
