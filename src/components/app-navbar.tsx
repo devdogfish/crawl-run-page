@@ -16,9 +16,9 @@ import { SITES, SITE_IDS, type SiteId } from "@/lib/sites";
 // Top-level sections. Only Crawls is built; the others are placeholders to try the navigation.
 export const SECTIONS = [
   { id: "crawls", label: "Crawls", icon: LuList },
+  { id: "analytics", label: "Analytics", icon: LuChartColumn },
   { id: "pages", label: "Pages", icon: LuFileText },
   { id: "issues", label: "Issues", icon: LuCircleAlert },
-  { id: "analytics", label: "Analytics", icon: LuChartColumn },
   { id: "settings", label: "Settings", icon: LuSettings },
 ] as const;
 export type SectionId = (typeof SECTIONS)[number]["id"];

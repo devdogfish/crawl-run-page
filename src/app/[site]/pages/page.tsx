@@ -143,10 +143,10 @@ function Pages() {
           <DataToolbar<ChangeFilter>
             query={s.q} onQuery={(q) => set({ q })} placeholder="Search URL, title or H1"
             segments={comparing ? [
-              { value: "all", label: `All in #${s.crawl} ${fmtNum(counts.all)}` }, // A's pages = new + changed + unchanged
-              { value: "new", label: `New ${fmtNum(counts.new)}` },
-              { value: "changed", label: `Changed ${fmtNum(counts.changed)}` },
-              { value: "removed", label: `Removed ${fmtNum(counts.removed)}` },
+              { value: "all", label: `All in #${s.crawl} (${fmtNum(counts.all)})` }, // A's pages = new + changed + unchanged
+              { value: "new", label: `New (${fmtNum(counts.new)})` },
+              { value: "changed", label: `Changed (${fmtNum(counts.changed)})` },
+              { value: "removed", label: `Removed (${fmtNum(counts.removed)})` },
             ] : undefined}
             value={s.change} onValue={(change) => set({ change })}
             count={active ? `${rows.length.toLocaleString("en-US")} matches` : comparing ? "" : `${counts.all.toLocaleString("en-US")} pages`}
