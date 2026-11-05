@@ -138,10 +138,11 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
 function Section({ title, note, locked, children }: { title: string; note?: string; locked: boolean; children: React.ReactNode }) {
   return (
     <Stack gap="3">
+      {/* Section headings are small muted caps, so they never compete with field labels */}
       <HStack gap="2" minH="5">
-        <Text textStyle="sm" fontWeight="semibold">{title}</Text>
-        {locked ? <Badge size="sm" variant="subtle" colorPalette="gray"><LuLock />Locked</Badge>
-          : note ? <Badge size="sm" variant="subtle" colorPalette="blue">{note}</Badge> : null}
+        <Text textStyle="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wider">{title}</Text>
+        {locked ? <Badge size="xs" variant="subtle" colorPalette="gray"><LuLock />Locked</Badge>
+          : note ? <Badge size="xs" variant="subtle" colorPalette="blue">{note}</Badge> : null}
       </HStack>
       {children}
     </Stack>
