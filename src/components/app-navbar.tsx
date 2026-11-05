@@ -22,17 +22,16 @@ export const SECTIONS = [
 ] as const;
 export type SectionId = (typeof SECTIONS)[number]["id"];
 
-export function SiteSwitcher({ logoH = "10", full = false, onBrand = false }: { logoH?: string; full?: boolean; onBrand?: boolean }) {
+export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; full?: boolean }) {
   const router = useRouter();
   const site = useSite();
   return (
     <Menu.Root positioning={{ placement: "bottom-start", gutter: 6 }}>
       <Menu.Trigger asChild>
         <Button variant="ghost" h="12" px="2" ms="-2" gap="3" w={full ? "calc(100% + 1rem)" : undefined} justifyContent="space-between"
-          _hover={onBrand ? { bg: "whiteAlpha.200" } : undefined} _expanded={onBrand ? { bg: "whiteAlpha.200" } : undefined}
           aria-label={`${SITES[site].name}: switch site`}>
-          <SiteLogo id={site} h={logoH} white={onBrand} />
-          <Icon as={LuChevronsUpDown} boxSize="4" color={onBrand ? "whiteAlpha.800" : "fg.muted"} />
+          <SiteLogo id={site} h={logoH} />
+          <Icon as={LuChevronsUpDown} boxSize="4" color="fg.muted" />
         </Button>
       </Menu.Trigger>
       <Portal>
@@ -71,9 +70,8 @@ export function NewCrawlButton(props: ButtonProps) {
 }
 
 // Official logo; the white version is used in dark mode
-export function SiteLogo({ id, h = "8", white = false }: { id: SiteId; h?: string; white?: boolean }) {
+export function SiteLogo({ id, h = "8" }: { id: SiteId; h?: string }) {
   const s = SITES[id];
-  if (white) return <Image src={s.logo.dark} alt={s.name} h={h} w="auto" />;
   return (
     <>
       <Image src={s.logo.light} alt={s.name} h={h} w="auto" _dark={{ display: "none" }} />
