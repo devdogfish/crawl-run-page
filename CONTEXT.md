@@ -11,7 +11,7 @@ One website the tool crawls, such as RBC Capital Markets. Each has its own crawl
 _Avoid_: domain, property, project
 
 **Environment**:
-Which copy of a site a crawl targets: Production or QA.
+Which copy of a site a crawl targets: Production or QA. The two are treated almost as separate sites: QA holds a minimal baseline of content for testing new components and isn't updated with new content, so a crawl is only ever compared with a baseline from the same environment.
 _Avoid_: stage, staging, dev
 
 **Crawl**:
@@ -23,7 +23,7 @@ One stage of a crawl, such as discovery, fetching, or the Lighthouse audit.
 _Avoid_: stage, task, phase
 
 **Baseline**:
-An older crawl that another crawl is compared against.
+An older crawl of the same environment that another crawl is compared against.
 _Avoid_: previous crawl, reference, comparison crawl
 
 ### Pages

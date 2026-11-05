@@ -18,7 +18,7 @@ import { CrawlScope } from "@/components/scope-select";
 import { useSite } from "@/components/site-context";
 import { PRIORITIES, PRIORITY, PRIORITY_COLOR } from "@/lib/priority";
 import { byRule, hitsFor, rulesPrompt, type RuleRow, type Seg } from "@/lib/site-issues";
-import { CATEGORIES, LH_SAMPLE, PAGE_TYPES, crawlChoices, fullLighthouse } from "@/lib/site-pages";
+import { CATEGORIES, defaultScope, LH_SAMPLE, PAGE_TYPES, fullLighthouse } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
 
 type Sort = "priority" | "pages" | "elements" | "new";
@@ -32,10 +32,9 @@ export default function IssuesPage() {
 
 function Issues() {
   const site = useSite();
-  const crawls = useMemo(() => crawlChoices(site), [site]);
   const sp = useSearchParams();
 
-  const defaults: State = { crawl: crawls[0].id, vs: crawls[1]?.id ?? "none", q: "", cat: "all", pri: "all", markup: "all", type: "all", sort: "priority", seg: "all" };
+  const defaults: State = { ...defaultScope(site), q: "", cat: "all", pri: "all", markup: "all", type: "all", sort: "priority", seg: "all" };
   const [s, setS] = useState<State>(() => {
     const init = { ...defaults };
     for (const k of Object.keys(defaults) as (keyof State)[]) { const v = sp.get(k); if (v != null) (init as Record<string, string>)[k] = v; }

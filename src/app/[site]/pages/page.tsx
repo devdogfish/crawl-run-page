@@ -22,13 +22,12 @@ import { LuLink, LuX } from "react-icons/lu";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { FilterSelect } from "@/components/filter-select";
-import { ScopeSelect } from "@/components/scope-select";
+import { CrawlScope } from "@/components/scope-select";
 import { TablePagination } from "@/components/table-pagination";
 import { useSite } from "@/components/site-context";
 import { crawlsFor } from "@/lib/crawls-list";
-import { ENVIRONMENTS } from "@/lib/settings";
 import {
-  CATEGORIES, LH_SAMPLE, PAGE_TYPES, RULES, YEARS, crawlChoices, fullLighthouse, issuesIn, linksTo, normalizeTarget, pagesFor, ruleMatches,
+  CATEGORIES, defaultScope, LH_SAMPLE, PAGE_TYPES, RULES, YEARS, fullLighthouse, issuesIn, linksTo, normalizeTarget, pagesFor, ruleMatches,
   severity, totalIssues, yearOf, type Category, type Change, type PageView, type RuleId,
 } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
@@ -50,12 +49,11 @@ export default function PagesPage() {
 
 function Pages() {
   const site = useSite();
-  const crawls = useMemo(() => crawlChoices(site), [site]);
   const dates = useMemo(() => new Map(crawlsFor(site).map((c) => [Number(c.id), c.startedAt])), [site]); // any crawl, failed ones too
   const sp = useSearchParams();
 
   // Defaults: the latest finished crawl, compared with the one before it
-  const defaults: State = { crawl: crawls[0].id, vs: crawls[1]?.id ?? "none", q: "", type: "all", year: "all", rule: "none", links: "", sort: "worst", change: "all" };
+  const defaults: State = { ...defaultScope(site), q: "", type: "all", year: "all", rule: "none", links: "", sort: "worst", change: "all" };
   const [s, setS] = useState<State>(() => {
     const init = { ...defaults };
     for (const k of Object.keys(defaults) as (keyof State)[]) { const v = sp.get(k); if (v != null) (init as Record<string, string>)[k] = v; }
@@ -119,7 +117,6 @@ function Pages() {
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const active = (["q", "type", "year", "rule", "links"] as const).some((k) => s[k] !== defaults[k]);
-  const crawlLabel = (id: string) => { const c = crawls.find((x) => x.id === id); return c ? `#${c.id} · ${fmtDay(c.startedAt)}` : `#${id}`; };
 
   const toCsv = () => ["url,title,type,status,issues,critical,change,last_changed" + (rule ? ",rule_matches" : ""),
     ...rows.map(({ p, matches }) => [p.path, p.title, p.type, p.status, totalIssues(p), p.critical, p.change ?? "", p.lastChanged ?? "", ...(rule ? [matches] : [])]
@@ -135,19 +132,7 @@ function Pages() {
         <Container maxW="7xl" pt="7" pb="5">
           <Flex justify="space-between" align={{ base: "start", md: "center" }} direction={{ base: "column", md: "row" }} gap="4">
             <Heading size="xl" fontWeight="semibold">Pages</Heading>
-            <HStack gap="2" wrap="wrap">
-              <ScopeSelect label="Crawl" value={s.crawl} onChange={(v) => {
-                // The baseline has to be older than the crawl; keep "previous" relative
-                const idx = crawls.findIndex((c) => c.id === v);
-                set({ crawl: v, vs: s.vs === "none" ? "none" : Number(s.vs) < Number(v) ? s.vs : crawls[idx + 1]?.id ?? "none" });
-              }} items={crawls.map((c) => ({ value: c.id, label: crawlLabel(c.id), hint: ENVIRONMENTS[c.environment].label }))} />
-              <Text textStyle="sm" color="fg.muted">compared with</Text>
-              <ScopeSelect label="Baseline" value={s.vs} onChange={(v) => set({ vs: v, change: "all" })}
-                items={[{ value: "none", label: "No comparison", hint: "" }, ...crawls.filter((c) => Number(c.id) < a).map((c) => {
-                  const days = Math.round(((dates.get(a)?.getTime() ?? 0) - c.startedAt.getTime()) / 86_400_000);
-                  return { value: c.id, label: crawlLabel(c.id), hint: days <= 0 ? "Same day" : `${days} day${days === 1 ? "" : "s"} earlier` };
-                })]} />
-            </HStack>
+            <CrawlScope crawl={s.crawl} vs={s.vs} onChange={(crawl, vs) => set({ crawl, vs, change: "all" })} />
           </Flex>
 
         </Container>

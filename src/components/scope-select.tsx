@@ -4,7 +4,7 @@
 import { HStack, Portal, Select, Text } from "@chakra-ui/react";
 import { useSite } from "@/components/site-context";
 import { ENVIRONMENTS } from "@/lib/settings";
-import { crawlChoices } from "@/lib/site-pages";
+import { baselinesFor, crawlChoices } from "@/lib/site-pages";
 import { useItems, type Item } from "@/components/filter-select";
 
 export function ScopeSelect({ label, value, onChange, items }: { label: string; value: string; onChange: (v: string) => void; items: Item[] }) {
@@ -33,21 +33,23 @@ export function ScopeSelect({ label, value, onChange, items }: { label: string; 
   );
 }
 
-// "Crawl [#A] compared with [#B]": the baseline has to be older than the crawl; changing the crawl keeps "previous" relative
+// "Crawl [#A] compared with [#B]": the baseline is an earlier crawl of the same environment (production and QA are
+// separate sites). Changing the crawl keeps the baseline if it still fits, else picks the previous crawl of that environment.
 export function CrawlScope({ crawl, vs, onChange }: { crawl: string; vs: string; onChange: (crawl: string, vs: string) => void }) {
   const site = useSite();
   const crawls = crawlChoices(site);
   const at = crawls.find((c) => c.id === crawl)?.startedAt.getTime() ?? 0;
   const label = (id: string) => { const c = crawls.find((x) => x.id === id); return c ? `#${c.id} · ${fmtDay(c.startedAt)}` : `#${id}`; };
+  const baselines = baselinesFor(site, crawl);
   return (
     <HStack gap="2" wrap="wrap">
       <ScopeSelect label="Crawl" value={crawl} onChange={(v) => {
-        const idx = crawls.findIndex((c) => c.id === v);
-        onChange(v, vs === "none" ? "none" : Number(vs) < Number(v) ? vs : crawls[idx + 1]?.id ?? "none");
+        const fits = baselinesFor(site, v);
+        onChange(v, vs === "none" ? "none" : fits.some((c) => c.id === vs) ? vs : fits[0]?.id ?? "none");
       }} items={crawls.map((c) => ({ value: c.id, label: label(c.id), hint: ENVIRONMENTS[c.environment].label }))} />
       <Text textStyle="sm" color="fg.muted">compared with</Text>
       <ScopeSelect label="Baseline" value={vs} onChange={(v) => onChange(crawl, v)}
-        items={[{ value: "none", label: "No comparison", hint: "" }, ...crawls.filter((c) => Number(c.id) < Number(crawl)).map((c) => {
+        items={[{ value: "none", label: "No comparison", hint: "" }, ...baselines.map((c) => {
           const days = Math.round((at - c.startedAt.getTime()) / 86_400_000);
           return { value: c.id, label: label(c.id), hint: days <= 0 ? "Same day" : `${days} day${days === 1 ? "" : "s"} earlier` };
         })]} />

@@ -20,7 +20,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { RULE_CATALOG, SEVERITIES } from "@/lib/page-issues";
 import { PRIORITY, PRIORITY_COLOR } from "@/lib/priority";
 import { byRule, countOf, hitsFor, rulesPrompt, type Seg } from "@/lib/site-issues";
-import { CATEGORIES, LH_SAMPLE, PAGE_TYPES, crawlChoices, fullLighthouse, type PageView } from "@/lib/site-pages";
+import { CATEGORIES, defaultScope, LH_SAMPLE, PAGE_TYPES, fullLighthouse, type PageView } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
 
 type State = { crawl: string; vs: string; q: string; el: string; type: string; seg: Seg };
@@ -36,10 +36,9 @@ function RuleView() {
   const { ruleId } = useParams<{ ruleId: string }>();
   const rule = RULE_CATALOG[ruleId];
   if (!rule) notFound();
-  const crawls = useMemo(() => crawlChoices(site), [site]);
   const sp = useSearchParams();
 
-  const defaults: State = { crawl: crawls[0].id, vs: crawls[1]?.id ?? "none", q: "", el: "all", type: "all", seg: "all" };
+  const defaults: State = { ...defaultScope(site), q: "", el: "all", type: "all", seg: "all" };
   const [s, setS] = useState<State>(() => {
     const init = { ...defaults };
     for (const k of Object.keys(defaults) as (keyof State)[]) { const v = sp.get(k); if (v != null) (init as Record<string, string>)[k] = v; }

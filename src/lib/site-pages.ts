@@ -132,6 +132,16 @@ export const ruleMatches = (p: SitePage, rule: RuleId) => {
 // Finished crawls you can look at, newest first
 export const crawlChoices = (site: SiteId): CrawlRow[] => crawlsFor(site).filter((c) => c.status === "success");
 
+// Production and QA are treated as separate sites: QA holds a minimal baseline of content for testing components.
+// Views open on the latest production crawl, and a baseline is always an earlier crawl of the same environment.
+export const defaultCrawl = (site: SiteId) => { const c = crawlChoices(site); return c.find((x) => x.environment === "production") ?? c[0]; };
+export const baselinesFor = (site: SiteId, crawlId: string) => {
+  const c = crawlChoices(site);
+  const env = c.find((x) => x.id === crawlId)?.environment;
+  return c.filter((x) => Number(x.id) < Number(crawlId) && x.environment === env);
+};
+export const defaultScope = (site: SiteId) => { const a = defaultCrawl(site).id; return { crawl: a, vs: baselinesFor(site, a)[0]?.id ?? "none" }; };
+
 // Every 10th crawl ran Lighthouse on the whole site; the others on a sample
 export const fullLighthouse = (crawlId: number) => crawlId % 10 === 0;
 export const LH_SAMPLE = 200;

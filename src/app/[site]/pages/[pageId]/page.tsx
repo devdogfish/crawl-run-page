@@ -27,7 +27,7 @@ import {
 } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
 import { downloadText } from "@/components/data-toolbar";
-import { CATEGORIES, crawlChoices, pageView, siteSize } from "@/lib/site-pages";
+import { CATEGORIES, crawlChoices, defaultCrawl, pageView, siteSize } from "@/lib/site-pages";
 import { SITES, envUrl, type SiteId } from "@/lib/sites";
 
 type Seg = "all" | "new" | "fixed";
@@ -46,8 +46,7 @@ function PageDetail() {
   const site = useSite();
   const { pageId } = useParams<{ pageId: string }>();
   const sp = useSearchParams();
-  const crawls = useMemo(() => crawlChoices(site), [site]);
-  const a = Number(sp.get("crawl") ?? crawls[0].id);
+  const a = Number(sp.get("crawl") ?? defaultCrawl(site).id);
   const b = sp.get("vs") ? Number(sp.get("vs")) : null;
   const p = useMemo(() => pageView(site, Number(pageId), a, b), [site, pageId, a, b]);
   if (!p) {
