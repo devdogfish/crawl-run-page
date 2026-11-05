@@ -1,8 +1,6 @@
-"use client";
-
 // The parts of a rule shown the same way everywhere (rule page, a page's issue): the one-line meta, and the
 // guidance (why it matters, how to fix, references).
-import NextLink from "next/link";
+import { Link as RouterLink } from "react-router";
 import { Badge, HStack, Heading, Icon, Link, Stack, Text } from "@chakra-ui/react";
 import { LuChevronLeft, LuExternalLink } from "react-icons/lu";
 
@@ -14,7 +12,7 @@ import { CATEGORIES } from "@/lib/site-pages";
 export function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Link asChild textStyle="sm" color="fg.muted" _hover={{ color: "fg" }} w="fit-content" mb="2" display="inline-flex" gap="0.5" alignItems="center">
-      <NextLink href={href}><Icon as={LuChevronLeft} boxSize="4" />{children}</NextLink>
+      <RouterLink to={href}><Icon as={LuChevronLeft} boxSize="4" />{children}</RouterLink>
     </Link>
   );
 }

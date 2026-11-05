@@ -1,5 +1,3 @@
-"use client"
-
 import type { IconButtonProps, SpanProps } from "@chakra-ui/react"
 import { ClientOnly, IconButton, Skeleton, Span } from "@chakra-ui/react"
 import { ThemeProvider, useTheme } from "next-themes"
@@ -11,7 +9,9 @@ export type ColorModeProviderProps = ThemeProviderProps;
 
 export function ColorModeProvider(props: ColorModeProviderProps) {
   return (
-    <ThemeProvider attribute="class" disableTransitionOnChange {...props} />
+    // next-themes' inline script only runs in server-rendered HTML; index.html sets the theme before React loads,
+    // and a data-block type keeps React from warning about the unused script.
+    <ThemeProvider attribute="class" disableTransitionOnChange scriptProps={{ type: "application/json" }} {...props} />
   )
 }
 

@@ -1,5 +1,3 @@
-"use client";
-
 // Crawl / baseline pickers in page headers (Pages, Issues): crawl id + date, with the distance as a hint
 import { HStack, Portal, Select, Text } from "@chakra-ui/react";
 import { useSite } from "@/components/site-context";

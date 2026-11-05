@@ -1,5 +1,3 @@
-"use client";
-
 // Footer pagination for every data panel (crawl history, pages, a crawl's pages tab).
 // Chakra renders "…" as plain text; here each "…" opens a small "Go to page" box so any page is two clicks away.
 import { useState } from "react";

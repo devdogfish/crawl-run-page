@@ -1,5 +1,3 @@
-"use client";
-
 // Pages · /[site]/pages: every page of the site in one crawl, or the delta between two crawls.
 // Same frame as Crawl history: header (scope) → facts row → one data panel (toolbar + filters + table + pagination).
 //
@@ -13,8 +11,8 @@
 //
 // PROTOTYPE: data comes from src/lib/site-pages.ts. Rows don't open a page detail yet.
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import NextLink from "next/link";
+import { useSearchParams } from "react-router";
+import { Link as RouterLink } from "react-router";
 import {
   Badge, Box, Button, Container, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Stack, Text,
 } from "@chakra-ui/react";
@@ -50,7 +48,7 @@ export default function PagesPage() {
 function Pages() {
   const site = useSite();
   const dates = useMemo(() => new Map(crawlsFor(site).map((c) => [Number(c.id), c.startedAt])), [site]); // any crawl, failed ones too
-  const sp = useSearchParams();
+  const sp = useSearchParams()[0];
 
   // Defaults: the latest finished crawl, compared with the one before it
   const defaults: State = { ...defaultScope(site), q: "", type: "all", year: "all", rule: "none", links: "", sort: "worst", change: "all" };
@@ -67,7 +65,7 @@ function Pages() {
     const p = new URLSearchParams();
     for (const k of Object.keys(s) as (keyof State)[]) if (s[k] !== defaults[k]) p.set(k, s[k]);
     const qs = p.toString();
-    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
   }, [s]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const a = Number(s.crawl);
@@ -237,7 +235,7 @@ function PageRowView({ p, cols, cat, matches, changedOn, since, href }: {
   return (
     <Grid asChild templateColumns={cols} gap="3" px="3" py="2" alignItems="center" textStyle="xs"
       borderBottomWidth="1px" borderColor="border.muted" _hover={{ bg: "bg.subtle" }} fontVariantNumeric="tabular-nums">
-      <NextLink href={href}>
+      <RouterLink to={href}>
       <Stack gap="0" minW="0">
         <HStack gap="2" minW="0">
           <Text textStyle="sm" truncate color={removed ? "fg.muted" : undefined} title={p.title}>{p.title}</Text>
@@ -254,7 +252,7 @@ function PageRowView({ p, cols, cat, matches, changedOn, since, href }: {
         {change && <Badge size="xs" variant="outline" colorPalette={change.color}>{change.label}</Badge>}
         {!removed && <Text color="fg.muted">{changedOn ? fmtDay(changedOn) : `Before ${fmtDay(since)}`}</Text>}
       </HStack>
-      </NextLink>
+      </RouterLink>
     </Grid>
   );
 }

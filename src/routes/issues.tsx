@@ -1,5 +1,3 @@
-"use client";
-
 // Issues · /[site]/issues: every rule failing in one crawl, across the whole site.
 // The Pages page is per page ("what's wrong here"); this is per rule ("what fails most, and on which elements"):
 // one row per rule, its pages and elements, and the element pattern most of them are on. "Shared" means the
@@ -8,8 +6,8 @@
 // Filters live in the URL like the Pages page. Rows open the rule: /[site]/issues/[ruleId].
 // PROTOTYPE: data from src/lib/site-issues.ts.
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import NextLink from "next/link";
+import { useSearchParams } from "react-router";
+import { Link as RouterLink } from "react-router";
 import { Box, Button, CloseButton, Container, Flex, Grid, HStack, Heading, Stack, Text } from "@chakra-ui/react";
 import { LuPlus } from "react-icons/lu";
 
@@ -39,7 +37,7 @@ function Issues() {
   const [custom, setCustom] = useState<CustomRule[]>([]);
   useEffect(() => setCustom(loadRules(site)), [site]);
   const updateCustom = (next: CustomRule[]) => { setCustom(next); saveRules(site, next); };
-  const sp = useSearchParams();
+  const sp = useSearchParams()[0];
 
   const defaults: State = { ...defaultScope(site), q: "", cat: "all", pri: "all", markup: "all", type: "all", sort: "priority", seg: "all" };
   const [s, setS] = useState<State>(() => {
@@ -52,7 +50,7 @@ function Issues() {
     const p = new URLSearchParams();
     for (const k of Object.keys(s) as (keyof State)[]) if (s[k] !== defaults[k]) p.set(k, s[k]);
     const qs = p.toString();
-    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
   }, [s]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const a = Number(s.crawl);
@@ -201,7 +199,7 @@ function RuleRowView({ r, cols, showChange, href }: { r: RuleRow; cols: string; 
   return (
     <Grid asChild templateColumns={cols} gap="4" px="3" py="2.5" alignItems="center" textStyle="xs"
       borderBottomWidth="1px" borderColor="border.muted" _hover={{ bg: "bg.subtle" }} fontVariantNumeric="tabular-nums">
-      <NextLink href={href}>
+      <RouterLink to={href}>
         <HStack gap="3" minW="0" align="start">
           <Text fontWeight="medium" color={PRIORITY_COLOR[r.priority]} w="5" flexShrink={0} lineHeight="1.25rem">{r.priority}</Text>
           <Stack gap="0" minW="0">
@@ -224,7 +222,7 @@ function RuleRowView({ r, cols, showChange, href }: { r: RuleRow; cols: string; 
             {!r.added && !r.fixed && <Text color="fg.subtle">No change</Text>}
           </HStack>
         )}
-      </NextLink>
+      </RouterLink>
     </Grid>
   );
 }

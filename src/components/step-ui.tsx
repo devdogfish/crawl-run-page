@@ -1,5 +1,3 @@
-"use client";
-
 // Small shared pieces for steps: status labels, status icon, per-step throughput chart.
 import { Chart, useChart } from "@chakra-ui/charts";
 import { Icon, Spinner } from "@chakra-ui/react";

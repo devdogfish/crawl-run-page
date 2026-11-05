@@ -1,5 +1,3 @@
-"use client";
-
 // "New rule": a custom check the crawler runs on every page's stored HTML.
 // Fields: name, where to look, what to look for (found or missing, text or regex), which pages, priority, category, how to fix.
 import { useState } from "react";

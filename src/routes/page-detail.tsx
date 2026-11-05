@@ -1,5 +1,3 @@
-"use client";
-
 // Page detail · /[site]/pages/[pageId]?crawl=811&vs=810
 // For a developer fixing one page. Quiet by default: the list of what's wrong on this page, and the selected
 // issue with how to fix it. Shared issues (header, footer, banners) are folded away: they're fixed in the template.
@@ -10,8 +8,8 @@
 //
 // PROTOTYPE: data from src/lib/page-issues.ts; assistant answers are scripted from that data.
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import NextLink from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { Link as RouterLink } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import {
   Box, Button, Code, Collapsible, Container, EmptyState, Flex, Grid, HStack, Heading, Icon, IconButton, Input, InputGroup, Link, Menu, Portal,
   SegmentGroup, Span, Stack, Tabs, Text,
@@ -46,7 +44,7 @@ export default function PageDetailRoute() {
 function PageDetail() {
   const site = useSite();
   const { pageId } = useParams<{ pageId: string }>();
-  const sp = useSearchParams();
+  const sp = useSearchParams()[0];
   const a = Number(sp.get("crawl") ?? defaultCrawl(site).id);
   const b = sp.get("vs") ? Number(sp.get("vs")) : null;
   const p = useMemo(() => pageView(site, Number(pageId), a, b), [site, pageId, a, b]);
@@ -56,7 +54,7 @@ function PageDetail() {
         <EmptyState.Root><EmptyState.Content>
           <EmptyState.Indicator><LuFileQuestion /></EmptyState.Indicator>
           <EmptyState.Title>This page isn&apos;t in crawl #{a}</EmptyState.Title>
-          <EmptyState.Description><Link asChild><NextLink href={`/${site}/pages`}>Back to Pages</NextLink></Link></EmptyState.Description>
+          <EmptyState.Description><Link asChild><RouterLink to={`/${site}/pages`}>Back to Pages</RouterLink></Link></EmptyState.Description>
         </EmptyState.Content></EmptyState.Root>
       </Container>
     );
@@ -70,7 +68,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const { instances, html } = useMemo(() => pageIssues(p, a, b, siteSize(site)), [p, a, b, site]);
   const [tab, setTab] = useState<"issues" | "preview" | "source">("issues");
   // Shareable state lives in the URL: ?issue=18&pri=P1&cat=accessibility&q=…&seg=new
-  const sp = useSearchParams();
+  const sp = useSearchParams()[0];
   const list = (k: string) => (sp.get(k) ? sp.get(k)!.split(",") : []);
   const [q, setQ] = useState(sp.get("q") ?? "");
   const [seg, setSeg] = useState<Seg>((sp.get("seg") as Seg) ?? "all");
@@ -124,7 +122,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
     if (seg !== "all") u.set("seg", seg);
     if (pri.length) u.set("pri", pri.join(","));
     if (cats.length) u.set("cat", cats.join(","));
-    window.history.replaceState(null, "", `${window.location.pathname}?${u}`);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}?${u}`);
   }, [current?.k, q, seg, pri, cats, a, b]); // eslint-disable-line react-hooks/exhaustive-deps
   const linkTo = (it: Instance) => typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}?crawl=${a}${b != null ? `&vs=${b}` : ""}&issue=${it.k + 1}`;
 

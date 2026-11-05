@@ -1,13 +1,12 @@
-"use client";
-
 // One rule across the site · /[site]/issues/[ruleId]
 //   Header: the rule, and a one-line summary (element, pages, instances, shared or page-specific markup).
 //   Pages: every page this rule fails on, linking to the page detail with the issue selected.
 //   Side: why it matters, how to fix, references, and handoff (prompt, API request).
 // State in the URL: ?crawl=&vs=&el=&type=&seg=&q=
 import { Suspense, useEffect, useMemo, useState } from "react";
-import NextLink from "next/link";
-import { notFound, useParams, useSearchParams } from "next/navigation";
+import { Link as RouterLink } from "react-router";
+import { useParams, useSearchParams } from "react-router";
+import { NotFound } from "@/routes/not-found";
 import { Box, Button, Container, Flex, Grid, HStack, Stack, Text } from "@chakra-ui/react";
 import { LuCheck, LuCopy, LuTerminal } from "react-icons/lu";
 
@@ -27,15 +26,16 @@ const PAGE_SIZE = 50;
 const n = (x: number) => x.toLocaleString("en-US");
 
 export default function RulePage() {
-  return <Suspense><RuleView /></Suspense>;
+  const { ruleId = "" } = useParams();
+  if (!RULE_CATALOG[ruleId]) return <NotFound />;
+  return <Suspense><RuleView key={ruleId} /></Suspense>;
 }
 
 function RuleView() {
   const site = useSite();
-  const { ruleId } = useParams<{ ruleId: string }>();
-  const rule = RULE_CATALOG[ruleId];
-  if (!rule) notFound();
-  const sp = useSearchParams();
+  const { ruleId = "" } = useParams();
+  const rule = RULE_CATALOG[ruleId]; // RulePage only renders this for a known rule
+  const sp = useSearchParams()[0];
 
   const defaults: State = { ...defaultScope(site), q: "", el: "all", type: "all", seg: "all" };
   const [s, setS] = useState<State>(() => {
@@ -49,7 +49,7 @@ function RuleView() {
     const p = new URLSearchParams();
     for (const k of Object.keys(s) as (keyof State)[]) if (s[k] !== defaults[k]) p.set(k, s[k]);
     const qs = p.toString();
-    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
   }, [s]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const a = Number(s.crawl);
@@ -145,7 +145,7 @@ function RuleView() {
                   {pages.length === 0 ? <Text p="4" textStyle="sm" color="fg.muted">No pages match.</Text> : pageRows.map((r) => (
                     <Grid key={r.p.i} asChild templateColumns={tpl} gap="4" px="3" py="2" alignItems="center" textStyle="xs"
                       borderBottomWidth="1px" borderColor="border.muted" _hover={{ bg: "bg.subtle" }} fontVariantNumeric="tabular-nums">
-                      <NextLink href={pageHref(r)}>
+                      <RouterLink to={pageHref(r)}>
                         <Stack gap="0" minW="0">
                           <HStack gap="2" minW="0">
                             <Text textStyle="sm" truncate title={r.p.title}>{r.p.title}</Text>
@@ -159,7 +159,7 @@ function RuleView() {
                           </Text>
                         )}
                         <Text textAlign="right" fontWeight="medium">{r.elements}</Text>
-                      </NextLink>
+                      </RouterLink>
                     </Grid>
                   ))}
                 </Box>

@@ -39,8 +39,8 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 - `GET /api/crawls/{crawl_id}` (SPEC §6.1): id, url, status, trigger, settings, timestamps, `elapsed_sec` and `steps[]`. Leave `progress_pct`, `eta_at`, `pages` and `history` null until slice 3. Use read-only connections, plus `ETag`/`304`.
 
 **Frontend**
-- Move `src/app/[site]/crawls/page.tsx` and `src/app/[site]/crawls/[crawlId]/page.tsx` into your app at the same routes. Copy `src/components/*`, `src/lib/types.ts` and `src/lib/settings.ts`.
-- **Navbar:** mount `AppNavbar` inside `SiteProvider` (see `src/app/layout.tsx`). Load the sites from `GET /api/sites` instead of `src/lib/sites.ts`, and put the official logo files in `/public/sites/`.
+- Move `src/routes/crawls.tsx` and `src/routes/crawl-run.tsx` into your app at the same routes (see `src/app.tsx`). Copy `src/components/*`, `src/lib/types.ts` and `src/lib/settings.ts`.
+- **Navbar:** mount `AppNavbar` inside `SiteProvider` (see `src/routes/site-layout.tsx`). Load the sites from `GET /api/sites` instead of `src/lib/sites.ts`, and put the official logo files in `/public/sites/`.
 - **Crawls page:** replace `CRAWLS` (from `src/lib/crawls-list.ts`) with a `useCrawls({ status, q, page })` query. Leave the **New crawl** button disabled until slice 5.
 - **Run page:** **delete** `PrototypeBar`, `SCENARIOS`, the `?settings=` / `CRAWLS` lookup and the `useCrawlRun` simulator usage.
 - Add a `useCrawl(crawlId)` hook that polls the summary every 2s while `status === "running"`. Map `steps[]` to the existing `StepInfo` shape in `useSteps`.

@@ -1,9 +1,7 @@
-"use client";
-
 // Navigation building blocks shared by both layouts (top tabs and sidebar):
 // site switcher with the official logo, the New crawl button, and the list of sections.
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router";
 import { Badge, Box, Button, HStack, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
 import { LuChartColumn, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
 
@@ -24,7 +22,7 @@ export const SECTIONS = [
 export type SectionId = (typeof SECTIONS)[number]["id"];
 
 export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; full?: boolean }) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const site = useSite();
   return (
     <Menu.Root positioning={{ placement: "bottom-start", gutter: 6 }}>
@@ -40,7 +38,7 @@ export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; f
           <Menu.Content minW="80" p="1.5">
             <Text textStyle="xs" fontWeight="medium" color="fg.muted" px="2" pt="1" pb="2">Switch site</Text>
             {SITE_IDS.map((id) => (
-              <Menu.Item key={id} value={id} onClick={() => id !== site && router.push(`/${id}/crawls`)} gap="3" py="2.5" px="2" rounded="l2">
+              <Menu.Item key={id} value={id} onClick={() => id !== site && navigate(`/${id}/crawls`)} gap="3" py="2.5" px="2" rounded="l2">
                 <Box w="24" flexShrink={0}><SiteLogo id={id} h="9" /></Box>
                 <Box flex="1" minW="0">
                   <HStack gap="2">{SITES[id].qa && <QaBadge />}<Text textStyle="xs" color="fg.muted" truncate>{hostOf(SITES[id].url)}</Text></HStack>
@@ -56,7 +54,7 @@ export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; f
 }
 
 export function NewCrawlButton(props: ButtonProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const site = useSite();
   const [open, setOpen] = useState(false);
   return (
@@ -64,7 +62,7 @@ export function NewCrawlButton(props: ButtonProps) {
       <Button size="sm" onClick={() => setOpen(true)} {...props}><LuPlus />New crawl</Button>
       <CrawlSettingsDialog
         open={open} onOpenChange={setOpen} mode="create" initial={defaultSettings(site)}
-        onSubmit={(s) => router.push(`/${site}/crawls/${Number(crawlsFor(site)[0].id) + 1}?settings=${encodeURIComponent(JSON.stringify(s))}`)}
+        onSubmit={(s) => navigate(`/${site}/crawls/${Number(crawlsFor(site)[0].id) + 1}?settings=${encodeURIComponent(JSON.stringify(s))}`)}
       />
     </>
   );

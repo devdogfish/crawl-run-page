@@ -1,10 +1,8 @@
-"use client";
-
 // Crawl history · /[site]/crawls
 // Same frame as the run page: facts row → one data panel
 // (shared toolbar + table + pagination). Rows open /[site]/crawls/[crawlId].
 import { useMemo, useState } from "react";
-import NextLink from "next/link";
+import { Link as RouterLink } from "react-router";
 import {
   Box, Container, DataList, Flex, Grid, HStack, Heading, Progress, Span, Text,
 } from "@chakra-ui/react";
@@ -111,7 +109,7 @@ function CrawlRowView({ c, site }: { c: CrawlRow; site: string }) {
       asChild templateColumns={COLS} gap="4" px="4" py="2.5" alignItems="center" textStyle="sm"
       borderBottomWidth="1px" borderColor="border.muted" _hover={{ bg: "bg.subtle" }} fontVariantNumeric="tabular-nums"
     >
-      <NextLink href={`/${site}/crawls/${c.id}`}>
+      <RouterLink to={`/${site}/crawls/${c.id}`}>
         <Text fontWeight="medium">{c.id}</Text>
         <Text color="fg.muted" truncate>{hostOf(c.url)}</Text>
         <HStack gap="2">
@@ -128,7 +126,7 @@ function CrawlRowView({ c, site }: { c: CrawlRow; site: string }) {
         <Text textAlign="right">{live ? <Span color="fg.muted">{fmtDur(c.durationSec)}</Span> : fmtDur(c.durationSec)}</Text>
         <Text color="fg.muted">{fmtDate(c.startedAt)}</Text>
         <Text color="fg.muted">{c.trigger}</Text>
-      </NextLink>
+      </RouterLink>
     </Grid>
   );
 }

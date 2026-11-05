@@ -1,5 +1,3 @@
-"use client";
-
 // Charts shared by option F (copied from D so D/E stay untouched)
 import { useMemo } from "react";
 import { BarSegment, Chart, useChart } from "@chakra-ui/charts";

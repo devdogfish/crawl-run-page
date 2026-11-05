@@ -1,13 +1,11 @@
-"use client";
-
 // PROTOTYPE: the three shortlisted navigation layouts, switchable in Settings → Navigation layout.
 //   compact → one row: site switcher · section pills · New crawl
 //   center  → one row: site switcher · centered segmented sections · New crawl, no border
 //   side    → left sidebar (site switcher, New crawl, sections); pages get the full height
 // Pick one, then delete the others and the Settings control.
 import { createContext, useContext, useEffect, useState } from "react";
-import NextLink from "next/link";
-import { usePathname } from "next/navigation";
+import { Link as RouterLink } from "react-router";
+import { useLocation } from "react-router";
 import { Box, Container, Flex, Grid, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 
 import { NewCrawlButton, SECTIONS, SiteSwitcher } from "@/components/app-navbar";
@@ -53,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function useActiveSection() {
-  return usePathname().split("/")[2] ?? "crawls";
+  return useLocation().pathname.split("/")[2] ?? "crawls";
 }
 
 // ───────────────────────── Option 1: compact, one row ─────────────────────────
@@ -73,7 +71,7 @@ function CompactLayout({ children }: { children: React.ReactNode }) {
                   <Box asChild key={s.id} px="3" py="1.5" rounded="l2" textStyle="sm" fontWeight="medium"
                     color={on ? "fg" : "fg.muted"} bg={on ? "bg.muted" : undefined} _hover={{ color: "fg", bg: "bg.muted" }}
                     aria-current={on ? "page" : undefined}>
-                    <NextLink href={`/${site}/${s.id}`}>{s.label}</NextLink>
+                    <RouterLink to={`/${site}/${s.id}`}>{s.label}</RouterLink>
                   </Box>
                 );
               })}
@@ -104,7 +102,7 @@ function CenterLayout({ children }: { children: React.ReactNode }) {
                   <Box asChild key={s.id} px="3.5" py="1" rounded="full" textStyle="sm" fontWeight="medium"
                     color={on ? "fg" : "fg.muted"} bg={on ? "bg" : undefined} shadow={on ? "xs" : undefined}
                     _hover={{ color: "fg" }} aria-current={on ? "page" : undefined}>
-                    <NextLink href={`/${site}/${s.id}`}>{s.label}</NextLink>
+                    <RouterLink to={`/${site}/${s.id}`}>{s.label}</RouterLink>
                   </Box>
                 );
               })}
@@ -135,10 +133,10 @@ function SideLayout({ children }: { children: React.ReactNode }) {
               <HStack asChild key={s.id} gap="2.5" px="2.5" py="2" rounded="l2" textStyle="sm" fontWeight="medium"
                 color={on ? "fg" : "fg.muted"} bg={on ? "bg.muted" : undefined} _hover={{ bg: "bg.muted", color: "fg" }}
                 aria-current={on ? "page" : undefined}>
-                <NextLink href={`/${site}/${s.id}`}>
+                <RouterLink to={`/${site}/${s.id}`}>
                   <Icon as={s.icon} boxSize="4" />
                   {s.label}
-                </NextLink>
+                </RouterLink>
               </HStack>
             );
           })}

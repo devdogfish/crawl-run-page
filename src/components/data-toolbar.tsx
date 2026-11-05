@@ -1,5 +1,3 @@
-"use client";
-
 // One toolbar for every data panel (logs, pages): search · filter segments (optional) · count · copy · download
 import { useState } from "react";
 import { HStack, IconButton, Input, InputGroup, SegmentGroup, Text } from "@chakra-ui/react";

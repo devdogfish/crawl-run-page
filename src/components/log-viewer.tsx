@@ -1,5 +1,3 @@
-"use client";
-
 // Log viewer for long logs (tens of thousands of lines).
 // - Virtualised with react-virtuoso: only the visible lines are in the DOM.
 // - Follows new output while you're at the bottom; scroll up to pause, "Jump to latest" to resume.

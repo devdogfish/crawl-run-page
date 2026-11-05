@@ -1,5 +1,3 @@
-"use client";
-
 // Settings, saved in this browser: theme (light / dark / system) and the navigation layout
 // (prototype: pick one layout, then remove that control).
 import { useEffect, useState } from "react";

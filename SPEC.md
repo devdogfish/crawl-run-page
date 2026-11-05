@@ -1,7 +1,7 @@
 # Crawl run page: spec
 
 Status: agreed design, ready to integrate · Last updated: 2026-11-04
-Stack: Next.js + **Chakra UI v3** (frontend) · **FastAPI** + **SQLite** (backend)
+Stack: React + Vite + **Chakra UI v3** (frontend) · **FastAPI** + **SQLite** (backend)
 
 This document records what was decided while designing the crawl run page:
 
@@ -80,7 +80,7 @@ Step ids and names are examples; use your pipeline's own. The UI reads whatever 
 
 ## 3. UI spec
 
-Routes: **`/[site]/crawls`** (`src/app/[site]/crawls/page.tsx`) and **`/[site]/crawls/[crawlId]`** (`src/app/[site]/crawls/[crawlId]/page.tsx`).
+Routes: **`/[site]/crawls`** (`src/routes/crawls.tsx`) and **`/[site]/crawls/[crawlId]`** (`src/routes/crawl-run.tsx`).
 
 ### 3.0 Navbar (every page)
 - **Left, site switcher:** the current site's **official logo** (colour in light mode, white wordmark in dark mode) and a chevron, then a divider and the product name "Crawler". The menu lists every site (logo, production host, a check on the current one). Choosing one navigates to `/{site}/crawls`. The last site used is remembered per browser, for `/`.

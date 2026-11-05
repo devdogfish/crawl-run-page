@@ -1,5 +1,3 @@
-"use client";
-
 // The crawled page with its issues drawn on top.
 //   screenshot → what the crawler saved (image + element boxes): fixed 1280px, issue boxes only.
 //   live       → the stored HTML rendered again: any viewport width, hover to inspect any element,

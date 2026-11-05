@@ -1,5 +1,3 @@
-"use client";
-
 // The current website comes from the first URL segment (/rbccm/…, /rbcits/…).
 // It is also remembered per browser, so "/" opens the site used last.
 import { createContext, useContext, useEffect } from "react";

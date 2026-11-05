@@ -1,5 +1,3 @@
-"use client";
-
 // Ask AI, docked on the right. One conversation per page that keeps going while you move around;
 // every question is anchored to the issue it's about, shown as a link to that element, so you can
 // always jump back to what a message referred to. Answers can reference other issues (also links),

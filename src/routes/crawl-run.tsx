@@ -1,5 +1,3 @@
-"use client";
-
 // Crawl run page · /[site]/crawls/[crawlId]
 // Built like CI/orchestration run pages (GitHub Actions, Vercel, Dagster):
 //   page header (breadcrumbs, status, actions) → facts row → two panes:
@@ -10,7 +8,7 @@
 // PROTOTYPE: data comes from the simulator in src/lib/crawl.ts and src/lib/pages.ts.
 // SLICES.md describes how to replace it with the FastAPI endpoints in SPEC.md.
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useNavigate, useSearchParams } from "react-router";
 import {
   Alert, Badge, Box, Breadcrumb, Button, Container, DataList, EmptyState, Flex, Grid, HStack, Heading, IconButton,
   Menu, Portal, Progress, ProgressCircle, Span, Stack, Tabs, Text,
@@ -24,7 +22,7 @@ import { CodesBar, CrawlChart, HistoryChart } from "@/components/crawl-charts";
 import { LogViewer } from "@/components/log-viewer";
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { TablePagination } from "@/components/table-pagination";
-import NextLink from "next/link";
+import { Link as RouterLink } from "react-router";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { CRAWLS, type CrawlRow } from "@/lib/crawls-list";
@@ -43,7 +41,7 @@ const SCENARIOS: { v: CrawlScenario; label: string }[] = [
 
 // Prototype: settings come from the "New crawl" dialog (?settings=…) or from the crawl's row in the list
 function useInitialSettings(row: CrawlRow | undefined, site: SiteId): CrawlSettings {
-  const raw = useSearchParams().get("settings");
+  const raw = useSearchParams()[0].get("settings");
   try { if (raw) return { ...defaultSettings(site), ...JSON.parse(raw) }; } catch { /* fall through */ }
   return row ? { ...defaultSettings(row.site), url: row.url } : defaultSettings(site);
 }
@@ -54,8 +52,8 @@ export default function CrawlRunPage() {
   // A crawl belongs to one site: if the URL names another site, send it to the right one
   const site = useSite();
   const settings = useInitialSettings(row, site);
-  const router = useRouter();
-  useEffect(() => { if (row && row.site !== site) router.replace(`/${row.site}/crawls/${row.id}`); }, [row, site, router]);
+  const navigate = useNavigate();
+  useEffect(() => { if (row && row.site !== site) navigate(`/${row.site}/crawls/${row.id}`, { replace: true }); }, [row, site, navigate]);
   const finished = !!row && row.status !== "running" && row.status !== "paused";
   const [scenario, setScenario] = useState<CrawlScenario>(row?.status === "failed" ? "failure" : "healthy");
   const [replay, setReplay] = useState(false); // prototype bar restarts a finished crawl live
@@ -169,7 +167,7 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
       <Container maxW="7xl" pt="5" pb="5">
         <Breadcrumb.Root size="sm" mb="3">
           <Breadcrumb.List>
-            <Breadcrumb.Item><Breadcrumb.Link asChild><NextLink href={`/${state.settings.site}/crawls`}>Crawls</NextLink></Breadcrumb.Link></Breadcrumb.Item>
+            <Breadcrumb.Item><Breadcrumb.Link asChild><RouterLink to={`/${state.settings.site}/crawls`}>Crawls</RouterLink></Breadcrumb.Link></Breadcrumb.Item>
             <Breadcrumb.Separator />
             <Breadcrumb.Item><Breadcrumb.CurrentLink>{crawlId}</Breadcrumb.CurrentLink></Breadcrumb.Item>
           </Breadcrumb.List>

@@ -11,7 +11,7 @@ Status: proposal. Nothing here is built yet. Build order is at the end (slices 6
 ## 1. The shape in one picture
 
 ```
-           Next.js UI            Claude Code / Desktop / any MCP client
+           React UI              Claude Code / Desktop / any MCP client
                │                               │
           HTTP (JSON)                 stdio  or  Streamable HTTP (/mcp)
                │                               │

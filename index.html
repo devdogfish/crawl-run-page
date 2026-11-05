@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Crawl history and run pages (Chakra UI prototype)" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Crawls</title>
+    <script>
+      // Apply the saved theme and primary colour before first paint (next-themes key "theme", Settings key "crawler.brand")
+      try {
+        var t = localStorage.getItem("theme") || "system";
+        if (t === "system") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.classList.add(t);
+        document.documentElement.style.colorScheme = t;
+        var b = localStorage.getItem("crawler.brand");
+        if (b && /^#[0-9a-f]{6}$/i.test(b)) document.documentElement.style.setProperty("--brand", b);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

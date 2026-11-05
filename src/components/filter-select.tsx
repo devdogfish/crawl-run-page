@@ -1,5 +1,3 @@
-"use client";
-
 // Small styled dropdown used in table filter rows (xs, matches the toolbar). The first item is the "no filter" value;
 // when another value is picked the trigger gets a stronger border so active filters stand out.
 import { useMemo } from "react";
