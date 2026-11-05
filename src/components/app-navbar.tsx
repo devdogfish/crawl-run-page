@@ -4,7 +4,7 @@
 // site switcher with the official logo, the New crawl button, and the list of sections.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Button, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
 import { LuChartColumn, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
 
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
@@ -31,7 +31,7 @@ export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; f
       <Menu.Trigger asChild>
         <Button variant="ghost" h="12" px="2" ms="-2" gap="3" w={full ? "calc(100% + 1rem)" : undefined} justifyContent="space-between"
           aria-label={`${SITES[site].name}: switch site`}>
-          <SiteLogo id={site} h={logoH} />
+          <HStack gap="2"><SiteLogo id={site} h={logoH} />{SITES[site].qa && <QaBadge />}</HStack>
           <Icon as={LuChevronsUpDown} boxSize="4" color="fg.muted" />
         </Button>
       </Menu.Trigger>
@@ -43,7 +43,7 @@ export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; f
               <Menu.Item key={id} value={id} onClick={() => id !== site && router.push(`/${id}/crawls`)} gap="3" py="2.5" px="2" rounded="l2">
                 <Box w="24" flexShrink={0}><SiteLogo id={id} h="9" /></Box>
                 <Box flex="1" minW="0">
-                  <Text textStyle="xs" color="fg.muted" truncate>{hostOf(SITES[id].environments.production)}</Text>
+                  <HStack gap="2">{SITES[id].qa && <QaBadge />}<Text textStyle="xs" color="fg.muted" truncate>{hostOf(SITES[id].url)}</Text></HStack>
                 </Box>
                 {id === site && <Icon as={LuCheck} boxSize="4" color="fg" />}
               </Menu.Item>
@@ -68,6 +68,11 @@ export function NewCrawlButton(props: ButtonProps) {
       />
     </>
   );
+}
+
+// QA copies share the production logo, so they carry this label wherever the logo is shown
+function QaBadge() {
+  return <Badge size="sm" variant="outline" colorPalette="orange" flexShrink={0}>QA</Badge>;
 }
 
 // Official logo; the white version is used in dark mode

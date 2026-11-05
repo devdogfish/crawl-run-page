@@ -27,8 +27,8 @@ import {
 } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
 import { downloadText } from "@/components/data-toolbar";
-import { CATEGORIES, crawlChoices, defaultCrawl, pageView, siteSize } from "@/lib/site-pages";
-import { SITES, envUrl, type SiteId } from "@/lib/sites";
+import { CATEGORIES, defaultCrawl, pageView, siteSize } from "@/lib/site-pages";
+import { SITES, type SiteId } from "@/lib/sites";
 
 type Seg = "all" | "new" | "fixed";
 type PageV = NonNullable<ReturnType<typeof pageView>>;
@@ -64,8 +64,8 @@ function PageDetail() {
 }
 
 function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site: SiteId }) {
-  // Assets aren't stored: the preview streams them from the environment this crawl ran against
-  const origin = envUrl(site, crawlChoices(site).find((c) => Number(c.id) === a)?.environment ?? "production");
+  // Assets aren't stored: the preview streams them from the site that was crawled
+  const origin = SITES[site].url;
   const { instances, html } = useMemo(() => pageIssues(p, a, b, siteSize(site)), [p, a, b, site]);
   const [tab, setTab] = useState<"issues" | "preview" | "source">("issues");
   // Shareable state lives in the URL: ?issue=18&pri=P1&cat=accessibility&q=…&seg=new
@@ -197,7 +197,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
           <Flex justify="space-between" align="start" gap="4">
             <Stack gap="0.5" minW="0">
               <Heading size="lg" fontWeight="semibold" truncate>{p.title}</Heading>
-              <Link href={`${SITES[site].environments.production}${p.path}`} target="_blank" rel="noopener noreferrer" textStyle="xs" fontFamily="mono" color="fg.muted" w="fit-content">
+              <Link href={`${SITES[site].url}${p.path}`} target="_blank" rel="noopener noreferrer" textStyle="xs" fontFamily="mono" color="fg.muted" w="fit-content">
                 {p.path}<LuExternalLink />
               </Link>
             </Stack>

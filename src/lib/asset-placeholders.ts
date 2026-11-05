@@ -1,6 +1,6 @@
 // The crawler stores each page's HTML, not its images, video or audio (too much storage). The HTML already holds
 // each asset's path, so the preview streams them from the site on demand: a <base> pointing at the crawled
-// environment makes the relative paths resolve. Only an asset that no longer loads (removed, renamed, blocked)
+// site makes the relative paths resolve. Only an asset that no longer loads (removed, renamed, blocked)
 // is swapped for a neutral placeholder of the same size that names the file, so the layout stays right.
 // The Source view and issue snippets always show the original markup.
 //   <img>          → grey box: file name, width × height, "not available"
@@ -12,7 +12,7 @@ const fileOf = (src: string) => {
 };
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-// Point relative asset paths at the environment the page was crawled from; never autoplay anything
+// Point relative asset paths at the site the page was crawled from; never autoplay anything
 export function withBase(html: string, origin: string | undefined) {
   const out = html.replace(/\sautoplay(="[^"]*")?/gi, "");
   return origin ? out.replace(/<head([^>]*)>/i, `<head$1><base href="${esc(origin)}/">`) : out;

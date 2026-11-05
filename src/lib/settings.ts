@@ -2,15 +2,7 @@
 // them mid-run would make the results inconsistent); others only control HOW FAST/HOW HARD it crawls
 // and can be changed while the crawl is paused.
 
-import { DEFAULT_SITE, envUrl, type SiteId } from "@/lib/sites";
-
-export type Environment = "production" | "qa";
-
-// Environment names. Each site defines its own URL per environment (src/lib/sites.ts).
-export const ENVIRONMENTS: Record<Environment, { label: string }> = {
-  production: { label: "Production" },
-  qa: { label: "QA" },
-};
+import { DEFAULT_SITE, SITES, type SiteId } from "@/lib/sites";
 
 export type Discovery = "sitemap+links" | "sitemap" | "links";
 export const DISCOVERY: Record<Discovery, string> = {
@@ -22,7 +14,6 @@ export const DISCOVERY: Record<Discovery, string> = {
 export type CrawlSettings = {
   // Locked after start
   site: SiteId;
-  environment: Environment;
   url: string;
   discovery: Discovery;
   exclude: string; // comma-separated path prefixes
@@ -38,8 +29,7 @@ export type CrawlSettings = {
 
 export const defaultSettings = (site: SiteId): CrawlSettings => ({
   site,
-  environment: "production",
-  url: envUrl(site, "production"),
+  url: SITES[site].url,
   discovery: "sitemap+links",
   exclude: "/search, /login",
   renderJs: true,

@@ -28,7 +28,7 @@ import NextLink from "next/link";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { CRAWLS, type CrawlRow } from "@/lib/crawls-list";
-import { ENVIRONMENTS, defaultSettings, hostOf, type CrawlSettings } from "@/lib/settings";
+import { defaultSettings, hostOf, type CrawlSettings } from "@/lib/settings";
 import { SITES, type SiteId } from "@/lib/sites";
 import { useSite } from "@/components/site-context";
 import { ESTIMATED_PAGES, FULL_LH_SEC, PREVIOUS_CRAWLS, useCrawlRun, type CrawlScenario, type FullJob } from "@/lib/crawl";
@@ -45,7 +45,7 @@ const SCENARIOS: { v: CrawlScenario; label: string }[] = [
 function useInitialSettings(row: CrawlRow | undefined, site: SiteId): CrawlSettings {
   const raw = useSearchParams().get("settings");
   try { if (raw) return { ...defaultSettings(site), ...JSON.parse(raw) }; } catch { /* fall through */ }
-  return row ? { ...defaultSettings(row.site), environment: row.environment, url: row.url } : defaultSettings(site);
+  return row ? { ...defaultSettings(row.site), url: row.url } : defaultSettings(site);
 }
 
 export default function CrawlRunPage() {
@@ -250,7 +250,7 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
           </Fact>
           <Fact label="Target">
             <Tooltip content={`${hostOf(state.settings.url)} · ${state.settings.concurrency} workers · delay ${state.settings.delayMs} ms · timeout ${state.settings.timeoutS} s`} showArrow>
-              <Span>{SITES[state.settings.site].short} <Span color="fg.muted">· {ENVIRONMENTS[state.settings.environment].label}</Span></Span>
+              <Span>{SITES[state.settings.site].short}</Span>
             </Tooltip>
           </Fact>
         </DataList.Root>

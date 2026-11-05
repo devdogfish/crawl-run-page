@@ -123,7 +123,7 @@ export const RULE_CATALOG: Record<string, Rule> = {
     why: "Search engines may show the English page to French-speaking users.",
     howToFix: "Add <link rel=\"alternate\" hreflang=\"fr\"> pointing to the French page, and the reverse link on that page.",
     refs: [{ label: "Google: Localized versions", url: "https://developers.google.com/search/docs/specialty/international/localized-versions" }],
-    fix: (s) => `${s}\n<link rel="alternate" hreflang="fr" href="https://www.rbccm.com/fr/…">`,
+    fix: (s) => `${s}\n<link rel="alternate" hreflang="fr" href="/fr/…">`,
   },
   noopener: {
     id: "noopener", title: "External link opens a new tab without rel=\"noopener\"", category: "security", severity: "moderate", source: "Custom check",
@@ -293,8 +293,8 @@ function buildHtml(p: PageView, instances: Instance[]) {
   const head = [
     `<title>${p.title} | RBC Capital Markets</title>`,
     meta.length ? record(meta, 0, "<!-- no meta description -->") : `<meta name="description" content="${p.title}">`,
-    canonical.length ? record(canonical, 0, `<link rel="canonical" href="https://www.rbccm.com${p.path}?utm_source=newsletter&utm_medium=email">`) : `<link rel="canonical" href="https://www.rbccm.com${p.path}">`,
-    hreflang.length ? record(hreflang, 0, `<link rel="alternate" hreflang="en" href="https://www.rbccm.com${p.path}">`) : "",
+    canonical.length ? record(canonical, 0, `<link rel="canonical" href="${p.url}?utm_source=newsletter&utm_medium=email">`) : `<link rel="canonical" href="${p.url}">`,
+    hreflang.length ? record(hreflang, 0, `<link rel="alternate" hreflang="en" href="${p.url}">`) : "",
     ...blocking.map((_, j) => record(blocking, j, `<script src="/assets/${["analytics", "consent", "tag-manager"][j % 3]}.js"></script>`)),
     ...unused.map((_, j) => record(unused, j, `<script src="/assets/vendor-${j + 1}.js"></script>`)),
   ].filter(Boolean).join("\n    ");
@@ -401,7 +401,7 @@ export function sourceLines(html: string) {
 export function issuePrompt(p: PageView, it: Instance) {
   const r = RULE_CATALOG[it.rule];
   return [
-    `Fix this ${r.category} issue on https://www.rbccm.com${p.path}`,
+    `Fix this ${r.category} issue on ${p.url}`,
     `Rule: ${r.id} (${r.source}${r.criterion ? `, WCAG ${r.criterion}` : ""}) – ${r.title}`,
     `Element: ${it.selector}`, "", "```html", it.snippet, "```", "",
     `Why it matters: ${r.why}`, `How to fix: ${r.howToFix}`,
@@ -413,7 +413,7 @@ export function issuePrompt(p: PageView, it: Instance) {
 // ───────── Handoff: the filtered list as JSON, one prompt, an API request, a local check ─────────
 export function issuesJson(p: PageView, crawl: number, list: Instance[], priority: (s: Severity) => string) {
   return JSON.stringify({
-    page: { id: p.i, url: `https://www.rbccm.com${p.path}`, crawl },
+    page: { id: p.i, url: `${p.url}`, crawl },
     issues: list.map((it) => {
       const r = RULE_CATALOG[it.rule];
       return {
@@ -429,7 +429,7 @@ export function batchPrompt(p: PageView, list: Instance[], priority: (s: Severit
   const byRule = new Map<string, Instance[]>();
   for (const it of list) byRule.set(it.rule, [...(byRule.get(it.rule) ?? []), it]);
   return [
-    `Fix these ${list.length} issues on https://www.rbccm.com${p.path}. Return a patch per file.`, "",
+    `Fix these ${list.length} issues on ${p.url}. Return a patch per file.`, "",
     ...[...byRule.entries()].flatMap(([rule, items]) => {
       const r = RULE_CATALOG[rule];
       return [

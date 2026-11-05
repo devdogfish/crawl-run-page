@@ -5,7 +5,7 @@
 //   changed  = URL in both, content hash differs
 // Deterministic from the page index, so rows don't change between renders.
 import { crawlsFor, type CrawlRow } from "@/lib/crawls-list";
-import type { SiteId } from "@/lib/sites";
+import { SITES, type SiteId } from "@/lib/sites";
 
 const rand = (i: number, salt: number) => {
   let x = (i + 1) * 374761393 + salt * 668265263;
@@ -132,21 +132,17 @@ export const ruleMatches = (p: SitePage, rule: RuleId) => {
 // Finished crawls you can look at, newest first
 export const crawlChoices = (site: SiteId): CrawlRow[] => crawlsFor(site).filter((c) => c.status === "success");
 
-// Production and QA are treated as separate sites: QA holds a minimal baseline of content for testing components.
-// Views open on the latest production crawl, and a baseline is always an earlier crawl of the same environment.
-export const defaultCrawl = (site: SiteId) => { const c = crawlChoices(site); return c.find((x) => x.environment === "production") ?? c[0]; };
-export const baselinesFor = (site: SiteId, crawlId: string) => {
-  const c = crawlChoices(site);
-  const env = c.find((x) => x.id === crawlId)?.environment;
-  return c.filter((x) => Number(x.id) < Number(crawlId) && x.environment === env);
-};
+// Views open on the latest finished crawl, compared with the one before it
+export const defaultCrawl = (site: SiteId) => crawlChoices(site)[0];
+export const baselinesFor = (site: SiteId, crawlId: string) => crawlChoices(site).filter((x) => Number(x.id) < Number(crawlId));
 export const defaultScope = (site: SiteId) => { const a = defaultCrawl(site).id; return { crawl: a, vs: baselinesFor(site, a)[0]?.id ?? "none" }; };
 
 // Every 10th crawl ran Lighthouse on the whole site; the others on a sample
 export const fullLighthouse = (crawlId: number) => crawlId % 10 === 0;
 export const LH_SAMPLE = 200;
 
-export const siteSize = (site: SiteId) => (site === "rbcits" ? 19_400 : 48_300);
+const SIZE: Record<SiteId, number> = { rbccm: 48_300, "rbccm-qa": 1_200, rbcits: 19_400, "rbcits-qa": 650 };
+export const siteSize = (site: SiteId) => SIZE[site];
 const cache = new Map<SiteId, { pages: SitePage[]; ids: number[] }>();
 function universe(site: SiteId) {
   let u = cache.get(site);
@@ -161,6 +157,7 @@ function universe(site: SiteId) {
 
 export type Change = "new" | "changed" | "removed" | "same";
 export type PageView = SitePage & {
+  url: string; // full URL on the crawled site
   change: Change | null; // null when not comparing
   lastChanged: number | null; // crawl id where the content hash last changed (null: before the history starts)
   perf: number | null; // null: Lighthouse didn't audit this page in this crawl
@@ -181,24 +178,24 @@ function lastChange(p: SitePage, crawl: number, ids: number[]) {
 export function pagesFor(site: SiteId, a: number, b: number | null): PageView[] {
   const u = universe(site);
   const out: PageView[] = [];
-  for (const p of u.pages) { const v = view(u, p, a, b); if (v) out.push(v); }
+  for (const p of u.pages) { const v = view(site, u, p, a, b); if (v) out.push(v); }
   return out;
 }
 
 // One page, for the page detail view (null if it's in neither crawl)
 export const pageView = (site: SiteId, i: number, a: number, b: number | null) => {
   const u = universe(site);
-  return u.pages[i] ? view(u, u.pages[i], a, b) : null;
+  return u.pages[i] ? view(site, u, u.pages[i], a, b) : null;
 };
 
-function view(u: { pages: SitePage[]; ids: number[] }, p: SitePage, a: number, b: number | null): PageView | null {
+function view(site: SiteId, u: { pages: SitePage[]; ids: number[] }, p: SitePage, a: number, b: number | null): PageView | null {
   const inA = exists(p, a), inB = b != null && exists(p, b);
   if (!inA && !inB) return null;
   const at = inA ? a : b!;
   const lastChanged = lastChange(p, at, u.ids);
   const change: Change | null = b == null ? null : !inA ? "removed" : !inB ? "new" : lastChanged != null && lastChanged > b ? "changed" : "same";
   const audited = fullLighthouse(at) || rand(p.i, at) < LH_SAMPLE / u.pages.length;
-  return { ...p, change, lastChanged, perf: audited ? p.perfIssues : null };
+  return { ...p, url: SITES[site].url + p.path, change, lastChanged, perf: audited ? p.perfIssues : null };
 }
 
 export const issuesIn = (p: PageView, c: Category) => (c === "performance" ? p.perf : p.issues[c]);

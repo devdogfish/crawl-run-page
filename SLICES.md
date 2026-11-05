@@ -28,15 +28,15 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 **Crawler (calls only)**
 - Add `crawl_events.py` (SPEC §4.1) and start the writer thread once per process (§5.3).
 - Call:
-  - `rec = CrawlRecorder(crawl_id)` and `rec.crawl_started(environment, url, trigger, settings, steps)` where a crawl is created;
+  - `rec = CrawlRecorder(crawl_id)` and `rec.crawl_started(url, trigger, settings, steps)` where a crawl is created;
   - `rec.step_started(step_id)` / `rec.step_finished()` / `rec.step_failed(str(err))` around each step.
 
 **Backend**
 - Create the SQLite schema (SPEC §5.2) with the pragmas (§5.1).
 - Writer handlers for `crawl_started`, `step_started`, `step_finished` and `step_failed`. When a crawl starts, compute `expected_sec` per step (§5.4).
-- Table `sites` + `GET /api/sites` (SPEC §5.2, §6.0); seed RBC CM and RBC ITS with their environment URLs.
-- `GET /api/crawls?site=` (SPEC §6.0): list with status/search/environment filters, counts, facts and pagination.
-- `GET /api/crawls/{crawl_id}` (SPEC §6.1): id, environment, url, status, trigger, settings, timestamps, `elapsed_sec` and `steps[]`. Leave `progress_pct`, `eta_at`, `pages` and `history` null until slice 3. Use read-only connections, plus `ETag`/`304`.
+- Table `sites` + `GET /api/sites` (SPEC §5.2, §6.0); seed RBC CM, RBC CM QA, RBC IS and RBC IS QA with their URLs (QA copies are their own sites).
+- `GET /api/crawls?site=` (SPEC §6.0): list with status/search filters, counts, facts and pagination.
+- `GET /api/crawls/{crawl_id}` (SPEC §6.1): id, url, status, trigger, settings, timestamps, `elapsed_sec` and `steps[]`. Leave `progress_pct`, `eta_at`, `pages` and `history` null until slice 3. Use read-only connections, plus `ETag`/`304`.
 
 **Frontend**
 - Move `src/app/[site]/crawls/page.tsx` and `src/app/[site]/crawls/[crawlId]/page.tsx` into your app at the same routes. Copy `src/components/*`, `src/lib/types.ts` and `src/lib/settings.ts`.
@@ -207,7 +207,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 - **`Retry from {step}`** in the header calls `POST /retry`.
 
 **Acceptance**
-- [ ] New crawl: picking an environment fills the current site's URL; Start crawl opens the new run page.
+- [ ] New crawl: the start URL is the current site's URL; Start crawl opens the new run page.
 - [ ] Pause stops new requests within about a second, the badge shows Paused and the clock stops. Resume continues from where it stopped.
 - [ ] While paused, Target and Discovery can't be changed (UI locked, API `422`). Delay, timeout, concurrency, retries and Lighthouse sample can, and the change is visible in the log and in the crawl rate after resuming.
 - [ ] A normal crawl ends with sample scores coloured on Lighthouse's scale.

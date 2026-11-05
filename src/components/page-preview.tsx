@@ -30,7 +30,7 @@ const nameOf = (el: Element) => {
 export function PagePreview({ html, origin, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height, card }: {
   card?: React.ReactNode; // actions shown on the selected element (screen-size, not scaled with the page)
   html: string;
-  origin?: string; // environment the page was crawled from: assets stream from there
+  origin?: string; // site the page was crawled from: assets stream from there
   instances: Instance[]; // the ones to draw (already filtered)
   selected: number | null;
   highlightRule?: string | null;

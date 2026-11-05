@@ -127,7 +127,7 @@ class Issue:
 ```
 
 What the core hides (and therefore what its tests cover):
-- **Resolving inputs:** page by id, path or full URL; `crawl="latest"` → newest finished crawl of that site and environment.
+- **Resolving inputs:** page by id, path or full URL; `crawl="latest"` → newest finished crawl of that site (QA copies are their own sites).
 - **Comparing with the baseline:** element identity is `(page, rule, selector, html_hash)`. New = in crawl, not in baseline. Fixed = in baseline, not in crawl. Same key for page change detection with `content_hash`.
 - **Grouping:** elements → issues by rule; issues sorted by severity, then element count.
 - **Priority:** `{"critical": "P1", "serious": "P2", "moderate": "P3", "minor": "P4"}`, in `rules.py`, not configurable.

@@ -6,12 +6,12 @@
 //   view   → read-only (running or finished crawl)
 import { createContext, useContext, useRef, useState } from "react";
 import {
-  Alert, Button, CloseButton, Dialog, Field, Grid, Group, HStack, Input, InputGroup, NumberInput, Portal, Select, createListCollection, type ListCollection,
+  Alert, Button, CloseButton, Dialog, Field, Grid, HStack, Input, InputGroup, NumberInput, Portal, Select, createListCollection, type ListCollection,
   Separator, Stack, Switch,
 } from "@chakra-ui/react";
 
-import { DISCOVERY, ENVIRONMENTS, type CrawlSettings, type Discovery, type Environment } from "@/lib/settings";
-import { SITES, envUrl } from "@/lib/sites";
+import { DISCOVERY, type CrawlSettings, type Discovery } from "@/lib/settings";
+import { SITES } from "@/lib/sites";
 
 export type SettingsMode = "create" | "paused" | "view";
 
@@ -73,13 +73,8 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
           <Stack gap="5" separator={<Separator />}>
           <Section>
             <Field.Root disabled={lockedFixed}>
-              <Group w="full" gap="0" aria-label={`${SITES[s.site].name}: environment and URL`}>
-                <StyledSelect
-                  collection={ENV_ITEMS} value={s.environment} disabled={lockedFixed} w="40" flexShrink={0} attachedStart
-                  onChange={(v) => { const env = v as Environment; setS((x) => ({ ...x, environment: env, url: envUrl(x.site, env) })); }}
-                />
-                <Input size="sm" value={s.url} onChange={(e) => set("url", e.target.value)} roundedStart="0" ms="-1px" />
-              </Group>
+              <Field.Label>Start URL</Field.Label>
+              <Input size="sm" value={s.url} onChange={(e) => set("url", e.target.value)} aria-label={`${SITES[s.site].name}: start URL`} />
             </Field.Root>
           </Section>
 
@@ -134,7 +129,6 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
 // Chakra's styled Select (not the browser's native one). Its menu is portalled into the dialog content
 // (Chakra's pattern for Select inside Dialog), so it isn't clipped by the scrolling body.
 type Option = { value: string; label: string };
-const ENV_ITEMS = createListCollection<Option>({ items: (Object.keys(ENVIRONMENTS) as Environment[]).map((e) => ({ value: e, label: ENVIRONMENTS[e].label })) });
 const DISCOVERY_ITEMS = createListCollection<Option>({ items: (Object.keys(DISCOVERY) as Discovery[]).map((d) => ({ value: d, label: DISCOVERY[d] })) });
 
 function StyledSelect({ collection, value, onChange, disabled, attachedStart, ...rest }: {

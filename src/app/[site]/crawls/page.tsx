@@ -6,7 +6,7 @@
 import { useMemo, useState } from "react";
 import NextLink from "next/link";
 import {
-  Badge, Box, Container, DataList, Flex, Grid, HStack, Heading, Progress, Span, Text,
+  Box, Container, DataList, Flex, Grid, HStack, Heading, Progress, Span, Text,
 } from "@chakra-ui/react";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
@@ -14,7 +14,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { StageIcon } from "@/components/step-ui";
 import { crawlsFor, type CrawlListStatus, type CrawlRow } from "@/lib/crawls-list";
 import { useSite } from "@/components/site-context";
-import { ENVIRONMENTS, hostOf, type Environment } from "@/lib/settings";
+import { hostOf } from "@/lib/settings";
 import { fmtDur, fmtNum, type StageStatus } from "@/lib/types";
 
 type Filter = "all" | "active" | "failed" | "success";
@@ -26,8 +26,7 @@ const FILTERS: { v: Filter; label: string; match: (c: CrawlRow) => boolean }[] =
 ];
 const STATUS_LABEL: Record<CrawlListStatus, string> = { running: "Running", paused: "Paused", success: "Succeeded", failed: "Failed", cancelled: "Cancelled" };
 const STATUS_ICON: Record<CrawlListStatus, StageStatus> = { running: "running", paused: "paused", success: "success", failed: "failed", cancelled: "blocked" };
-const ENV_COLOR: Record<Environment, string> = { production: "gray", qa: "purple" };
-const COLS = "88px minmax(180px, 2fr) 120px 132px 96px 72px 96px 120px 92px";
+const COLS = "88px minmax(180px, 2fr) 132px 96px 72px 96px 120px 92px";
 const PAGE_SIZE = 20;
 
 const fmtDate = (d: Date) =>
@@ -44,7 +43,7 @@ export default function CrawlsPage() {
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const f = FILTERS.find((x) => x.v === filter)!;
-    return CRAWLS.filter((c) => f.match(c) && (!q || c.id.includes(q) || c.url.includes(q) || c.environment.includes(q)));
+    return CRAWLS.filter((c) => f.match(c) && (!q || c.id.includes(q) || c.url.includes(q)));
   }, [CRAWLS, filter, query]);
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -52,11 +51,11 @@ export default function CrawlsPage() {
   const recent = CRAWLS.filter((c) => c.startedAt >= new Date(Date.UTC(2026, 9, 5)));
   const finished = recent.filter((c) => c.status === "success" || c.status === "failed");
   const successRate = finished.length ? (finished.filter((c) => c.status === "success").length / finished.length) * 100 : 0;
-  const prod = recent.filter((c) => c.environment === "production" && c.status === "success").map((c) => c.durationSec).sort((a, b) => a - b);
+  const prod = recent.filter((c) => c.status === "success").map((c) => c.durationSec).sort((a, b) => a - b);
   const median = prod.length ? prod[Math.floor(prod.length / 2)] : 0;
 
-  const toCsv = () => ["id,environment,url,status,pages,error_pct,duration_s,started_at,trigger",
-    ...rows.map((c) => [c.id, c.environment, c.url, c.status, c.pages, c.errorPct, c.durationSec, c.startedAt.toISOString(), c.trigger].join(","))].join("\n");
+  const toCsv = () => ["id,url,status,pages,error_pct,duration_s,started_at,trigger",
+    ...rows.map((c) => [c.id, c.url, c.status, c.pages, c.errorPct, c.durationSec, c.startedAt.toISOString(), c.trigger].join(","))].join("\n");
 
   return (
     <Box bg="bg" minH="100vh">
@@ -68,7 +67,7 @@ export default function CrawlsPage() {
             <Fact label="Running now">{counts.active}</Fact>
             <Fact label="Crawls, last 30 days">{recent.length}</Fact>
             <Fact label="Success rate">{successRate.toFixed(0)}%</Fact>
-            <Fact label="Median duration (production)">{fmtDur(median)}</Fact>
+            <Fact label="Median duration">{fmtDur(median)}</Fact>
           </DataList.Root>
         </Container>
       </Box>
@@ -86,7 +85,7 @@ export default function CrawlsPage() {
           <Box overflowX="auto">
             <Box minW="980px">
               <Grid templateColumns={COLS} gap="4" px="4" py="2" borderBottomWidth="1px" textStyle="xs" fontWeight="medium" color="fg.muted">
-                <Text>Crawl</Text><Text>Target</Text><Text>Environment</Text><Text>Status</Text>
+                <Text>Crawl</Text><Text>Target</Text><Text>Status</Text>
                 <Text textAlign="right">Pages</Text><Text textAlign="right">Errors</Text><Text textAlign="right">Duration</Text>
                 <Text>Started</Text><Text>Trigger</Text>
               </Grid>
@@ -115,7 +114,6 @@ function CrawlRowView({ c, site }: { c: CrawlRow; site: string }) {
       <NextLink href={`/${site}/crawls/${c.id}`}>
         <Text fontWeight="medium">{c.id}</Text>
         <Text color="fg.muted" truncate>{hostOf(c.url)}</Text>
-        <Box><Badge size="sm" variant="outline" colorPalette={ENV_COLOR[c.environment]}>{ENVIRONMENTS[c.environment].label}</Badge></Box>
         <HStack gap="2">
           <StageIcon status={STATUS_ICON[c.status]} size="sm" />
           <Text>{STATUS_LABEL[c.status]}</Text>

@@ -7,15 +7,11 @@ An internal tool that crawls the RBC websites, checks every page against accessi
 ### Crawling
 
 **Site**:
-One website the tool crawls, such as RBC Capital Markets. Each has its own crawl history.
+One website the tool crawls, such as RBC Capital Markets. Each has its own crawl history. A QA copy (www.sterbccm.com) is a separate site: it holds a minimal baseline of content for testing new components and isn't updated with new content, so it's never compared with production.
 _Avoid_: domain, property, project
 
-**Environment**:
-Which copy of a site a crawl targets: Production or QA. The two are treated almost as separate sites: QA holds a minimal baseline of content for testing new components and isn't updated with new content, so a crawl is only ever compared with a baseline from the same environment.
-_Avoid_: stage, staging, dev
-
 **Crawl**:
-One run of the crawler over one environment of a site, producing a snapshot of every page it found.
+One run of the crawler over a site, producing a snapshot of every page it found.
 _Avoid_: run, scan, job
 
 **Step**:
@@ -23,7 +19,7 @@ One stage of a crawl, such as discovery, fetching, or the Lighthouse audit.
 _Avoid_: stage, task, phase
 
 **Baseline**:
-An older crawl of the same environment that another crawl is compared against.
+An older crawl of the same site that another crawl is compared against.
 _Avoid_: previous crawl, reference, comparison crawl
 
 ### Pages

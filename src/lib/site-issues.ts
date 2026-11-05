@@ -9,7 +9,7 @@
 import { RULE_CATALOG, issueSlots, type Rule } from "@/lib/page-issues";
 import { pagesFor, siteSize, type PageView } from "@/lib/site-pages";
 import { PRIORITY, type Priority } from "@/lib/priority";
-import type { SiteId } from "@/lib/sites";
+import { SITES, type SiteId } from "@/lib/sites";
 
 // One rule on one page, for one element pattern: its current elements, how many are new, how many were fixed
 export type Hit = { p: PageView; rule: string; pattern: string; shared: boolean; elements: number; added: number; fixed: number; k: number };
@@ -79,7 +79,7 @@ export function byRule(hits: Hit[], seg: Seg): RuleRow[] {
 // One prompt for a whole filtered list: per rule, the element patterns and how to fix them
 export function rulesPrompt(site: SiteId, crawl: number, rows: RuleRow[]) {
   return [
-    `Fix these ${rows.length} issues found on ${site === "rbccm" ? "www.rbccm.com" : "www.rbcits.com"} in crawl #${crawl}.`, "",
+    `Fix these ${rows.length} issues found on ${SITES[site].url.replace(/^https?:\/\//, "")} in crawl #${crawl}.`, "",
     ...rows.flatMap((r) => [
       `## ${r.priority} ${r.rule.title} (${r.rule.id}${r.rule.criterion ? `, WCAG ${r.rule.criterion.split(" ")[0]}` : ""}): ${r.pages.toLocaleString("en-US")} pages`,
       `How to fix: ${r.rule.howToFix}`,

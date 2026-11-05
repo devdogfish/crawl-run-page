@@ -71,9 +71,10 @@ Step ids and names are examples; use your pipeline's own. The UI reads whatever 
 | D29 | Crawler logs are all requests, but the other steps (except Lighthouse) make no requests. Keep one consistent style across the app. | **One line format for every step:** `<outcome> <ACTION> <subject>[ → <target>] (<duration>[, details])`. The outcome is the HTTP status for requests, `OK`/`ERR` for other work, and `—` for lifecycle events (start, progress, pause, settings, done). So `200 GET /product/1 (412 ms)`, `OK  AUDIT /product/1 (3.1 s, performance 80)`, `OK  BUILD table fct_prices (31.0 s, 48,146 rows)` and `—   PAUSE crawl (by you, 12,309 pages done)` all line up the same way (§4.3). |
 | D30 | Add a crawls page in the same enterprise style. | `/[site]/crawls`: title + **New crawl** → facts row (running now, crawls in the last 30 days, success rate, median production duration) → one data panel with the shared toolbar (search, status segments, copy, CSV), a table and pagination. Rows open `/{site}/crawls/{id}`. |
 | D31 | Pause at any point; Pause turns into Resume; when paused, open the crawl settings. Immutable settings are locked; request delay and timeout are mutable. What else? | **Pause** (any time while the run is active) → status **Paused** (yellow), the clock stops, and the actions become **Settings** + **Resume**. In the settings dialog, **Target** (environment + URL) and **Discovery** (sources, exclude paths, render JS, robots.txt) are **locked**, because they define *what* is crawled and changing them mid-run would mix results. **Throughput** is editable: request delay, request timeout, **concurrency**, **max retries** and **Lighthouse sample size** (that step hasn't run yet). Save, or Save and resume. Each change is logged (`—   UPDATE settings (delay 250 → 500 ms, timeout 30 → 20 s)`). While running or finished, the same dialog opens read-only from the `⋯` menu. |
-| D32 | The environment is attached to the URL input; changing it changes the URL. Disabled for an existing crawl, enabled when creating one. | An attached select + input (`Group attached`): picking Production / QA fills in that environment's base URL. In **New crawl** both are editable; for an existing crawl both are disabled, with the hint "Start a new crawl to crawl another environment". |
+| D32 | *(Superseded by D35.)* The environment is attached to the URL input; changing it changes the URL. Disabled for an existing crawl, enabled when creating one. | An attached select + input (`Group attached`): picking Production / QA fills in that environment's base URL. In **New crawl** both are editable; for an existing crawl both are disabled, with the hint "Start a new crawl to crawl another environment". |
 | D33 | The top-left should be the RBC CM logo, and I want to crawl other websites too (e.g. RBC ITS), switching there. | A **navbar** on every page: a **site switcher** on the left (logo + short name; the menu lists every site with its full name) and **New crawl** on the right. The page title and subtitle were dropped; the navbar carries the context. Everything is scoped to the selected site: the crawls list and facts, New crawl (environments fill in that site's URLs), and the run page (opening a crawl selects its site). Switching site on a run page goes to that site's crawls list. Sites live in one config (`src/lib/sites.ts` / `GET /api/sites`), so adding a website is one entry. |
 | D34 | Use the real logos and make it look good; the website must be the first URL segment, without changing the breadcrumbs; the list page needs a title. | **Official logos**, from rbccm.com and rbcis.com, in `public/sites/`: full colour in light mode, white wordmark in dark mode (RBC CM's white version is official; RBC IS's applies the same treatment). The navbar shows the logo itself, then a divider and "Crawler". **URLs:** `/{site}/crawls` and `/{site}/crawls/{id}` (e.g. `/rbccm/crawls/812`). The switcher navigates to `/{other site}/crawls`; `/` opens the site used last; an unknown site is a 404; a crawl opened under the wrong site redirects to its own. **Breadcrumbs stay** `Crawls › {id}`. The list page title is **Crawl history**. rbcits.com now redirects to RBC Investor Services (rbcis.com), so that site is labelled RBC Investor Services, with the URL segment kept as `rbcits`. |
+| D35 | Production and QA should be treated almost as different sites; QA only has a minimal baseline for testing new components. Add QA as its own site in the switcher. | QA copies are separate sites (`rbccm-qa` → www.sterbccm.com, `rbcits-qa` → www.sterbcits.com), each with its own crawl history, pages and issues, and a **QA** label next to the logo. No environment field anywhere: a crawl targets its site's URL, and a baseline is an earlier crawl of the same site. |
 
 ---
 
@@ -89,8 +90,8 @@ Routes: **`/[site]/crawls`** (`src/app/[site]/crawls/page.tsx`) and **`/[site]/c
 - Shows the **current site's** crawls only, under the title **Crawl history** (D34).
 - **Facts row** (for the current site): Running now · Crawls, last 30 days · Success rate · Median duration (production).
 - **Data panel:**
-  - the shared `DataToolbar` with search (id, URL, environment), segments **All · Running · Failed · Succeeded** with counts, copy IDs and CSV download;
-  - columns: Crawl (id) · Target (host) · Environment (outline badge: Production gray, QA purple) · Status (icon + label; running/paused rows add a tiny progress bar) · Pages · Errors · Duration · Started (UTC) · Trigger (Schedule / Manual);
+  - the shared `DataToolbar` with search (id, URL), segments **All · Running · Failed · Succeeded** with counts, copy IDs and CSV download;
+  - columns: Crawl (id) · Target (host) · Status (icon + label; running/paused rows add a tiny progress bar) · Pages · Errors · Duration · Started (UTC) · Trigger (Schedule / Manual);
   - 20 rows per page; each row links to the run page.
 
 ### 3.2 Run page header
@@ -111,7 +112,7 @@ Routes: **`/[site]/crawls`** (`src/app/[site]/crawls/page.tsx`) and **`/[site]/c
 | Elapsed / Duration | Plus "· done ~HH:MM" while running, or "· paused". Paused time doesn't count. | `elapsed_sec`, `eta_at` |
 | Pages | Fetched; while crawling "/ ~48.2K", with a tooltip "median of the last 5 crawls". | `pages.done`, `crawls.expected_pages` |
 | Errors | % of fetched, plus the count. | crawl `counters.codes` |
-| Target | Site · environment ("RBC CM · Production"), with a tooltip of the host and throughput settings. | `crawls.site`, `crawls.environment`, `crawls.url`, `crawls.settings` |
+| Target | Site ("RBC CM", "RBC CM QA"), with a tooltip of the host and throughput settings. | `crawls.site`, `crawls.url`, `crawls.settings` |
 
 ### 3.3 Step list (left, sticky)
 - **Row content:** icon, name, one-line subtitle, and duration (or `~usual` if not started). Running rows add a thin progress bar.
@@ -157,7 +158,7 @@ One component (`src/components/crawl-settings-dialog.tsx`) with three modes:
 
 | Section | Fields | create | paused | running / finished |
 |---|---|---|---|---|
-| Target | Site (from the switcher) + environment + URL (attached; picking an environment fills that site's URL) | editable | 🔒 locked | read-only |
+| Target | Site (from the switcher) + start URL (filled with the site's URL) | editable | 🔒 locked | read-only |
 | Discovery | Find pages from (sitemap and links / sitemap only / links only), exclude paths, render JavaScript, respect robots.txt | editable | 🔒 locked | read-only |
 | Throughput | Request delay (ms), request timeout (s), concurrency (workers), max retries (per URL), Lighthouse sample (pages) | editable | **editable** | read-only |
 
@@ -196,9 +197,9 @@ class CrawlRecorder:
         crawl_id_var.set(crawl_id)
 
     # ── lifecycle ──────────────────────────────────────────────
-    def crawl_started(self, environment: str, url: str, trigger: str, settings: dict, steps: list[tuple[str, str]]):
+    def crawl_started(self, url: str, trigger: str, settings: dict, steps: list[tuple[str, str]]):
         """steps = [(step_id, name), ...] in order. Also stores expected_pages / expected_sec medians (§5.4)."""
-        _q.put(("crawl_started", dict(id=self.crawl_id, environment=environment, url=url, trigger=trigger,
+        _q.put(("crawl_started", dict(id=self.crawl_id, url=url, trigger=trigger,
                                       settings=settings, steps=steps, ts=now())))
 
     def checkpoint(self) -> dict:
@@ -287,7 +288,7 @@ log.addHandler(DbLogHandler())   # keep your existing console handler as it is
 
 | When in the crawler | Call | Feeds in the UI |
 |---|---|---|
-| A crawl is created | `rec.crawl_started(environment, url, trigger, settings, steps)` + `log_event("START", f"crawl {url}", "64 workers", …)` | breadcrumb, header facts, step list (all `pending`), expected pages, usual durations |
+| A crawl is created | `rec.crawl_started(url, trigger, settings, steps)` + `log_event("START", f"crawl {url}", "64 workers", …)` | breadcrumb, header facts, step list (all `pending`), expected pages, usual durations |
 | Before each request / unit of work | `settings = rec.checkpoint()`, then use `settings["delay_ms"]`, `["timeout_s"]`, … | Pause/Resume, live throughput changes (D31) |
 | Each step begins | `rec.step_started("crawl", items_total=None)`; processing steps pass the page count; Lighthouse passes the sample size | step status, "Started", progress denominator |
 | Every 5–10s while a step runs (a timer, or every N items) | **crawl:** `rec.progress(done, rate, codes={...}, discovered=n, queue=n, render_ms_median=n)` · **others:** `rec.progress(done, rate)` | progress bar, ETA, Metrics charts, response-code bar, queue, facts row "Pages"/"Errors" |
@@ -364,8 +365,7 @@ PRAGMA foreign_keys = ON;
 ```sql
 CREATE TABLE crawls (
   id                 TEXT PRIMARY KEY,                 -- shown in the breadcrumb
-  site               TEXT NOT NULL REFERENCES sites(id), -- rbccm | rbcits | … (locked after start)
-  environment        TEXT NOT NULL,                    -- production | qa (locked after start)
+  site               TEXT NOT NULL REFERENCES sites(id), -- rbccm | rbccm-qa | rbcits | rbcits-qa (locked after start)
   url                TEXT NOT NULL,                    -- base URL (locked after start)
   status             TEXT NOT NULL CHECK (status IN ('running','paused','success','failed','cancelled')),
   trigger            TEXT NOT NULL,                    -- 'schedule' | 'manual' | ...
@@ -379,15 +379,15 @@ CREATE TABLE crawls (
   finished_at        TEXT
 );
 CREATE INDEX crawls_site_started ON crawls (site, started_at);
-CREATE INDEX crawls_env_started ON crawls (site, environment, started_at);
 CREATE INDEX crawls_status ON crawls (status, started_at);
 
 CREATE TABLE sites (                                   -- websites that can be crawled (the navbar switcher)
-  id           TEXT PRIMARY KEY,                       -- rbccm, rbcits
+  id           TEXT PRIMARY KEY,                       -- rbccm, rbccm-qa, rbcits, rbcits-qa
   name         TEXT NOT NULL,                          -- "RBC Capital Markets"
   short        TEXT NOT NULL,                          -- "RBC CM"
   logo_url     TEXT,                                   -- served from the frontend's /public or a CDN
-  environments TEXT NOT NULL                           -- JSON {"production": "https://www.rbccm.com", "qa": "https://www.sterbccm.com"}
+  url          TEXT NOT NULL,                          -- "https://www.rbccm.com"; QA copies are their own rows ("https://www.sterbccm.com")
+  qa           INTEGER NOT NULL DEFAULT 0              -- 1 = QA copy: minimal baseline content, labelled QA in the switcher
 );
 
 CREATE TABLE crawl_steps (                             -- one row per step AND per follow-up job
@@ -482,7 +482,7 @@ threading.Thread(target=_writer, args=("crawls.db",), daemon=True).start()
 
 | Record | SQL |
 |---|---|
-| `crawl_started` | `INSERT crawls(status='running', environment, url, settings)` + one `crawl_steps` row per step (`pending`; the first is `waiting`), with `expected_sec` from §5.4 |
+| `crawl_started` | `INSERT crawls(status='running', url, settings)` + one `crawl_steps` row per step (`pending`; the first is `waiting`), with `expected_sec` from §5.4 |
 | `step_started` | `UPDATE crawl_steps SET status='running', started_at, items_total`; the next step → `waiting` |
 | `progress` | `UPDATE crawl_steps SET items_done, rate, counters` + `INSERT crawl_samples` |
 | `page` | `INSERT crawl_pages` (compute `redirect_side` and `hop_count` from `hops`) |
@@ -498,7 +498,7 @@ Flush the queue on shutdown (`atexit`), so the last lines and the final status a
 ```sql
 -- expected_pages: median pages of the last 5 successful crawls of this site
 SELECT items_done FROM crawl_steps s JOIN crawls c ON c.id = s.crawl_id
-WHERE c.site = :site AND c.environment = :environment AND c.status = 'success' AND s.step_id = 'crawl'
+WHERE c.site = :site AND c.status = 'success' AND s.step_id = 'crawl'
 ORDER BY c.started_at DESC LIMIT 5;          -- take the median in Python: statistics.median(rows)
 
 -- expected_sec per step: same query over the last 10 crawls, (julianday(finished_at) - julianday(started_at)) * 86400
@@ -550,17 +550,17 @@ All under `/api`. Times are ISO 8601 UTC. Pydantic models mirror the payloads be
 ### 6.0 Crawls list and create
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/sites` | `[{ "id": "rbccm", "name": "RBC Capital Markets", "short": "RBC CM", "logo_url": "/sites/rbccm.svg", "environments": { "production": "https://www.rbccm.com", … } }, …]` (navbar switcher + dialog URLs) |
-| `GET /api/crawls?site=rbccm&status=running,paused&q=&environment=&page=1&page_size=20` | `{ "items": [CrawlRow], "total": 64, "counts": { "all": 64, "running": 1, "failed": 4, "success": 58 }, "facts": { "running": 1, "last_30_days": 50, "success_rate": 96, "median_duration_sec": { "production": 1465 } } }` |
-| `POST /api/crawls` `{ site, environment, url, settings }` | Validates and starts a crawl → `201 { "id": "813" }`; the UI navigates to `/crawls/813` |
+| `GET /api/sites` | `[{ "id": "rbccm", "name": "RBC Capital Markets", "short": "RBC CM", "logo_url": "/sites/rbccm.svg", "url": "https://www.rbccm.com", "qa": false }, { "id": "rbccm-qa", …, "url": "https://www.sterbccm.com", "qa": true }, …]` (navbar switcher + dialog URL) |
+| `GET /api/crawls?site=rbccm&status=running,paused&q=&page=1&page_size=20` | `{ "items": [CrawlRow], "total": 64, "counts": { "all": 64, "running": 1, "failed": 4, "success": 58 }, "facts": { "running": 1, "last_30_days": 50, "success_rate": 96, "median_duration_sec": 1465 } }` |
+| `POST /api/crawls` `{ site, url, settings }` | Validates and starts a crawl → `201 { "id": "813" }`; the UI navigates to `/crawls/813` |
 
-`CrawlRow`: `{ "id", "site", "environment", "url", "status", "progress_pct", "pages", "error_pct", "duration_sec", "started_at", "trigger" }`
+`CrawlRow`: `{ "id", "site", "url", "status", "progress_pct", "pages", "error_pct", "duration_sec", "started_at", "trigger" }`
 
 ### 6.1 Crawl summary: polled every 2s while running
 `GET /api/crawls/{crawl_id}`
 ```json
 {
-  "id": "812", "site": "rbccm", "environment": "production", "url": "https://www.rbccm.com", "status": "running", "trigger": "schedule",
+  "id": "812", "site": "rbccm", "url": "https://www.rbccm.com", "status": "running", "trigger": "schedule",
   "settings": { "discovery": "sitemap+links", "exclude": ["/search", "/cart"], "render_js": true, "respect_robots": true,
                 "delay_ms": 250, "timeout_s": 30, "concurrency": 64, "max_retries": 2, "lighthouse_sample": 200 },
   "paused_at": null,

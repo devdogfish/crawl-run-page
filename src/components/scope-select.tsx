@@ -1,9 +1,8 @@
 "use client";
 
-// Crawl / baseline pickers in page headers (Pages, Issues): crawl id + date, environment or distance as a hint
+// Crawl / baseline pickers in page headers (Pages, Issues): crawl id + date, with the distance as a hint
 import { HStack, Portal, Select, Text } from "@chakra-ui/react";
 import { useSite } from "@/components/site-context";
-import { ENVIRONMENTS } from "@/lib/settings";
 import { baselinesFor, crawlChoices } from "@/lib/site-pages";
 import { useItems, type Item } from "@/components/filter-select";
 
@@ -33,8 +32,8 @@ export function ScopeSelect({ label, value, onChange, items }: { label: string; 
   );
 }
 
-// "Crawl [#A] compared with [#B]": the baseline is an earlier crawl of the same environment (production and QA are
-// separate sites). Changing the crawl keeps the baseline if it still fits, else picks the previous crawl of that environment.
+// "Crawl [#A] compared with [#B]": the baseline is an earlier crawl of the same site.
+// Changing the crawl keeps the baseline if it's still older, else picks the crawl before it.
 export function CrawlScope({ crawl, vs, onChange }: { crawl: string; vs: string; onChange: (crawl: string, vs: string) => void }) {
   const site = useSite();
   const crawls = crawlChoices(site);
@@ -46,7 +45,7 @@ export function CrawlScope({ crawl, vs, onChange }: { crawl: string; vs: string;
       <ScopeSelect label="Crawl" value={crawl} onChange={(v) => {
         const fits = baselinesFor(site, v);
         onChange(v, vs === "none" ? "none" : fits.some((c) => c.id === vs) ? vs : fits[0]?.id ?? "none");
-      }} items={crawls.map((c) => ({ value: c.id, label: label(c.id), hint: ENVIRONMENTS[c.environment].label }))} />
+      }} items={crawls.map((c) => ({ value: c.id, label: label(c.id), hint: c.trigger }))} />
       <Text textStyle="sm" color="fg.muted">compared with</Text>
       <ScopeSelect label="Baseline" value={vs} onChange={(v) => onChange(crawl, v)}
         items={[{ value: "none", label: "No comparison", hint: "" }, ...baselines.map((c) => {
