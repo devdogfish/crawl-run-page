@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AppNavbar } from "@/components/app-navbar";
+import { AppShell } from "@/components/app-shell";
 import { SiteProvider } from "@/components/site-context";
 import { SITES, type SiteId } from "@/lib/sites";
 
@@ -9,8 +9,7 @@ export default async function SiteLayout({ children, params }: { children: React
   if (!(site in SITES)) notFound();
   return (
     <SiteProvider site={site as SiteId}>
-      <AppNavbar />
-      {children}
+      <AppShell>{children}</AppShell>
     </SiteProvider>
   );
 }

@@ -275,7 +275,7 @@ function Sidebar({ run, steps, job, selected, onSelect, onFullLighthouse }: {
   const { state } = run;
   const lhDone = state.tail.find((s) => s.id === "lighthouse")?.status === "success";
   return (
-    <Stack gap="6" position={{ lg: "sticky" }} top={{ lg: "16" }}>
+    <Stack gap="6" position={{ lg: "sticky" }} top={{ lg: "calc(var(--sticky-top, 4rem) + 1rem)" }}>
       <Box>
         <Stack gap="0.5">
           {steps.map((s) => <StepButton key={s.id} step={s} selected={s.id === selected} onSelect={onSelect} />)}
