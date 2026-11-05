@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Button, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
-import { LuCalendarClock, LuChartColumn, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
+import { LuChartColumn, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
 
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { useSite } from "@/components/site-context";
@@ -16,8 +16,8 @@ import { SITES, SITE_IDS, type SiteId } from "@/lib/sites";
 // Top-level sections. Only Crawls is built; the others are placeholders to try the navigation.
 export const SECTIONS = [
   { id: "crawls", label: "Crawls", icon: LuList },
-  { id: "schedules", label: "Schedules", icon: LuCalendarClock },
-  { id: "reports", label: "Reports", icon: LuChartColumn },
+  { id: "pages", label: "Pages", icon: LuFileText },
+  { id: "analytics", label: "Analytics", icon: LuChartColumn },
   { id: "settings", label: "Settings", icon: LuSettings },
 ] as const;
 export type SectionId = (typeof SECTIONS)[number]["id"];

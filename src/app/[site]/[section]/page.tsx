@@ -1,6 +1,6 @@
 "use client";
 
-// Placeholder for sections that aren't part of this prototype yet (Schedules, Reports),
+// Placeholder for sections that aren't part of this prototype yet (Pages, Analytics),
 // so both navigation layouts can be clicked through. /[site]/crawls and /[site]/settings are real routes and take precedence.
 import { notFound, useParams } from "next/navigation";
 import { Box, Container, EmptyState, Heading, Icon } from "@chakra-ui/react";
