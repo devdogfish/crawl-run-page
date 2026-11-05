@@ -23,7 +23,7 @@ import { PagePreview, type Layer } from "@/components/page-preview";
 import { useSite } from "@/components/site-context";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
-  OWNER_LABEL, RULE_CATALOG, SEVERITIES, apiRequest, batchPrompt, issuePrompt, issuesJson, localCheck, pageIssues, sevRank, sourceLines, sourceOf, type Instance,
+  RULE_CATALOG, SEVERITIES, apiRequest, batchPrompt, issuePrompt, issuesJson, localCheck, pageIssues, sevRank, sourceLines, type Instance,
 } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
 import { downloadText } from "@/components/data-toolbar";
@@ -354,7 +354,6 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
   it: Instance; siblings: Instance[]; html: string; page: PageV; fix: boolean;
   onFix: () => void; onSelect: (k: number) => void; onShow: () => void; onAsk: () => void; prio: (s: string) => string; link: string;
 }) {
-  const src = sourceOf(it, page);
   const r = RULE_CATALOG[it.rule];
   const idx = siblings.findIndex((x) => x.k === it.k);
   const cat = CATEGORIES.find((c) => c.id === r.category)!.label;
@@ -388,9 +387,7 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
           <Code display="block" whiteSpace="pre-wrap" wordBreak="break-all" px="3" py="2.5" textStyle="xs" bg="bg.subtle" rounded="0">{it.snippet}</Code>
         </Box>
         <HStack gap="1.5" textStyle="xs" color="fg.muted" wrap="wrap">
-          <Text>Fix in <Span color="fg" fontWeight="medium">{OWNER_LABEL[src.owner]}</Span></Text>
-          <Text color="fg">{src.label}</Text>
-          {it.shared != null && <Text>· same markup on {it.shared.toLocaleString("en-US")} pages</Text>}
+          {it.shared != null ? <Text>Same markup on {it.shared.toLocaleString("en-US")} pages: one fix covers all of them</Text> : <Text>Only on this page</Text>}
         </HStack>
       </Stack>
 
@@ -490,7 +487,7 @@ function ElementCard({ it, siblings, fix, page, onSelect, onFix, onAsk, onDetail
         <Box mt="1.5"><SevDot sev={r.severity} /></Box>
         <Stack gap="0" flex="1" minW="0">
           <Text textStyle="sm" fontWeight="medium" lineClamp={2}>{r.title}</Text>
-          <Text textStyle="xs" color="fg.muted">{prio(r.severity)} · {SEV[r.severity].label} · {OWNER_LABEL[sourceOf(it, page).owner]}</Text>
+          <Text textStyle="xs" color="fg.muted">{prio(r.severity)} · {SEV[r.severity].label}</Text>
         </Stack>
         {siblings.length > 1 && (
           <HStack gap="0" flexShrink={0} textStyle="xs" color="fg.muted">

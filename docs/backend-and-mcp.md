@@ -2,7 +2,7 @@
 
 How to build the part of the backend behind the Pages page, the page detail and the MCP server.
 The crawl run page backend (logs, metrics, steps) is in [SPEC.md](../SPEC.md) §4 to §6; this document adds what comes after it.
-Words like **issue**, **element**, **owner** and **baseline** are defined in [CONTEXT.md](../CONTEXT.md).
+Words like **issue**, **element**, **shared markup** and **baseline** are defined in [CONTEXT.md](../CONTEXT.md).
 
 Status: proposal. Nothing here is built yet. Build order is at the end (slices 6 and 7 in [SLICES.md](../SLICES.md)).
 
@@ -35,7 +35,7 @@ The one rule: **the REST API and the MCP server are siblings, both calling the s
 The MCP server does not call the REST API over HTTP. That would add a network hop, a second serialisation and a second set of error cases for no gain, because both run in the same Python process (or can open the same SQLite file).
 
 Why this shape (in the vocabulary of deep modules):
-- **The core is the deep module.** A small interface (four or five functions) hides the real work: comparing a crawl with its baseline, grouping elements into issues, working out new and fixed, priority, owner and source, filtering, paging.
+- **The core is the deep module.** A small interface (four or five functions) hides the real work: comparing a crawl with its baseline, grouping elements into issues, working out new and fixed, priority, shared markup, filtering, paging.
 - **The interface between core and transport is a real seam.** It has two adapters today (FastAPI and MCP) and a third later (the local check CLI). Logic that lives in an adapter would have to be written twice. Deletion test: delete `core/issues.py` and the same SQL and grouping logic reappears in a router, a tool and the exporter.
 - **No repository port in front of SQLite.** SQLite runs in-process and tests can use a real database file, so the core takes a `sqlite3.Connection` directly. A `Repository` interface with one implementation would be indirection without a second adapter to justify it.
 
@@ -92,7 +92,7 @@ def get_page(db, page: int | str, crawl: int | Literal["latest"]) -> Page | None
 
 # core/issues.py
 def find_issues(db, page: int | str, crawl: int | Literal["latest"], baseline: int | None = None, *,
-                priority: list[str] = [], category: list[str] = [], owner: list[str] = [],
+                priority: list[str] = [], category: list[str] = [],
                 status: Literal["new", "existing", "fixed"] | None = None,
                 q: str = "", shared: bool | None = None) -> list[Issue]: ...
 
@@ -109,9 +109,6 @@ class Element:
     status: Literal["new", "existing", "fixed"]
     first_seen: int         # crawl id
     shared_pages: int | None   # None = only on this page
-    owner: Literal["code", "template", "content"]
-    source: str             # "Footer component", "Component 1786807680025", "Article body (DCR field)"
-    source_url: str | None
     box: tuple[int, int, int, int] | None   # x, y, w, h in the screenshot
 
 @dataclass
@@ -169,10 +166,8 @@ CREATE TABLE element (              -- one failing element of one rule on one pa
   selector     TEXT NOT NULL,
   html         TEXT NOT NULL,       -- trimmed snippet
   html_hash    TEXT NOT NULL,       -- identity across crawls and pages
-  box          TEXT,                -- JSON [x,y,w,h]
-  owner        TEXT NOT NULL,       -- code | template | content
-  source       TEXT NOT NULL,
-  source_url   TEXT
+  pattern      TEXT NOT NULL,       -- selector without positions (footer .legal a): the Issues page groups by it
+  box          TEXT                 -- JSON [x,y,w,h]
 );
 CREATE INDEX element_page ON element (crawl_id, page_id);
 CREATE INDEX element_hash ON element (crawl_id, rule_id, html_hash);   -- shared markup counts
@@ -181,11 +176,7 @@ CREATE TABLE link (crawl_id INTEGER, from_page INTEGER, to_url TEXT);    -- "lin
 CREATE TABLE rule_match (crawl_id INTEGER, page_id INTEGER, rule_id TEXT, count INTEGER);  -- custom rules
 ```
 
-Owner and source are decided by the crawler while it has the DOM (see [research/teamsite-cms-traces.md](../research/teamsite-cms-traces.md)):
-- nearest `div.iw_component` ancestor → the component;
-- the same `html_hash` on most pages of the crawl → `template` (computed after the crawl, in one UPDATE);
-- inside a known content record field container (`div.article-content`, `#description`, …) → `content`, with the record path from the URL or canonical when it's there;
-- everything else → `code`.
+The crawler doesn't decide who owns an element or which CMS field it came from. TeamSite's HTML doesn't expose that reliably ([research/teamsite-cms-traces.md](../research/teamsite-cms-traces.md)): component ids are per page and unnamed, and content fields aren't marked. What it stores is deterministic: the selector pattern, and the `html_hash`, whose count across pages gives "same markup on N pages".
 
 ---
 
@@ -202,7 +193,7 @@ Start with three read-only tools. Design them around what the model needs to do,
 | Tool | Input | Returns |
 |---|---|---|
 | `find_pages` | `site`, `q?` (URL, title), `rule?`, `priority?`, `category?`, `change?`, `crawl?` = latest, `limit?` = 20 | pages with issue counts by priority, `ui_url`, `next_cursor` |
-| `list_issues` | `page` (id, path or URL), `crawl?` = latest, `priority?`, `category?`, `owner?`, `status?` | issues with their elements (selector, HTML, source), how to fix, `ui_url` |
+| `list_issues` | `page` (id, path or URL), `crawl?` = latest, `priority?`, `category?`, `status?` | issues with their elements (selector, HTML, shared pages), how to fix, `ui_url` |
 | `get_issue` | `issue_id` | one issue with every element, references and the local check command |
 
 Later, only if people ask for it: a `fix_page` **prompt** (MCP prompts are user-invoked templates: "fix all P1 issues on page X" expands into a ready prompt), and `issue://{id}` **resources**.
@@ -210,7 +201,7 @@ Later, only if people ask for it: a `fix_page` **prompt** (MCP prompts are user-
 ### 5.3 Writing tools that models use well
 
 - **Descriptions are for the model.** Say when to use the tool and what comes back, in one or two sentences: "List the issues on one page of the site. Use this before fixing a page; each issue includes the failing HTML, where it comes from (template, component or CMS content) and how to fix it."
-- **Constrain inputs.** Enums for `priority` (`P1`…`P4`), `category`, `owner`, `status`. Sensible defaults (`crawl` = latest). Accept what a user would paste: a full URL as well as an id.
+- **Constrain inputs.** Enums for `priority` (`P1`…`P4`), `category`, `status`. Sensible defaults (`crawl` = latest). Accept what a user would paste: a full URL as well as an id.
 - **Return compact, structured results.** Return the typed model (FastMCP turns it into structured content plus text). Cap lists (`limit`, `next_cursor`), trim HTML snippets, and omit fields the model doesn't need. A page with 150 elements should come back grouped by issue, not as 150 flat rows.
 - **Always include `ui_url`.** The model can hand the developer a link to the exact issue in the UI.
 - **Errors that say what to do next:** "Page /en/foo isn't in crawl 811. The latest crawl that has it is 806." Raise them as tool errors, not empty results.

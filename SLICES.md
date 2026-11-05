@@ -16,7 +16,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 | 3 | Metrics + ETA | `progress(...)`, `rate_limited(...)` | samples, ETA, medians, history | Metrics tab, progress/ETA, sparkline | charts and ETA come from real numbers |
 | 4 | Pages table | `page(...)` per URL | pages, counts, CSV | Pages tab | redirects/errors/skips can be filtered, paged and exported |
 | 5 | Controls + Lighthouse | `checkpoint()`, `lighthouse_result(...)` | create, pause/resume, settings, retry, jobs, scores | New crawl, Pause/Resume/Settings, Retry, Scores, full-site row | crawls can be started, paused, re-tuned, resumed and retried; Lighthouse works end to end |
-| 6 | Pages + issues API | snapshots, elements (with owner/source), links, custom-rule matches | `core/` (pages, issues, rules, handoff), `/api/…/pages`, `/api/pages/{id}/issues` | Pages page and page detail on real data | a real crawl compared with its baseline shows the right new/changed/removed pages and new/fixed issues |
+| 6 | Pages + issues API | snapshots, elements (with selector pattern and HTML hash), links, custom-rule matches | `core/` (pages, issues, rules, handoff), `/api/…/pages`, `/api/pages/{id}/issues` | Pages page and page detail on real data | a real crawl compared with its baseline shows the right new/changed/removed pages and new/fixed issues |
 | 7 | MCP server | none | `mcp/` with `find_pages`, `list_issues`, `get_issue`; stdio entry and `/mcp` mount | none | Claude Code, connected locally, lists a page's P1 issues and fixes one in the repo |
 
 ---
@@ -223,7 +223,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 
 **Crawler (calls only)**
 - Per page: a snapshot (status, title, H1, content hash, page type, screenshot path).
-- Per failing element: rule, selector, trimmed HTML, HTML hash, box, owner and source (§4 of the design doc).
+- Per failing element: rule, selector, trimmed HTML, HTML hash, selector pattern, box (§4 of the design doc).
 - Per page: outgoing links, and custom-rule match counts.
 
 **Backend**

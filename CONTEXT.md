@@ -78,24 +78,14 @@ _Avoid_: urgency, rank
 The area a rule belongs to: accessibility, performance, SEO, or security and compliance.
 _Avoid_: type, area, group
 
-### Ownership
+### Where issues are
 
 **Shared markup**:
-HTML that appears unchanged on many pages, such as the header or footer.
+HTML that appears unchanged on many pages, such as the header or footer. One fix covers every page it's on.
 _Avoid_: global component, boilerplate
 
-**Owner**:
-Who fixes an element: code (a component), template (shared markup), or content (an editor in the CMS).
-_Avoid_: team, assignee
+**Element pattern**:
+The selector an issue's elements share once positions are removed, such as `footer .legal a`. The Issues page groups a rule's elements by it.
+_Avoid_: group, location, source
 
-**Source**:
-The thing that produced an element: a component, a template file, or a content record.
-_Avoid_: origin, location
-
-**Component**:
-A TeamSite LiveSite component on a page, the block wrapped in an `iw_component` container.
-_Avoid_: widget, module, block
-
-**Content record**:
-A TeamSite data content record (DCR) whose fields hold a page's editable content.
-_Avoid_: DCR (in prose), entry, document
+The tool doesn't say who owns an element or which CMS field it came from: TeamSite's HTML doesn't expose that reliably, and the preview shows where it is.

@@ -1,24 +1,18 @@
-// PROTOTYPE DATA for /[site]/issues: every issue of one crawl, grouped by rule and by where it's fixed.
+// PROTOTYPE DATA for /[site]/issues: every issue of one crawl, grouped by rule and by element pattern.
 //
-// The Pages page answers "what's wrong with this page". This answers "what do we fix, and where":
-// one rule failing on 30,000 pages is usually one shared file, so the unit of work is rule × source, not page.
+// The Pages page answers "what's wrong with this page". This answers "which rules fail most, on which elements":
+// each rule's elements are grouped by selector pattern (footer .legal a, article figure.chart img), and a pattern
+// whose markup repeats unchanged across pages is marked shared, so one fix covers all of them.
+// Both are computed from the HTML; nothing guesses who owns the markup or which CMS field it came from.
 // Built from the same per-page elements as the page detail (issueSlots), so counts and ?issue= links line up.
-// Real backend: GROUP BY rule, source over the element table for one crawl (and its baseline), see docs/backend-and-mcp.md.
-import { RULE_CATALOG, issueSlots, sourceOf, type Instance, type Owner, type Rule } from "@/lib/page-issues";
+// Real backend: GROUP BY rule, selector pattern over the element table for one crawl (and its baseline).
+import { RULE_CATALOG, issueSlots, type Rule } from "@/lib/page-issues";
 import { pagesFor, siteSize, type PageView } from "@/lib/site-pages";
 import { PRIORITY, type Priority } from "@/lib/priority";
 import type { SiteId } from "@/lib/sites";
 
-// Where an element gets fixed: what sourceOf reads from the HTML. Content sources are one DCR field type,
-// spread over one record per page.
-export type FixSource = { key: string; owner: Owner; label: string };
-export function fixSource(it: Instance, p: PageView): FixSource {
-  const s = sourceOf(it, p);
-  return { key: s.label, owner: s.owner, label: s.label };
-}
-
-// One rule on one page from one source: its current elements, how many are new, how many were fixed
-export type Hit = { p: PageView; rule: string; src: FixSource; elements: number; added: number; fixed: number; k: number };
+// One rule on one page, for one element pattern: its current elements, how many are new, how many were fixed
+export type Hit = { p: PageView; rule: string; pattern: string; shared: boolean; elements: number; added: number; fixed: number; k: number };
 
 const cache = new Map<string, Hit[]>();
 export function hitsFor(site: SiteId, a: number, b: number | null): Hit[] {
@@ -31,10 +25,9 @@ export function hitsFor(site: SiteId, a: number, b: number | null): Hit[] {
     if (p.change === "removed") continue; // not in this crawl
     const by = new Map<string, Hit>();
     for (const it of issueSlots(p, a, b, n)) {
-      const src = fixSource(it, p);
-      const id = `${it.rule}|${src.key}`;
+      const id = `${it.rule}|${it.group}`;
       let h = by.get(id);
-      if (!h) { h = { p, rule: it.rule, src, elements: 0, added: 0, fixed: 0, k: it.k }; by.set(id, h); }
+      if (!h) { h = { p, rule: it.rule, pattern: it.group, shared: it.shared != null, elements: 0, added: 0, fixed: 0, k: it.k }; by.set(id, h); }
       if (it.status === "fixed") h.fixed++;
       else { h.elements++; if (it.status === "new") h.added++; }
     }
@@ -49,53 +42,48 @@ export function hitsFor(site: SiteId, a: number, b: number | null): Hit[] {
 export type Seg = "all" | "new" | "fixed";
 export const countOf = (h: Hit, seg: Seg) => (seg === "all" ? h.elements : seg === "new" ? h.added : h.fixed);
 
-export type SourceCount = { src: FixSource; pages: number; elements: number };
+export type PatternCount = { pattern: string; shared: boolean; pages: number; elements: number };
 export type RuleRow = {
   rule: Rule; priority: Priority;
   pages: number; elements: number; // in the chosen segment
-  added: number; fixed: number; // pages with new / fixed elements (for the Change column)
-  sources: SourceCount[]; // most pages first
+  added: number; fixed: number; // pages with new / fixed elements (for the change column)
+  sharedPages: number; // pages where it fails in markup shared across pages
+  patterns: PatternCount[]; // most pages first
 };
 
 export function byRule(hits: Hit[], seg: Seg): RuleRow[] {
-  const rows = new Map<string, { pages: Set<number>; elements: number; added: Set<number>; fixed: Set<number>; src: Map<string, SourceCount & { set: Set<number> }> }>();
+  type Acc = { pages: Set<number>; shared: Set<number>; elements: number; added: Set<number>; fixed: Set<number>; pat: Map<string, PatternCount> };
+  const rows = new Map<string, Acc>();
   for (const h of hits) {
     let r = rows.get(h.rule);
-    if (!r) { r = { pages: new Set(), elements: 0, added: new Set(), fixed: new Set(), src: new Map() }; rows.set(h.rule, r); }
+    if (!r) { r = { pages: new Set(), shared: new Set(), elements: 0, added: new Set(), fixed: new Set(), pat: new Map() }; rows.set(h.rule, r); }
     if (h.added) r.added.add(h.p.i);
     if (h.fixed) r.fixed.add(h.p.i);
     const n = countOf(h, seg);
     if (!n) continue;
     r.pages.add(h.p.i); r.elements += n;
-    let s = r.src.get(h.src.key);
-    if (!s) { s = { src: h.src, pages: 0, elements: 0, set: new Set() }; r.src.set(h.src.key, s); }
-    if (!s.set.has(h.p.i)) { s.set.add(h.p.i); s.pages++; }
-    s.elements += n;
+    if (h.shared) r.shared.add(h.p.i);
+    const x = r.pat.get(h.pattern) ?? { pattern: h.pattern, shared: h.shared, pages: 0, elements: 0 };
+    x.pages++; x.elements += n; // one hit per page and pattern
+    r.pat.set(h.pattern, x);
   }
   return [...rows.entries()].filter(([, r]) => r.pages.size > 0).map(([id, r]) => {
     const rule = RULE_CATALOG[id];
     return {
       rule, priority: PRIORITY[rule.severity], pages: r.pages.size, elements: r.elements, added: r.added.size, fixed: r.fixed.size,
-      sources: [...r.src.values()].map(({ src, pages, elements }) => ({ src, pages, elements })).sort((x, y) => y.pages - x.pages),
+      sharedPages: r.shared.size, patterns: [...r.pat.values()].sort((x, y) => y.pages - x.pages),
     };
   });
 }
 
-// Every source with how many issues (rule on a page) it accounts for: the Source filter's options
-export function sourcesIn(hits: Hit[]) {
-  const m = new Map<string, { src: FixSource; n: number }>();
-  for (const h of hits) { const s = m.get(h.src.key) ?? { src: h.src, n: 0 }; s.n++; m.set(h.src.key, s); }
-  return [...m.values()].sort((x, y) => y.n - x.n);
-}
-
-// One prompt for a whole filtered list: per rule, where to fix it and how
+// One prompt for a whole filtered list: per rule, the element patterns and how to fix them
 export function rulesPrompt(site: SiteId, crawl: number, rows: RuleRow[]) {
   return [
-    `Fix these ${rows.length} issues found on ${site === "rbccm" ? "www.rbccm.com" : "www.rbcits.com"} in crawl #${crawl}. Fix each in its source, not per page. Return a patch per file.`, "",
+    `Fix these ${rows.length} issues found on ${site === "rbccm" ? "www.rbccm.com" : "www.rbcits.com"} in crawl #${crawl}.`, "",
     ...rows.flatMap((r) => [
       `## ${r.priority} ${r.rule.title} (${r.rule.id}${r.rule.criterion ? `, WCAG ${r.rule.criterion.split(" ")[0]}` : ""}): ${r.pages.toLocaleString("en-US")} pages`,
       `How to fix: ${r.rule.howToFix}`,
-      ...r.sources.map((s) => `- ${s.src.label}: ${s.pages.toLocaleString("en-US")} pages, ${s.elements.toLocaleString("en-US")} elements`), "",
+      ...r.patterns.map((x) => `- ${x.pattern}: ${x.pages.toLocaleString("en-US")} pages, ${x.elements.toLocaleString("en-US")} elements${x.shared ? " (same markup on every one of these pages)" : ""}`), "",
     ]),
   ].join("\n");
 }

@@ -657,23 +657,17 @@ Architecture, storage and the MCP build guide: [`docs/backend-and-mcp.md`](docs/
   "ui_url": "https://crawler.internal/rbccm/pages/9155?crawl=811&issue=…",
   "elements": [
     { "id": "811-9155-image-alt-1", "selector": "article figure.chart:nth-of-type(1) img", "html": "<img src=…>",
-      "status": "existing", "first_seen": 802, "shared_pages": null,
-      "owner": "content", "source": "Content record templatedata/article/story/data/2025/03/… · body", "source_url": null } ] }
+      "status": "existing", "first_seen": 802, "shared_pages": null } ] }
 ```
 
 - **Priority** is fixed per severity and not configurable: Critical P1, Serious P2, Moderate P3, Minor P4.
-- **Owner and source** (who fixes it, and where). Only what the HTML exposes today (research/teamsite-cms-traces.md); the site emits no `data-cms-*` or `data-component*` attributes and no repo or file names:
-  - `template` when the same normalised markup is on many pages (header, footer, cookie banner), or the element is in a page-template region (`ls:begin[head-injection]`, `[script]`). Source: the component or region name;
-  - `content` when the element is inside a DCR field slot (`.article-content`, `.story-main`, `.news-date`, `#description`) or comes from page properties (`[meta-description]`). Source: the field, plus the DCR path when the page exposes it (news releases: `?dcr=` in the canonical);
-  - `code` when it's inside a custom-coded component (`rbccm-*` class prefix, own CSS/JS under `/assets/rbccm/`). Source: that prefix and the TeamSite component id (`div.iw_component#<id>`, per page);
-  - No source links until we know where the TeamSite source lives; `source_url` stays null.
-  - The crawler stores `owner`, `source_label`, `source_url` per issue instance.
+- **Where to fix** is not inferred. TeamSite's HTML doesn't reliably say who owns an element or which content field it came from (research/teamsite-cms-traces.md), and the preview shows where it is. What the tool states is deterministic: the selector, and "same markup on N pages" from the HTML hash (one fix covers all of them).
 
 **API.**
 
 | Endpoint | Returns |
 |---|---|
-| `GET /api/pages/{page_id}/issues?crawl=811&priority=P1,P2&category=accessibility&status=new&owner=code` | `{ page, issues: [Issue] }`, the same filters as the UI |
+| `GET /api/pages/{page_id}/issues?crawl=811&priority=P1,P2&category=accessibility&status=new` | `{ page, issues: [Issue] }`, the same filters as the UI |
 | `GET /api/issues/{issue_id}` | one `Issue` with all its elements |
 
 Links: the page detail URL carries the view (`?crawl=811&issue=18&pri=P1&cat=accessibility`), so any issue or filtered list can be linked to.
@@ -681,7 +675,7 @@ Links: the page detail URL carries the view (`?crawl=811&issue=18&pri=P1&cat=acc
 **Exports** (Issues tab → Export): copy as one prompt (grouped by rule, one line per element with its source), download JSON (the shape above), copy the API request, copy a link to the view. The API serves the same with `?format=prompt|json`.
 
 **MCP server** (so an AI coding tool can pull issues itself; a sibling of the REST API, both calling the same core in-process, see `docs/backend-and-mcp.md` §5):
-- `list_issues(page, crawl?, priority?, category?, owner?, status?)` → `Issue[]`
+- `list_issues(page, crawl?, priority?, category?, status?)` → `Issue[]`
 - `get_issue(issue_id)` → `Issue` with elements
 - `find_pages(site, q?, rule?, priority?, category?, change?)` → pages with issue counts by priority
 

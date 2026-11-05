@@ -1,9 +1,10 @@
 "use client";
 
-// Issues · /[site]/issues: every rule failing in one crawl, with where it gets fixed.
-// The Pages page is per page ("what's wrong here"); this is per rule and source ("what do we fix, and where"):
-// one row per rule, its pages and elements, and the file or CMS field that most of them come from,
-// so a fix in one shared file is visibly worth thousands of pages. Comparing adds New / Fixed since the baseline.
+// Issues · /[site]/issues: every rule failing in one crawl, across the whole site.
+// The Pages page is per page ("what's wrong here"); this is per rule ("what fails most, and on which elements"):
+// one row per rule, its pages and elements, and the element pattern most of them are on. "Shared" means the
+// markup is identical on every page it's on, so one fix covers them all. Comparing adds New / Fixed since the baseline.
+// Nothing here guesses who owns the markup or which CMS field it comes from: the preview shows that.
 // Filters live in the URL like the Pages page. Rows open the rule: /[site]/issues/[ruleId].
 // PROTOTYPE: data from src/lib/site-issues.ts.
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -15,14 +16,13 @@ import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { FilterSelect } from "@/components/filter-select";
 import { CrawlScope } from "@/components/scope-select";
 import { useSite } from "@/components/site-context";
-import { OWNER_LABEL } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, PRIORITY_COLOR } from "@/lib/priority";
-import { byRule, hitsFor, rulesPrompt, sourcesIn, type RuleRow, type Seg } from "@/lib/site-issues";
+import { byRule, hitsFor, rulesPrompt, type RuleRow, type Seg } from "@/lib/site-issues";
 import { CATEGORIES, LH_SAMPLE, PAGE_TYPES, crawlChoices, fullLighthouse } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
 
 type Sort = "priority" | "pages" | "elements" | "new";
-type State = { crawl: string; vs: string; q: string; cat: string; pri: string; owner: string; src: string; type: string; sort: Sort; seg: Seg };
+type State = { crawl: string; vs: string; q: string; cat: string; pri: string; markup: string; type: string; sort: Sort; seg: Seg };
 
 const n = (x: number) => x.toLocaleString("en-US");
 
@@ -35,7 +35,7 @@ function Issues() {
   const crawls = useMemo(() => crawlChoices(site), [site]);
   const sp = useSearchParams();
 
-  const defaults: State = { crawl: crawls[0].id, vs: crawls[1]?.id ?? "none", q: "", cat: "all", pri: "all", owner: "all", src: "all", type: "all", sort: "priority", seg: "all" };
+  const defaults: State = { crawl: crawls[0].id, vs: crawls[1]?.id ?? "none", q: "", cat: "all", pri: "all", markup: "all", type: "all", sort: "priority", seg: "all" };
   const [s, setS] = useState<State>(() => {
     const init = { ...defaults };
     for (const k of Object.keys(defaults) as (keyof State)[]) { const v = sp.get(k); if (v != null) (init as Record<string, string>)[k] = v; }
@@ -55,16 +55,15 @@ function Issues() {
   const seg: Seg = comparing ? s.seg : "all";
   const all = useMemo(() => hitsFor(site, a, b), [site, a, b]);
 
-  // Page type, owner and source narrow the hits before grouping, so every number follows them
+  // Page type and markup narrow the hits before grouping, so every number follows them
   const hits = useMemo(() => all.filter((h) =>
-    (s.type === "all" || h.p.type === s.type) && (s.owner === "all" || h.src.owner === s.owner) && (s.src === "all" || h.src.key === s.src)),
-  [all, s.type, s.owner, s.src]);
-  const sources = useMemo(() => sourcesIn(all.filter((h) => s.owner === "all" || h.src.owner === s.owner)), [all, s.owner]);
+    (s.type === "all" || h.p.type === s.type) && (s.markup === "all" || h.shared === (s.markup === "shared"))),
+  [all, s.type, s.markup]);
 
   const ruleFilter = (r: RuleRow) => {
     const q = s.q.trim().toLowerCase();
     return (s.cat === "all" || r.rule.category === s.cat) && (s.pri === "all" || r.priority === s.pri) &&
-      (!q || r.rule.title.toLowerCase().includes(q) || r.rule.id.includes(q) || r.sources.some((x) => x.src.label.toLowerCase().includes(q)));
+      (!q || r.rule.title.toLowerCase().includes(q) || r.rule.id.includes(q) || r.patterns.some((x) => x.pattern.toLowerCase().includes(q)));
   };
   const segCount = (g: Seg) => byRule(hits, g).filter(ruleFilter).reduce((t, r) => t + r.pages, 0); // issues = rule × page
   const counts = useMemo(() => comparing ? { all: segCount("all"), new: segCount("new"), fixed: segCount("fixed") } : null,
@@ -81,13 +80,13 @@ function Issues() {
     return byRule(hits, seg).filter(ruleFilter).sort(by[sort]);
   }, [hits, seg, s.q, s.cat, s.pri, s.sort, comparing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const active = (["q", "cat", "pri", "owner", "src", "type"] as const).some((k) => s[k] !== defaults[k]);
+  const active = (["q", "cat", "pri", "markup", "type"] as const).some((k) => s[k] !== defaults[k]);
   const issues = rows.reduce((t, r) => t + r.pages, 0);
-  const keep = ["crawl", "vs", "type", "src", "seg"].map((k) => s[k as keyof State] !== defaults[k as keyof State] ? `${k}=${encodeURIComponent(s[k as keyof State])}` : "").filter(Boolean);
+  const keep = ["crawl", "vs", "type", "seg"].map((k) => s[k as keyof State] !== defaults[k as keyof State] ? `${k}=${encodeURIComponent(s[k as keyof State])}` : "").filter(Boolean);
   const hrefOf = (id: string) => `/${site}/issues/${id}?${[`crawl=${s.crawl}`, `vs=${s.vs}`, ...keep.filter((x) => !/^(crawl|vs)=/.test(x))].join("&")}`;
 
-  const toCsv = () => ["rule,priority,category,pages,elements,top_source,top_source_pages" + (comparing ? ",pages_with_new,pages_with_fixed" : ""),
-    ...rows.map((r) => [r.rule.id, r.priority, r.rule.category, r.pages, r.elements, r.sources[0]?.src.label ?? "", r.sources[0]?.pages ?? "", ...(comparing ? [r.added, r.fixed] : [])]
+  const toCsv = () => ["rule,priority,category,pages,elements,top_element,top_element_pages,shared" + (comparing ? ",pages_with_new,pages_with_fixed" : ""),
+    ...rows.map((r) => [r.rule.id, r.priority, r.rule.category, r.pages, r.elements, r.patterns[0]?.pattern ?? "", r.patterns[0]?.pages ?? "", r.patterns[0]?.shared ? "yes" : "no", ...(comparing ? [r.added, r.fixed] : [])]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
 
   const showChange = comparing && seg === "all";
@@ -107,7 +106,7 @@ function Issues() {
       <Container maxW="7xl" py="6">
         <Flex direction="column" borderWidth="1px" rounded="l2" overflow="hidden">
           <DataToolbar<Seg>
-            query={s.q} onQuery={(q) => set({ q })} placeholder="Search rule or source"
+            query={s.q} onQuery={(q) => set({ q })} placeholder="Search rule or element"
             segments={counts ? [
               { value: "all", label: `All in #${s.crawl} ${fmtNum(counts.all)}` },
               { value: "new", label: `New ${fmtNum(counts.new)}` },
@@ -125,20 +124,15 @@ function Issues() {
               ...PRIORITIES.map((p) => ({ value: p, label: p, hint: Object.entries(PRIORITY).find(([, v]) => v === p)![0].replace(/^\w/, (c) => c.toUpperCase()) })),
             ]} />
             <FilterSelect value={s.cat} onChange={(cat) => set({ cat })} w="36" items={[{ value: "all", label: "All categories" }, ...CATEGORIES.map((c) => ({ value: c.id, label: c.label }))]} />
-            <FilterSelect value={s.owner} onChange={(owner) => set({ owner, src: "all" })} w="32" items={[
-              { value: "all", label: "Any owner" },
-              { value: "template", label: "Template", hint: "Shared markup: fix once" },
-              { value: "code", label: "Code", hint: "A component" },
-              { value: "content", label: "Content", hint: "An editor, in the CMS" },
-            ]} />
-            <FilterSelect value={s.src} onChange={(src) => set({ src })} w="44" items={[
-              { value: "all", label: "Any source" },
-              ...sources.map((x) => ({ value: x.src.key, label: x.src.label, hint: `${OWNER_LABEL[x.src.owner]} · ${n(x.n)} issues` })),
+            <FilterSelect value={s.markup} onChange={(markup) => set({ markup })} w="40" items={[
+              { value: "all", label: "Any markup" },
+              { value: "shared", label: "Shared markup", hint: "Identical on many pages: one fix covers all" },
+              { value: "page", label: "Page-specific markup", hint: "Different on each page" },
             ]} />
             <FilterSelect value={s.type} onChange={(type) => set({ type })} w="32" items={[
               { value: "all", label: "All page types" }, ...PAGE_TYPES.map((t) => ({ value: t.id, label: t.label, hint: t.prefix ?? "No match" })),
             ]} />
-            {active && <Button size="xs" variant="ghost" onClick={() => set({ q: "", cat: "all", pri: "all", owner: "all", src: "all", type: "all" })}>Clear filters</Button>}
+            {active && <Button size="xs" variant="ghost" onClick={() => set({ q: "", cat: "all", pri: "all", markup: "all", type: "all" })}>Clear filters</Button>}
             <HStack gap="2" ms="auto">
               <Text textStyle="xs" color="fg.muted">Sort</Text>
               <FilterSelect value={s.sort === "new" && !comparing ? "priority" : s.sort} onChange={(v) => set({ sort: v as Sort })} w="36" items={[
@@ -154,7 +148,7 @@ function Issues() {
             <Box minW="720px">
               <Grid templateColumns={cols} gap="4" px="3" py="2" borderBottomWidth="1px" textStyle="xs" fontWeight="medium" color="fg.muted">
                 <Text>Issue</Text>
-                <Text>Fix in</Text>
+                <Text>Most common element</Text>
                 <Text textAlign="right">Pages</Text>
                 <Text textAlign="right">Elements</Text>
                 {showChange && <Text>Since #{s.vs}</Text>}
@@ -178,7 +172,7 @@ function Issues() {
 }
 
 function RuleRowView({ r, cols, showChange, href }: { r: RuleRow; cols: string; showChange: boolean; href: string }) {
-  const top = r.sources[0];
+  const top = r.patterns[0];
   const share = Math.round((top.pages / r.pages) * 100);
   const cat = CATEGORIES.find((c) => c.id === r.rule.category)!.label;
   return (
@@ -193,9 +187,9 @@ function RuleRowView({ r, cols, showChange, href }: { r: RuleRow; cols: string; 
           </Stack>
         </HStack>
         <Stack gap="0" minW="0">
-          <Text truncate title={top.src.label}>{top.src.label}</Text>
+          <Text fontFamily="mono" truncate title={top.pattern}>{top.pattern}</Text>
           <Text color="fg.muted" truncate>
-            {OWNER_LABEL[top.src.owner]}{r.sources.length > 1 ? `${share < 100 ? ` · ${share}% of pages` : ""} · +${r.sources.length - 1} more` : ""}
+            {top.shared ? "Shared markup" : "Page-specific"}{share < 100 ? ` · ${share}% of pages` : ""}{r.patterns.length > 1 ? ` · +${r.patterns.length - 1} more` : ""}
           </Text>
         </Stack>
         <Text textAlign="right" fontWeight="medium">{n(r.pages)}</Text>

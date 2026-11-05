@@ -241,7 +241,7 @@ export function issueSlots(p: PageView, crawl: number, baseline: number | null, 
     const pool = ["image-alt", "color-contrast", "link-in-text-block", "heading-order"];
     for (let j = 0; j < fixed; j++) {
       const rule = pool[j % pool.length];
-      instances.push({ k: 1000 + j, rule, group: `article (removed) ${rule}`, selector: `article .old-block:nth-of-type(${j + 1})`, shared: null, status: "fixed", firstSeen: baseline - 10, onPage: false, snippet: "" });
+      instances.push({ k: 1000 + j, rule, group: "article .old-block", selector: `article .old-block:nth-of-type(${j + 1})`, shared: null, status: "fixed", firstSeen: baseline - 10, onPage: false, snippet: "" });
     }
   }
 
@@ -403,39 +403,15 @@ export function issuePrompt(p: PageView, it: Instance) {
   ].join("\n");
 }
 
-// ───────── Who fixes it, and where ─────────
-// Only what the crawler can read from the page's HTML (research/teamsite-cms-traces.md). No links: we don't know
-// yet where the TeamSite source lives, and component ids only name a component on one page, not a file.
-//   template: shared markup (header, footer, cookie banner) or a region of the page template (ls:begin[head-injection], [script])
-//   code:     a custom-coded component (its own CSS/JS under /assets/rbccm/)
-//   content:  a DCR field (article body, hero image) or a page property (meta description), edited in TeamSite
-export type Owner = "code" | "template" | "content";
-export const OWNER_LABEL: Record<Owner, string> = { code: "Code", template: "Template", content: "Content" };
-export function sourceOf(it: Instance, _p?: PageView): { owner: Owner; label: string } {
-  if (it.shared != null) {
-    if (it.rule === "link-name") return { owner: "template", label: "Header component" };
-    if (it.rule === "region") return { owner: "template", label: "Cookie banner component" };
-    if (it.selector.startsWith("head")) return { owner: "template", label: "Page template, script region" };
-    return { owner: "template", label: "Footer component" };
-  }
-  if (["label", "button-name"].includes(it.rule)) return { owner: "code", label: "Newsletter form component" };
-  if (["canonical", "hreflang"].includes(it.rule)) return { owner: "template", label: "Page template, head-injection region" };
-  if (["render-blocking-resources", "unused-javascript"].includes(it.rule)) return { owner: "template", label: "Page template, script region" };
-  if (it.rule === "meta-description") return { owner: "content", label: "Page properties, meta description" };
-  if (it.rule === "modern-image-formats") return { owner: "content", label: "Article hero image (DCR field)" };
-  return { owner: "content", label: "Article body (DCR field)" };
-}
-
 // ───────── Handoff: the filtered list as JSON, one prompt, an API request, a local check ─────────
 export function issuesJson(p: PageView, crawl: number, list: Instance[], priority: (s: Severity) => string) {
   return JSON.stringify({
     page: { id: p.i, url: `https://www.rbccm.com${p.path}`, crawl },
     issues: list.map((it) => {
       const r = RULE_CATALOG[it.rule];
-      const src = sourceOf(it, p);
       return {
         id: `${p.i}-${it.k + 1}`, rule: r.id, title: r.title, priority: priority(r.severity), severity: r.severity, category: r.category,
-        wcag: r.criterion ?? null, status: it.status, owner: src.owner, source: src.label, selector: it.selector, html: it.snippet,
+        wcag: r.criterion ?? null, status: it.status, shared_pages: it.shared, selector: it.selector, html: it.snippet,
         how_to_fix: r.howToFix, references: r.refs.map((x) => x.url),
       };
     }),
@@ -452,7 +428,7 @@ export function batchPrompt(p: PageView, list: Instance[], priority: (s: Severit
       return [
         `## ${priority(r.severity)} ${r.title} (${r.id}${r.criterion ? `, WCAG ${r.criterion.split(" ")[0]}` : ""}), ${items.length} element${items.length > 1 ? "s" : ""}`,
         `How to fix: ${r.howToFix}`,
-        ...items.map((it) => `- ${sourceOf(it, p).label} · ${it.selector}\n  \`${it.snippet.replace(/\n/g, " ")}\``), "",
+        ...items.map((it) => `- ${it.selector}${it.shared ? ` (same markup on ${it.shared.toLocaleString("en-US")} pages)` : ""}\n  \`${it.snippet.replace(/\n/g, " ")}\``), "",
       ];
     }),
   ].join("\n");
