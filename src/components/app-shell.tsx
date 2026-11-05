@@ -1,25 +1,28 @@
 "use client";
 
-// PROTOTYPE: the three shortlisted navigation layouts, switchable with the floating toggle (bottom-right).
+// PROTOTYPE: the three shortlisted navigation layouts, switchable in Settings → Navigation layout.
 //   compact → one row: site switcher · section pills · New crawl
 //   center  → one row: site switcher · centered segmented sections · New crawl, no border
 //   side    → left sidebar (site switcher, New crawl, sections); pages get the full height
-// Pick one, then delete the others and the toggle.
-import { useEffect, useState } from "react";
+// Pick one, then delete the others and the Settings control.
+import { createContext, useContext, useEffect, useState } from "react";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
-import { Box, Container, Flex, Grid, HStack, Icon, SegmentGroup, Stack, Text } from "@chakra-ui/react";
+import { Box, Container, Flex, Grid, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 
 import { NewCrawlButton, SECTIONS, SiteSwitcher } from "@/components/app-navbar";
 import { useSite } from "@/components/site-context";
 
-type Layout = "compact" | "center" | "side";
-const LAYOUTS: { value: Layout; label: string }[] = [
-  { value: "compact", label: "Compact" },
-  { value: "center", label: "Centered" },
-  { value: "side", label: "Sidebar" },
+export type Layout = "compact" | "center" | "side";
+export const LAYOUTS: { value: Layout; label: string; description: string }[] = [
+  { value: "compact", label: "Compact", description: "One top bar: logo, sections, New crawl" },
+  { value: "center", label: "Centered", description: "Top bar with the sections centered" },
+  { value: "side", label: "Sidebar", description: "Sections in a sidebar on the left" },
 ];
 const KEY = "crawler.layout";
+
+const LayoutContext = createContext<{ layout: Layout; setLayout: (v: Layout) => void }>({ layout: "compact", setLayout: () => {} });
+export const useLayout = () => useContext(LayoutContext);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [layout, setLayout] = useState<Layout>("compact");
@@ -29,12 +32,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const choose = (v: Layout) => { setLayout(v); try { localStorage.setItem(KEY, v); } catch { /* ignore */ } };
 
   return (
-    <>
+    <LayoutContext.Provider value={{ layout, setLayout: choose }}>
       {layout === "compact" && <CompactLayout>{children}</CompactLayout>}
       {layout === "center" && <CenterLayout>{children}</CenterLayout>}
       {layout === "side" && <SideLayout>{children}</SideLayout>}
-      <LayoutToggle value={layout} onChange={choose} />
-    </>
+    </LayoutContext.Provider>
   );
 }
 
@@ -133,18 +135,5 @@ function SideLayout({ children }: { children: React.ReactNode }) {
       </Flex>
       <Box flex="1" minW="0">{children}</Box>
     </Flex>
-  );
-}
-
-function LayoutToggle({ value, onChange }: { value: Layout; onChange: (v: Layout) => void }) {
-  return (
-    <HStack position="fixed" bottom="4" right="4" zIndex="toast" gap="2" px="2.5" py="1.5" rounded="l3"
-      bg="bg.panel" borderWidth="1px" shadow="lg">
-      <Text textStyle="xs" color="fg.muted" fontWeight="medium">Layout</Text>
-      <SegmentGroup.Root size="xs" value={value} onValueChange={(e) => onChange(e.value as Layout)}>
-        <SegmentGroup.Indicator />
-        <SegmentGroup.Items items={LAYOUTS} />
-      </SegmentGroup.Root>
-    </HStack>
   );
 }
