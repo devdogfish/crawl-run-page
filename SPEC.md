@@ -11,9 +11,9 @@ This document records what was decided while designing the crawl run page:
 - how to store it all in SQLite (§5);
 - the FastAPI endpoints (§6).
 
-`SLICES.md` breaks the integration into 5 slices.
+[PLAN.md](PLAN.md) orders the integration into tickets, with what counts as done.
 
-> **Revised 2026-11-05:** §4–5's separate `crawl_events.py` / `crawls.db` / writer thread is replaced by a run recorder inside the existing v2 backend and `intelligence.db`. See [docs/backend-integration-plan.md](docs/backend-integration-plan.md) and [ADR 0001](docs/adr/0001-extend-v2-backend.md). The UI, log format, table shapes and payloads below still stand.
+> **Revised 2026-11-05:** §4–5's separate `crawl_events.py` / `crawls.db` / writer thread is replaced by a run recorder inside the existing v2 backend and `intelligence.db`. See [PLAN.md](PLAN.md) and [ADR 0001](docs/adr/0001-extend-v2-backend.md). The UI, log format, table shapes and payloads below still stand.
 
 > **The crawler already exists and is not changed by this work.** This spec only defines what it should *report* (logs, progress, per-page results) and where to store it. How it crawls, renders, retries or picks pages is up to the crawler.
 
@@ -644,45 +644,9 @@ Filters:
 | `POST /api/crawls/{id}/jobs` `{ "type": "lighthouse_full" }` | `202`; the job appears in `steps` as `kind: "job"`. `409` if one is already running or the crawl hasn't succeeded. |
 | `GET /api/crawls/{id}/lighthouse?scope=sample\|full` | `{ "pages": 200, "median": { "performance": 72, "accessibility": 91, "best_practices": 96, "seo": 98 } }` |
 
-### 6.6 Developer handoff (proposed; the page detail UI already shows these)
+### 6.6 Pages, issues and AI
 
-Goal: a developer can take the issues for a page into their own tools without copying from several places.
-
-Architecture, storage and the MCP build guide: [`docs/backend-and-mcp.md`](docs/backend-and-mcp.md). Terms: [`CONTEXT.md`](CONTEXT.md).
-
-**Issue shape.** An issue is one rule failing on one page in one crawl; it holds the failing elements. Every issue, whatever produced it (axe-core, Lighthouse, a custom check), has the same shape:
-
-```json
-{ "id": "811-9155-image-alt", "rule": "image-alt", "title": "Image has no text alternative",
-  "priority": "P1", "severity": "critical", "category": "accessibility", "wcag": "1.1.1 Non-text Content · A",
-  "how_to_fix": "…", "references": ["https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html"],
-  "ui_url": "https://crawler.internal/rbccm/pages/9155?crawl=811&issue=…",
-  "elements": [
-    { "id": "811-9155-image-alt-1", "selector": "article figure.chart:nth-of-type(1) img", "html": "<img src=…>",
-      "status": "existing", "first_seen": 802, "shared_pages": null } ] }
-```
-
-- **Priority** is fixed per severity and not configurable: Critical P1, Serious P2, Moderate P3, Minor P4.
-- **Assets aren't stored.** The crawler keeps each page's HTML, not its images, video or audio (too much storage). The HTML holds each asset's path, so the preview streams them from the crawled environment on demand. Only an asset that no longer loads gets a neutral placeholder of the same size that names the file ("Image · 880 × 300 · not available", an "Audio not available" bar). The Source view and issue snippets keep the original markup.
-- **Where to fix** is not inferred. TeamSite's HTML doesn't reliably say who owns an element or which content field it came from (research/teamsite-cms-traces.md), and the preview shows where it is. What the tool states is deterministic: the selector, and "same markup on N pages" from the HTML hash (one fix covers all of them).
-
-**API.**
-
-| Endpoint | Returns |
-|---|---|
-| `GET /api/pages/{page_id}/issues?crawl=811&priority=P1,P2&category=accessibility&status=new` | `{ page, issues: [Issue] }`, the same filters as the UI |
-| `GET /api/issues/{issue_id}` | one `Issue` with all its elements |
-
-Links: the page detail URL carries the view (`?crawl=811&issue=18&pri=P1&cat=accessibility`), so any issue or filtered list can be linked to.
-
-**Exports** (Issues tab → Export): copy as one prompt (grouped by rule, one line per element with its source), download JSON (the shape above), copy the API request, copy a link to the view. The API serves the same with `?format=prompt|json`.
-
-**MCP server** (so an AI coding tool can pull issues itself; a sibling of the REST API, both calling the same core in-process, see `docs/backend-and-mcp.md` §5):
-- `list_issues(page, crawl?, priority?, category?, status?)` → `Issue[]`
-- `get_issue(issue_id)` → `Issue` with elements
-- `find_pages(site, q?, rule?, priority?, category?, change?)` → pages with issue counts by priority
-
-**Local check CLI** (check a fix before the next crawl): `npx @rbc/crawler check <url> [--rule image-alt] [--selector "…"]` runs the same rules (axe-core with the same config, the custom checks) against any URL, including `http://localhost:3000`, and prints issues in the same shape. Each issue has "Copy local check command" in its menu.
+Moved out of this spec: the read side behind Pages, page detail and Issues (issue shape, element ids, routes, exports, the local check CLI) is in [docs/pages-and-issues.md](docs/pages-and-issues.md); navigation, the MCP server and Ask AI are in [docs/ai.md](docs/ai.md).
 
 ---
 
@@ -691,7 +655,7 @@ Links: the page detail URL carries the view (`?crawl=811&issue=18&pri=P1&cat=acc
 - **Prototype-only code:**
   - `src/lib/crawl.ts` and `src/lib/pages.ts` are simulators;
   - `PrototypeBar` in the page switches scenarios and skips stages.
-  - All of these are removed in slice 1.
+  - All of these are removed when the run page reads the API (PLAN.md T1.9).
 - **Reusable components:** `LogViewer`, `DataToolbar`, `CrawlChart`, `CodesBar`, `HistoryChart` (`compact`), and `StageIcon`, `STATUS` and `StageAreaChart` in `step-ui.tsx`.
 - **Data fetching:**
   - poll the summary every 2s while `status === "running"`; TanStack Query's `refetchInterval` works well for this;

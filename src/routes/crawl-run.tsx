@@ -6,7 +6,7 @@
 // a full-site audit is a separate follow-up job that reuses this crawl.
 //
 // PROTOTYPE: data comes from the simulator in src/lib/crawl.ts and src/lib/pages.ts.
-// SLICES.md describes how to replace it with the FastAPI endpoints in SPEC.md.
+// PLAN.md (Tier 1) lists the tickets that replace it with the FastAPI endpoints in SPEC.md.
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import {
@@ -650,7 +650,7 @@ function Scores({ run, step, onFullLighthouse }: { run: RunView; step: StepInfo;
   );
 }
 
-// PROTOTYPE ONLY: switch simulated scenarios. Delete in slice 1 (see SLICES.md).
+// PROTOTYPE ONLY: switch simulated scenarios. Delete when the run page reads the API (PLAN.md T1.9).
 function PrototypeBar({ scenario, onScenario, onSkip, canSkip }: {
   scenario: CrawlScenario; onScenario: (s: CrawlScenario) => void; onSkip: () => void; canSkip: boolean;
 }) {

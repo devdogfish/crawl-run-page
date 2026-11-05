@@ -4,19 +4,20 @@
 //   Issues  → list (this page first, shared folded) | selected issue: why, the element, how to fix, suggested fix
 //   Preview → live render of the stored page with issue boxes (viewport + accessibility layers); no screenshots
 //   Source  → the rendered HTML, issue lines marked
-// The assistant (header button) can also drive the view: filter, select, open the preview with a layer on.
+// "Fix with AI" / "Explain with AI" put a visible prompt into the global assistant (components/assistant.tsx).
+// ?issue= and ?tab= select the element and the view, so the assistant's links land on the right thing.
 //
-// PROTOTYPE: data from src/lib/page-issues.ts; assistant answers are scripted from that data.
+// PROTOTYPE: data from src/lib/page-issues.ts.
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
-import { useParams, useSearchParams } from "react-router";
+import { useLocation, useParams, useSearchParams } from "react-router";
 import {
   Box, Button, Code, Collapsible, Container, EmptyState, Flex, Grid, HStack, Heading, Icon, IconButton, Input, InputGroup, Link, Menu, Portal,
   SegmentGroup, Span, Stack, Tabs, Text,
 } from "@chakra-ui/react";
 import { LuChevronDown, LuChevronLeft, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuExternalLink, LuFileQuestion, LuFilter, LuLayers, LuLink, LuSearch, LuSparkles, LuTerminal } from "react-icons/lu";
 
-import { AiPanel, type AiReply, type IssueRef } from "@/components/ai-panel";
+import { useAssistant } from "@/components/assistant";
 import { BackLink, RuleGuide, RuleMeta, RuleTitle } from "@/components/rule-ui";
 import { PagePreview, type Layer } from "@/components/page-preview";
 import { useSite } from "@/components/site-context";
@@ -25,6 +26,7 @@ import {
   RULE_CATALOG, SEVERITIES, apiRequest, batchPrompt, issuePrompt, issuesJson, localCheck, pageIssues, sevRank, sourceLines, type Instance,
 } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
+import { explainSeed, fixSeed, summarizeSeed } from "@/lib/refs";
 import { downloadText } from "@/components/data-toolbar";
 import { CATEGORIES, defaultCrawl, pageView, siteSize } from "@/lib/site-pages";
 import { SITES, type SiteId } from "@/lib/sites";
@@ -66,9 +68,10 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   // Assets aren't stored: the preview streams them from the site that was crawled
   const origin = SITES[site].url;
   const { instances, html } = useMemo(() => pageIssues(p, a, b, siteSize(site)), [p, a, b, site]);
-  const [tab, setTab] = useState<"issues" | "preview" | "source">("issues");
-  // Shareable state lives in the URL: ?issue=18&pri=P1&cat=accessibility&q=…&seg=new
+  // Shareable state lives in the URL: ?issue=18&tab=preview&pri=P1&cat=accessibility&q=…&seg=new
   const sp = useSearchParams()[0];
+  const tabOf = (v: string | null) => (v === "preview" || v === "source" ? v : "issues");
+  const [tab, setTab] = useState<"issues" | "preview" | "source">(tabOf(sp.get("tab")));
   const list = (k: string) => (sp.get(k) ? sp.get(k)!.split(",") : []);
   const [q, setQ] = useState(sp.get("q") ?? "");
   const [seg, setSeg] = useState<Seg>((sp.get("seg") as Seg) ?? "all");
@@ -78,9 +81,6 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const [selected, setSelected] = useState<number | null>(sp.get("issue") ? Number(sp.get("issue")) - 1 : null);
   const prio = (sev: string) => PRIORITY[sev as keyof typeof PRIORITY];
   const [highlightRule, setHighlightRule] = useState<string | null>(null);
-  const [fixes, setFixes] = useState<Set<number>>(new Set());
-  const [ai, setAi] = useState(false);
-  const [ask, setAsk] = useState<{ q: string; about: IssueRef | null; n: number } | null>(null);
   const [viewport, setViewport] = useState(1280);
   const [layers, setLayers] = useState<Layer[]>(["issues"]);
   const comparing = b != null;
@@ -113,76 +113,40 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const counts = { all: now.length, new: instances.filter((it) => it.status === "new").length, fixed: instances.filter((it) => it.status === "fixed").length };
   const pagesHref = `/${site}/pages?crawl=${a}${b != null ? `&vs=${b}` : ""}`;
 
+  // A link to this page (from the assistant) selects its element and view without reloading the page
+  const location = useLocation();
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const k = sp.get("issue") ? Number(sp.get("issue")) - 1 : null;
+    if (k != null) {
+      setSelected(k);
+      setSeg((x) => (instances.find((i) => i.k === k)?.status === "fixed" ? "fixed" : x === "fixed" ? "all" : x));
+      setQ(""); setPri([]); setCats([]);
+    }
+    setTab(tabOf(sp.get("tab")));
+  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Mirror the view into the URL (no navigation), so any issue or filtered list can be linked to
   useEffect(() => {
     const u = new URLSearchParams({ crawl: String(a), ...(b != null ? { vs: String(b) } : {}) });
     if (current) u.set("issue", String(current.k + 1));
+    if (tab !== "issues") u.set("tab", tab);
     if (q) u.set("q", q);
     if (seg !== "all") u.set("seg", seg);
     if (pri.length) u.set("pri", pri.join(","));
     if (cats.length) u.set("cat", cats.join(","));
     window.history.replaceState(window.history.state, "", `${window.location.pathname}?${u}`);
-  }, [current?.k, q, seg, pri, cats, a, b]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [current?.k, tab, q, seg, pri, cats, a, b]); // eslint-disable-line react-hooks/exhaustive-deps
   const linkTo = (it: Instance) => typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}?crawl=${a}${b != null ? `&vs=${b}` : ""}&issue=${it.k + 1}`;
 
-  // ───────── Ask AI: one conversation per page; each message links to the issue it's about ─────────
-  const refOf = (it: Instance): IssueRef => {
-    const sib = instances.filter((x) => x.rule === it.rule && (x.shared == null) === (it.shared == null));
-    return { k: it.k, label: RULE_CATALOG[it.rule].title, detail: sib.length > 1 ? `${sib.indexOf(it) + 1} of ${sib.length}` : it.group, color: `${SEV[RULE_CATALOG[it.rule].severity].color}.solid` };
-  };
-  const askAi = (text: string, it: Instance) => { setAi(true); setAsk((x) => ({ q: text, about: refOf(it), n: (x?.n ?? 0) + 1 })); };
-  const onAsk = (text: string, about: IssueRef | null): AiReply => {
-    const t = text.toLowerCase();
-    const it = about ? instances.find((x) => x.k === about.k) : undefined;
-    const r = it ? RULE_CATALOG[it.rule] : undefined;
-    const sib = it ? instances.filter((x) => x.rule === it.rule && x.status !== "fixed" && (x.shared == null) === (it.shared == null)) : [];
-    if (it) setSelected(it.k);
-
-    if (/first|priorit|start|worst/.test(t)) {
-      const top = byRule(now.filter((x) => x.shared == null)).slice(0, 3);
-      return {
-        text: top.length
-          ? `I'd start with the issues that only exist on this page, worst first. These three cover ${top.reduce((n, g) => n + g.items.length, 0)} of the ${now.filter((x) => x.shared == null).length}:`
-          : "Everything here comes from the shared header and footer, so nothing needs fixing on this page itself.",
-        refs: top.map((g) => refOf(g.items[0])),
-        followUps: ["Why these first?", "What about the shared ones?"],
-      };
-    }
-    if (/shared|template|header|footer/.test(t)) {
-      const sh = byRule(now.filter((x) => x.shared != null));
-      return {
-        text: `${now.filter((x) => x.shared != null).length} issues come from markup that's on almost every page (header, footer, cookie banner). Fixing them in the template fixes them everywhere at once, so they're worth raising with whoever owns it rather than patching here.`,
-        refs: sh.map((g) => refOf(g.items[0])), followUps: ["What should I fix first?"],
-      };
-    }
-    if (/why these/.test(t)) return { text: "They're critical or serious, so they block people from using the content at all (an image with no description, a field without a label). And they only exist here, so nobody else is going to fix them.", followUps: ["How do I fix the first one?"] };
-    if (!it || !r) return { text: "Select an issue (in the list or on the preview) and ask me about it, or ask about the page as a whole.", followUps: ["What should I fix first?"] };
-
-    if (/all|every|rest|others/.test(t) && sib.length > 1) {
-      setFixes((f) => { const n = new Set(f); sib.forEach((x) => n.add(x.k)); return n; });
-      return { text: `Same change for all ${sib.length}. ${it.shared ? "They come from the shared template, so it's one edit there." : "Each has its own content, so check that the wording fits each one."} I've added the suggested fix to each:`, refs: sib.slice(0, 6).map(refOf), actions: [`Suggested a fix for ${sib.length} elements`], followUps: ["How do I test it?"] };
-    }
-    if (/test|verify|check/.test(t)) {
-      return { text: r.category === "accessibility"
-        ? "Two quick checks: run axe DevTools on the page again, and try the element with a screen reader (VoiceOver: Cmd+F5) or keyboard only. The next crawl will confirm it's gone; it'll show under Fixed."
-        : "The next crawl re-checks it; it'll show under Fixed when it's gone.", followUps: [] };
-    }
-    if (/why|what|explain|mean|who/.test(t)) {
-      return { text: `${r.why}${r.criterion ? `\n\nThis fails WCAG ${r.criterion}.` : ""}`, followUps: ["How do I fix it?", "How do I test it?"] };
-    }
-    if (/fix|how|change|code/.test(t)) {
-      setFixes((f) => new Set(f).add(it.k));
-      return {
-        text: `${r.howToFix}\n\nI've added the change for this element as a diff.${it.rule === "image-alt" ? " The alt text is a guess from the figure caption; say what the chart actually shows." : ""}`,
-        followUps: [...(sib.length > 1 ? [`Apply it to all ${sib.length}`] : []), "Why does this matter?", "How do I test it?"],
-      };
-    }
-    if (/where|show|see/.test(t)) { setTab("preview"); return { text: "Here it is on the page.", actions: ["Opened Preview"], followUps: ["How do I fix it?"] }; }
-    return { text: `About ${r.title.toLowerCase()}: ${r.howToFix}`, followUps: ["How do I fix it?", "Why does this matter?"] };
-  };
+  // Ask AI: the buttons write the prompt into the global assistant, where the user sees all of it
+  const { send } = useAssistant();
+  const fixAi = (it: Instance) => send(fixSeed(site, p, it));
+  const explainAi = (it: Instance) => send(explainSeed(site, p, it));
 
   return (
-    <Box pe={{ lg: ai ? "380px" : 0 }}>
+    <Box>
       <Box borderBottomWidth="1px">
         <Container maxW="7xl" pt="5" pb="4">
           <BackLink href={pagesHref}>Pages</BackLink>
@@ -194,7 +158,6 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                 <Icon as={LuExternalLink} boxSize="4" color="fg.muted" flexShrink={0} />
               </Link>
             </Tooltip>
-            <Button size="sm" variant="ghost" onClick={() => setAi((x) => !x)} flexShrink={0}><LuSparkles />Ask AI</Button>
           </Flex>
         </Container>
       </Box>
@@ -218,6 +181,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                     </InputGroup>
                     <FilterMenu pri={pri} setPri={setPri} cats={cats} setCats={setCats} />
                     <ExportMenu count={visible.filter((it) => it.status !== "fixed").length}
+                      onAsk={() => send(summarizeSeed(site, p, visible.filter((it) => it.status !== "fixed")))}
                       onPrompt={() => navigator.clipboard.writeText(batchPrompt(p, visible.filter((it) => it.status !== "fixed"), prio))}
                       onJson={() => downloadText(issuesJson(p, a, visible, prio), `issues-${p.i}-${a}.json`, "application/json")}
                       onApi={() => navigator.clipboard.writeText(apiRequest(p.i, a, { priority: pri, category: cats, ...(seg !== "all" ? { status: [seg] } : {}) }))}
@@ -251,9 +215,8 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
 
               <Box minW="0" borderStartWidth={{ md: "1px" }} ps={{ md: "8" }}>
                 {current
-                  ? <IssueView it={current} siblings={siblings} html={html} origin={origin} page={p} fix={fixes.has(current.k)} link={linkTo(current)}
-                      onFix={() => setFixes((s) => new Set(s).add(current.k))} onSelect={setSelected}
-                      onShow={() => { setTab("preview"); setHighlightRule(current.rule); }} onAsk={() => askAi("How do I fix this?", current)} />
+                  ? <IssueView it={current} siblings={siblings} html={html} origin={origin} page={p} link={linkTo(current)} onSelect={setSelected}
+                      onShow={() => { setTab("preview"); setHighlightRule(current.rule); }} onFix={() => fixAi(current)} onExplain={() => explainAi(current)} />
                   : <Text textStyle="sm" color="fg.muted">No issues match.</Text>}
               </Box>
             </Grid>
@@ -284,8 +247,8 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
               <PagePreview html={html} origin={origin} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
                 onSelect={setSelected} viewport={viewport} layers={layers}
                 card={current && (
-                  <ElementCard it={current} siblings={siblings} fix={fixes.has(current.k)} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)}
-                    onFix={() => setFixes((f) => new Set(f).add(current.k))} onAsk={() => askAi("How do I fix this?", current)} onDetails={() => setTab("issues")} />
+                  <ElementCard it={current} siblings={siblings} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)}
+                    onFix={() => fixAi(current)} onExplain={() => explainAi(current)} onDetails={() => setTab("issues")} />
                 )} />
             </Box>
           </Tabs.Content>
@@ -297,9 +260,6 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
         </Tabs.Root>
       </Container>
 
-      <AiPanel open={ai} onClose={() => setAi(false)} onAsk={onAsk} ask={ask} about={current ? refOf(current) : null}
-        onRef={(k) => { setSelected(k); setSeg((x) => (instances.find((i) => i.k === k)?.status === "fixed" ? "fixed" : x === "fixed" ? "all" : x)); }}
-        starters={["What should I fix first?", "How do I fix this?", "Why does this matter?"]} />
     </Box>
   );
 }
@@ -335,9 +295,9 @@ function RuleList({ title, groups, selected, onSelect, prio, empty }: {
 }
 
 // ───────── Selected issue ─────────
-function IssueView({ it, siblings, html, origin, page, fix, onFix, onSelect, onShow, onAsk, link }: {
-  it: Instance; siblings: Instance[]; html: string; origin: string; page: PageV; fix: boolean;
-  onFix: () => void; onSelect: (k: number) => void; onShow: () => void; onAsk: () => void; link: string;
+function IssueView({ it, siblings, html, origin, page, onSelect, onShow, onFix, onExplain, link }: {
+  it: Instance; siblings: Instance[]; html: string; origin: string; page: PageV;
+  onSelect: (k: number) => void; onShow: () => void; onFix: () => void; onExplain: () => void; link: string;
 }) {
   const r = RULE_CATALOG[it.rule];
   const idx = siblings.findIndex((x) => x.k === it.k);
@@ -373,10 +333,7 @@ function IssueView({ it, siblings, html, origin, page, fix, onFix, onSelect, onS
         </HStack>
       </Stack>
 
-      <RuleGuide rule={r} actions={<>
-        {fix && it.status !== "fixed" && <Diff before={it.snippet} after={r.fix(it.snippet)} />}
-        {it.status !== "fixed" && <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} link={link} size="sm" />}
-      </>} />
+      <RuleGuide rule={r} actions={it.status !== "fixed" && <IssueActions it={it} page={page} onFix={onFix} onExplain={onExplain} link={link} size="sm" />} />
     </Stack>
   );
 }
@@ -411,14 +368,15 @@ function FilterMenu({ pri, setPri, cats, setCats }: { pri: Priority[]; setPri: (
 }
 
 // Export: the issues currently in the list, for handing off to a person, an AI tool or a script
-function ExportMenu({ count, onPrompt, onJson, onApi, onLink }: { count: number; onPrompt: () => void; onJson: () => void; onApi: () => void; onLink: () => void }) {
+function ExportMenu({ count, onAsk, onPrompt, onJson, onApi, onLink }: { count: number; onAsk: () => void; onPrompt: () => void; onJson: () => void; onApi: () => void; onLink: () => void }) {
   return (
     <Menu.Root positioning={{ placement: "bottom-end" }}>
       <Menu.Trigger asChild><IconButton size="sm" variant="outline" aria-label="Export these issues"><LuDownload /></IconButton></Menu.Trigger>
       <Portal><Menu.Positioner><Menu.Content minW="60">
         <Menu.ItemGroup>
           <Menu.ItemGroupLabel>{count} issue{count === 1 ? "" : "s"} in this list</Menu.ItemGroupLabel>
-          <Menu.Item value="prompt" onClick={onPrompt}><LuSparkles />Copy as one prompt</Menu.Item>
+          <Menu.Item value="ask" onClick={onAsk} disabled={!count}><LuSparkles />Summarize with AI</Menu.Item>
+          <Menu.Item value="prompt" onClick={onPrompt}><LuCopy />Copy as one prompt</Menu.Item>
           <Menu.Item value="json" onClick={onJson}><LuDownload />Download JSON</Menu.Item>
           <Menu.Item value="api" onClick={onApi}><LuTerminal />Copy API request</Menu.Item>
           <Menu.Item value="link" onClick={onLink}><LuLink />Copy link to this view</Menu.Item>
@@ -429,13 +387,13 @@ function ExportMenu({ count, onPrompt, onJson, onApi, onLink }: { count: number;
 }
 
 // The actions on an issue, the same in the Issues tab and on the element in Preview
-function IssueActions({ it, page, fix, onFix, onAsk, link, size, children }: {
-  it: Instance; page: PageV; fix: boolean; onFix: () => void; onAsk: () => void; link: string; size: "xs" | "sm"; children?: React.ReactNode;
+function IssueActions({ it, page, onFix, onExplain, link, size, children }: {
+  it: Instance; page: PageV; onFix: () => void; onExplain: () => void; link: string; size: "xs" | "sm"; children?: React.ReactNode;
 }) {
   return (
     <HStack gap="1.5">
-      {!fix && <Button size={size} variant="outline" onClick={onFix}>Suggest a fix</Button>}
-      <Button size={size} variant="ghost" onClick={onAsk}><LuSparkles />Ask AI</Button>
+      <Button size={size} variant="outline" onClick={onFix}><LuSparkles />Fix with AI</Button>
+      <Button size={size} variant="ghost" onClick={onExplain}>Explain with AI</Button>
       {children}
       <Menu.Root>
         <Menu.Trigger asChild><IconButton size={size} variant="ghost" aria-label="More actions"><LuEllipsis /></IconButton></Menu.Trigger>
@@ -450,8 +408,8 @@ function IssueActions({ it, page, fix, onFix, onAsk, link, size, children }: {
 }
 
 // Card attached to the selected element in Preview (like a design tool's selection toolbar)
-function ElementCard({ it, siblings, fix, page, onSelect, onFix, onAsk, onDetails, prio, link }: {
-  it: Instance; siblings: Instance[]; fix: boolean; page: PageV; onSelect: (k: number) => void; onFix: () => void; onAsk: () => void; onDetails: () => void;
+function ElementCard({ it, siblings, page, onSelect, onFix, onExplain, onDetails, prio, link }: {
+  it: Instance; siblings: Instance[]; page: PageV; onSelect: (k: number) => void; onFix: () => void; onExplain: () => void; onDetails: () => void;
   prio: (s: string) => string; link: string;
 }) {
   const r = RULE_CATALOG[it.rule];
@@ -472,27 +430,10 @@ function ElementCard({ it, siblings, fix, page, onSelect, onFix, onAsk, onDetail
           </HStack>
         )}
       </HStack>
-      {fix && <Diff before={it.snippet} after={r.fix(it.snippet)} />}
-      <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} link={link} size="xs">
+      <IssueActions it={it} page={page} onFix={onFix} onExplain={onExplain} link={link} size="xs">
         <Button size="xs" variant="ghost" onClick={onDetails}>Details</Button>
       </IssueActions>
     </Stack>
-  );
-}
-
-// Line diff of one element
-function Diff({ before, after }: { before: string; after: string }) {
-  const a = before.split("\n"), b = after.split("\n");
-  const rows = [...a.map((l) => ({ t: b.includes(l) ? " " : "-", l })), ...b.filter((l) => !a.includes(l)).map((l) => ({ t: "+", l }))];
-  return (
-    <Box borderWidth="1px" rounded="l2" overflow="hidden" fontFamily="mono" textStyle="xs">
-      {rows.map((r, n) => (
-        <HStack key={n} align="start" gap="0" bg={r.t === "-" ? "red.subtle" : r.t === "+" ? "green.subtle" : undefined}>
-          <Text w="6" flexShrink={0} textAlign="center" color="fg.muted" py="1">{r.t}</Text>
-          <Text whiteSpace="pre-wrap" wordBreak="break-all" py="1" pe="3">{r.l}</Text>
-        </HStack>
-      ))}
-    </Box>
   );
 }
 

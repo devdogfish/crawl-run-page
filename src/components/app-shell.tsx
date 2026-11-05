@@ -9,6 +9,7 @@ import { useLocation } from "react-router";
 import { Box, Container, Flex, Grid, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 
 import { NewCrawlButton, SECTIONS, SiteSwitcher } from "@/components/app-navbar";
+import { AskAiButton, AssistantProvider, PANEL_W, useAssistant } from "@/components/assistant";
 import { useSite } from "@/components/site-context";
 
 export type Layout = "compact" | "center" | "side";
@@ -43,11 +44,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <LayoutContext.Provider value={{ layout, setLayout: choose }}>
-      {layout === "compact" && <CompactLayout>{children}</CompactLayout>}
-      {layout === "center" && <CenterLayout>{children}</CenterLayout>}
-      {layout === "side" && <SideLayout>{children}</SideLayout>}
+      <AssistantProvider>
+        {layout === "compact" && <CompactLayout><Content>{children}</Content></CompactLayout>}
+        {layout === "center" && <CenterLayout><Content>{children}</Content></CenterLayout>}
+        {layout === "side" && <SideLayout><Content>{children}</Content></SideLayout>}
+      </AssistantProvider>
     </LayoutContext.Provider>
   );
+}
+
+// Makes room for the Ask AI panel on wide screens (it overlays on narrow ones)
+function Content({ children }: { children: React.ReactNode }) {
+  const { open } = useAssistant();
+  return <Box pe={{ lg: open ? PANEL_W : 0 }}>{children}</Box>;
 }
 
 function useActiveSection() {
@@ -76,7 +85,7 @@ function CompactLayout({ children }: { children: React.ReactNode }) {
                 );
               })}
             </HStack>
-            <NewCrawlButton ms="auto" />
+            <HStack ms="auto" gap="2"><AskAiButton /><NewCrawlButton /></HStack>
           </Flex>
         </Container>
       </Box>
@@ -107,7 +116,7 @@ function CenterLayout({ children }: { children: React.ReactNode }) {
                 );
               })}
             </HStack>
-            <Flex justify="flex-end"><NewCrawlButton variant="outline" /></Flex>
+            <Flex justify="flex-end" gap="2"><AskAiButton /><NewCrawlButton variant="outline" /></Flex>
           </Grid>
         </Container>
       </Box>
@@ -126,6 +135,7 @@ function SideLayout({ children }: { children: React.ReactNode }) {
         borderEndWidth="1px" bg="bg.subtle" px="4" py="3">
         <SiteSwitcher full />
         <NewCrawlButton w="full" mt="4" />
+        <Box mt="2"><AskAiButton /></Box>
         <Stack gap="0.5" mt="6">
           {SECTIONS.map((s) => {
             const on = s.id === active;

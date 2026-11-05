@@ -1,4 +1,4 @@
-// PROTOTYPE SIMULATOR. Replaced by the API in slice 1 (see SLICES.md).
+// PROTOTYPE SIMULATOR. Replaced by the API (PLAN.md T1.9).
 // A crawl-heavy run: one long crawl (~90% of the run), then short processing steps.
 // Supports pause/resume and live settings changes, like the real run page will.
 import { useCallback, useEffect, useState } from "react";

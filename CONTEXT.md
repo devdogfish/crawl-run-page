@@ -85,3 +85,29 @@ The selector an issue's elements share once positions are removed, such as `foot
 _Avoid_: group, location, source
 
 The tool doesn't say who owns an element or which CMS field it came from: TeamSite's HTML doesn't expose that reliably, and the preview shows where it is.
+
+### AI
+
+**Navigation**:
+The Cmd/Ctrl+K palette that turns what you type into a place in the app: a route and its URL parameters. It never fetches data.
+_Avoid_: AI search, command bar
+
+**Ask AI**:
+The assistant docked on the right. It explains and fixes from the prompts it's given, and has no tools.
+_Avoid_: chatbot, copilot, agent
+
+**Visible prompt**:
+What a button such as Fix with AI puts into Ask AI: a short instruction plus the context it's about, all of which the user can see.
+_Avoid_: seed (in the UI), hidden context
+
+**Component block**:
+A ` ```ui ` block of JSON in an Ask AI answer whose `type` picks the component the app shows, such as `fix`.
+_Avoid_: widget, card (in code)
+
+**MCP server**:
+The crawler's data for AI tools outside the app, such as Claude Code. Unopinionated and not tied to any screen.
+_Avoid_: AI API, plugin
+
+**URL map**:
+The one list of routes, URL parameters and their allowed values. Navigation writes URLs from it, and the MCP server and Ask AI build links from it.
+_Avoid_: route config, sitemap

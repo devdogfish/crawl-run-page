@@ -34,7 +34,6 @@ export type Rule = {
   why: string;
   howToFix: string;
   refs: { label: string; url: string }[];
-  fix: (snippet: string) => string; // what "Generate fix" returns for one element (mocked AI)
 };
 
 const deque = (id: string) => ({ label: "Deque University: " + id, url: `https://dequeuniversity.com/rules/axe/4.10/${id}` });
@@ -48,7 +47,6 @@ export const RULE_CATALOG: Record<string, Rule> = {
     why: "People with low vision or using a screen in sunlight can't read low-contrast text. Body text needs a 4.5:1 ratio.",
     howToFix: "Darken the text colour (or lighten the background) until the ratio is at least 4.5:1, or 3:1 for text 24px and larger. Change the design token, not the single element, when the colour comes from a shared style.",
     refs: [wcag("1.4.3", "contrast-minimum"), deque("color-contrast")],
-    fix: (s) => s.replace(/color:\s*#[0-9a-f]+/i, "color: #595959"),
   },
   "image-alt": {
     id: "image-alt", title: "Image has no text alternative", category: "accessibility", severity: "critical", source: "axe-core",
@@ -56,7 +54,6 @@ export const RULE_CATALOG: Record<string, Rule> = {
     why: "Screen readers announce an image without alt as its file name, or skip it. A chart without alt hides its data.",
     howToFix: "Add an alt that says what the image shows. For charts, give the takeaway (\"Rates fell 0.5 points in Q3\"). Decorative images get alt=\"\".",
     refs: [wcag("1.1.1", "non-text-content"), deque("image-alt")],
-    fix: (s) => s.replace("<img ", '<img alt="Chart: credit spreads narrowed through Q3 2025" '),
   },
   "link-name": {
     id: "link-name", title: "Link has no accessible name", category: "accessibility", severity: "serious", source: "axe-core",
@@ -64,7 +61,6 @@ export const RULE_CATALOG: Record<string, Rule> = {
     why: "An icon-only link is announced as \"link\", so screen reader users can't tell where it goes.",
     howToFix: "Add an aria-label that says where the link goes, or visually hidden text inside it.",
     refs: [wcag("2.4.4", "link-purpose-in-context"), deque("link-name")],
-    fix: (s) => s.replace(/<a class="icon (\w+)"/, (_, n) => `<a class="icon ${n}" aria-label="${n === "search" ? "Search" : "Change language"}"`),
   },
   "button-name": {
     id: "button-name", title: "Button has no accessible name", category: "accessibility", severity: "critical", source: "axe-core",
@@ -72,7 +68,6 @@ export const RULE_CATALOG: Record<string, Rule> = {
     why: "A button with only an icon is announced as \"button\". Users can't tell what it does.",
     howToFix: "Give the button visible text, or an aria-label that describes the action.",
     refs: [wcag("4.1.2", "name-role-value"), deque("button-name")],
-    fix: (s) => s.replace("<button ", '<button aria-label="Subscribe" '),
   },
   label: {
     id: "label", title: "Form field has no label", category: "accessibility", severity: "critical", source: "axe-core",
@@ -80,14 +75,12 @@ export const RULE_CATALOG: Record<string, Rule> = {
     why: "A placeholder disappears when you type and isn't a label. Screen readers announce the field as \"edit text\".",
     howToFix: "Add a <label for> tied to the input's id. Keep it visible, or visually hidden if the design needs it.",
     refs: [wcag("4.1.2", "name-role-value"), deque("label")],
-    fix: (s) => `<label for="nl-email">Email address</label>\n${s.replace("<input ", '<input id="nl-email" ')}`,
   },
   "heading-order": {
     id: "heading-order", title: "Heading levels skip a level", category: "accessibility", severity: "moderate", source: "axe-core",
     why: "Screen reader users jump between headings to scan the page. Going from H2 to H4 suggests a missing section.",
     howToFix: "Use the next level down (H3 after H2). Style it to look smaller if needed; don't pick a level for its size.",
     refs: [deque("heading-order")],
-    fix: (s) => s.replace(/<h4/g, "<h3").replace(/<\/h4>/g, "</h3>"),
   },
   "link-in-text-block": {
     id: "link-in-text-block", title: "Link in a paragraph is only distinguishable by colour", category: "accessibility", severity: "serious", source: "axe-core",
@@ -95,70 +88,60 @@ export const RULE_CATALOG: Record<string, Rule> = {
     why: "People who can't tell the colours apart don't see that the text is a link.",
     howToFix: "Underline links inside text, or give them a 3:1 contrast with the surrounding text plus a non-colour cue on hover and focus.",
     refs: [wcag("1.4.1", "use-of-color"), deque("link-in-text-block")],
-    fix: (s) => s.replace('class="inline"', 'class="inline" style="text-decoration: underline"'),
   },
   region: {
     id: "region", title: "Content is outside any landmark", category: "accessibility", severity: "moderate", source: "axe-core",
     why: "Screen reader users navigate by landmarks (header, main, footer). Content outside them is easy to miss.",
     howToFix: "Move the element inside a landmark, or wrap it in one with a label (e.g. <aside aria-label=\"Cookie consent\">).",
     refs: [deque("region")],
-    fix: (s) => s.replace('<div class="cookie-banner"', '<aside aria-label="Cookie consent" class="cookie-banner"').replace(/<\/div>$/, "</aside>"),
   },
   canonical: {
     id: "canonical", title: "Canonical URL points to a URL with tracking parameters", category: "seo", severity: "serious", source: "Custom check",
     why: "Search engines may index the tracking URL instead of the clean one, splitting ranking signals.",
     howToFix: "Set the canonical to the page's clean URL: no query string, the https://www host, no trailing slash.",
     refs: [{ label: "Google: Consolidate duplicate URLs", url: "https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls" }],
-    fix: (s) => s.replace(/\?utm_[^"]+/, ""),
   },
   "meta-description": {
     id: "meta-description", title: "Page has no meta description", category: "seo", severity: "moderate", source: "Lighthouse",
     why: "Search results show a random snippet of the page instead of a summary you chose.",
     howToFix: "Add a 120–160 character <meta name=\"description\"> that summarises the article.",
     refs: [lh("seo/meta-description", "Meta description")],
-    fix: () => '<meta name="description" content="Our analysts on where private credit goes next: spreads, default risk and the deals to watch.">',
   },
   "hreflang": {
     id: "hreflang", title: "French version isn't linked with hreflang", category: "seo", severity: "minor", source: "Custom check",
     why: "Search engines may show the English page to French-speaking users.",
     howToFix: "Add <link rel=\"alternate\" hreflang=\"fr\"> pointing to the French page, and the reverse link on that page.",
     refs: [{ label: "Google: Localized versions", url: "https://developers.google.com/search/docs/specialty/international/localized-versions" }],
-    fix: (s) => `${s}\n<link rel="alternate" hreflang="fr" href="/fr/…">`,
   },
   noopener: {
     id: "noopener", title: "External link opens a new tab without rel=\"noopener\"", category: "security", severity: "moderate", source: "Custom check",
     why: "The opened page can redirect this tab through window.opener (reverse tabnabbing).",
     howToFix: "Add rel=\"noopener noreferrer\" to links with target=\"_blank\".",
     refs: [{ label: "MDN: rel=noopener", url: "https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/noopener" }],
-    fix: (s) => s.replace('target="_blank"', 'target="_blank" rel="noopener noreferrer"'),
   },
   "mixed-content": {
     id: "mixed-content", title: "Image loaded over http on an https page", category: "security", severity: "serious", source: "Custom check",
     why: "Browsers warn about or block insecure content, and it can be tampered with in transit.",
     howToFix: "Load the resource over https, or host it on the site.",
     refs: [{ label: "MDN: Mixed content", url: "https://developer.mozilla.org/en-US/docs/Web/Security/Mixed_content" }],
-    fix: (s) => s.replace("http://", "https://"),
   },
   "render-blocking-resources": {
     id: "render-blocking-resources", title: "Resource blocks the first paint", category: "performance", severity: "moderate", source: "Lighthouse",
     why: "The browser waits for this file before showing anything, which delays first contentful paint.",
     howToFix: "Load scripts with defer or async; inline critical CSS and load the rest without blocking.",
     refs: [lh("performance/render-blocking-resources", "Eliminate render-blocking resources")],
-    fix: (s) => s.replace("<script ", "<script defer "),
   },
   "modern-image-formats": {
     id: "modern-image-formats", title: "Image could be served as WebP or AVIF", category: "performance", severity: "minor", source: "Lighthouse",
     why: "The JPEG is about 3× larger than the same image in AVIF, which slows the largest contentful paint.",
     howToFix: "Serve AVIF/WebP with a <picture> fallback, or let the image CDN pick the format.",
     refs: [lh("performance/uses-webp-images", "Serve images in modern formats")],
-    fix: (s) => `<picture>\n  <source srcset="${s.match(/src="([^"]+)\.jpg"/)?.[1] ?? "hero"}.avif" type="image/avif">\n  ${s}\n</picture>`,
   },
   "unused-javascript": {
     id: "unused-javascript", title: "Most of this script isn't used on the page", category: "performance", severity: "minor", source: "Lighthouse",
     why: "The browser downloads and parses code it never runs.",
     howToFix: "Split the bundle by route, or load the widget only on pages that use it.",
     refs: [lh("performance/unused-javascript", "Reduce unused JavaScript")],
-    fix: (s) => s.replace("<script ", '<script type="module" '),
   },
 };
 

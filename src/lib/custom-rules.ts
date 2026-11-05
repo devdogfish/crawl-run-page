@@ -1,6 +1,6 @@
 // PROTOTYPE: user-defined rules, saved in this browser per site. A rule flags a page when its pattern is found
 // (or missing) in the chosen part of the page. Rules run on the crawler's stored HTML, so they apply from the next
-// crawl; earlier crawls aren't re-checked. Real backend: a row in the rule table (see docs/backend-and-mcp.md).
+// crawl; earlier crawls aren't re-checked. Real backend: a row in the rule table (see docs/pages-and-issues.md and PLAN.md T2.7).
 import type { Priority } from "@/lib/priority";
 
 export type Scope = "content" | "attributes" | "source";

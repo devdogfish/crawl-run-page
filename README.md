@@ -1,10 +1,18 @@
 # Crawl run page
 
-A Chakra UI v3 prototype of the crawler UI (crawls, run page, pages, issues, settings): a React + Vite single-page app with React Router, frontend only, ready to drop into the app. All data is simulated in the browser; nothing here talks to a server.
+A Chakra UI v3 prototype of the crawler UI (crawls, run page, pages, issues, settings, Ask AI): a React + Vite single-page app with React Router, frontend only, ready to drop into the app. All data is simulated in the browser, and Ask AI's answers are scripted; nothing here talks to a server.
 
-- **[SPEC.md](SPEC.md):** every question asked during design and the decision taken; the UI spec; how to instrument the existing crawler (where to add logs and metrics); SQLite storage; FastAPI endpoints (polling, SSE log streaming, pagination).
-- **[SLICES.md](SLICES.md):** the integration broken into 5 slices, with acceptance criteria.
-- **[docs/research-enterprise-pipeline-ui.md](docs/research-enterprise-pipeline-ui.md):** the research on how GitHub Actions, Vercel, Dagster, Buildkite and others show pipeline runs.
+Docs, in the order to read them:
+
+| Doc | What it is |
+|---|---|
+| [CONTEXT.md](CONTEXT.md) | The words we use (crawl, page, issue, element…) |
+| [PLAN.md](PLAN.md) | **The plan**: every ticket in order, and when each tier is done |
+| [SPEC.md](SPEC.md) | The crawl run page: decisions, UI, log format, storage, endpoints |
+| [docs/pages-and-issues.md](docs/pages-and-issues.md) | The read side behind Pages, page detail and Issues: core, storage, element ids |
+| [docs/ai.md](docs/ai.md) | The three AI systems: navigation (Cmd/Ctrl+K), the MCP server, Ask AI |
+| [docs/adr/](docs/adr/) | Decisions and why |
+| [docs/research-enterprise-pipeline-ui.md](docs/research-enterprise-pipeline-ui.md), [research/](research/) | Background research |
 
 ## Run it
 
@@ -37,6 +45,9 @@ A simulated run takes about a minute; the full-site Lighthouse job takes about 1
 | `public/sites/*.svg` | Official logos (colour + white for dark mode) | Yes |
 | `src/routes/site-layout.tsx` | Reads the site from the first URL segment (not found if unknown), renders the navbar and the `<Outlet />` | Yes |
 | `src/routes/pages.tsx`, `page-detail.tsx` | Pages across the site (compared with a baseline crawl) and one page's issues, preview and source | Yes (swap the data source) |
+| `src/components/assistant.tsx` | Ask AI: the panel, visible prompts, chips and ` ```ui ` component blocks (docs/ai.md §5) | Yes |
+| `src/lib/refs.ts` | Issue ids → issue data and links; the prompts the buttons write; the system prompt | Yes (resolve ids and get prompts via the API) |
+| `src/lib/mock-ai.ts` | **Scripted answers** standing in for the model | No, replaced by `POST /api/v3/chat` |
 | `src/routes/issues.tsx`, `rule-detail.tsx` | Issues by rule, and one rule's affected pages | Yes (swap the data source) |
 | `src/lib/custom-rules.ts`, `src/components/rule-*.tsx` | Custom rules, saved in the browser for now | Yes (store rules via the API) |
 | `src/components/crawl-settings-dialog.tsx` | New crawl / paused settings / read-only settings dialog | Yes |
