@@ -21,11 +21,23 @@ export const LAYOUTS: { value: Layout; label: string; description: string }[] = 
 ];
 const KEY = "crawler.layout";
 
+// Primary colour: one hex, saved in this browser, applied as --brand (the whole brand palette derives from it)
+export const DEFAULT_BRAND = "#005daa";
+const BRAND_KEY = "crawler.brand";
+export function applyBrand(hex: string) {
+  document.documentElement.style.setProperty("--brand", hex);
+  try { if (hex === DEFAULT_BRAND) localStorage.removeItem(BRAND_KEY); else localStorage.setItem(BRAND_KEY, hex); } catch { /* ignore */ }
+}
+export function savedBrand() {
+  try { const v = localStorage.getItem(BRAND_KEY); return v && /^#[0-9a-f]{6}$/i.test(v) ? v : DEFAULT_BRAND; } catch { return DEFAULT_BRAND; }
+}
+
 const LayoutContext = createContext<{ layout: Layout; setLayout: (v: Layout) => void }>({ layout: "compact", setLayout: () => {} });
 export const useLayout = () => useContext(LayoutContext);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [layout, setLayout] = useState<Layout>("compact");
+  useEffect(() => { applyBrand(savedBrand()); }, []);
   useEffect(() => {
     try { const v = localStorage.getItem(KEY) as Layout | null; if (v && LAYOUTS.some((l) => l.value === v)) setLayout(v); } catch { /* default */ }
   }, []);

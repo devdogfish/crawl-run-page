@@ -1,16 +1,18 @@
-// Chakra theme: the default system plus one brand palette (RBC blue), used as the app-wide default colorPalette.
+// Chakra theme: the default system plus one brand palette, used as the app-wide default colorPalette.
+// The palette is derived from one CSS variable (--brand, default RBC blue) so Settings can change it at runtime.
 // Solid buttons, switches, radio cards and focus rings pick it up; anything that sets its own colorPalette
 // (status badges, Lighthouse colours) is unchanged.
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 
 const config = defineConfig({
-  globalCss: { html: { colorPalette: "brand" } },
+  globalCss: { html: { colorPalette: "brand", "--brand": "#005daa" } },
   theme: {
     tokens: {
       colors: {
         brand: {
-          50: { value: "#e8f1fa" }, 100: { value: "#c9ddf2" }, 200: { value: "#9cc3e8" }, 300: { value: "#64a2db" }, 400: { value: "#2f80cc" },
-          500: { value: "#005daa" }, 600: { value: "#004f91" }, 700: { value: "#003f74" }, 800: { value: "#002f57" }, 900: { value: "#00213d" }, 950: { value: "#00162a" },
+          50: { value: "color-mix(in srgb, var(--brand) 10%, white)" }, 100: { value: "color-mix(in srgb, var(--brand) 22%, white)" }, 200: { value: "color-mix(in srgb, var(--brand) 40%, white)" }, 300: { value: "color-mix(in srgb, var(--brand) 60%, white)" }, 400: { value: "color-mix(in srgb, var(--brand) 80%, white)" },
+          500: { value: "var(--brand)" },
+          600: { value: "color-mix(in srgb, var(--brand) 85%, black)" }, 700: { value: "color-mix(in srgb, var(--brand) 68%, black)" }, 800: { value: "color-mix(in srgb, var(--brand) 50%, black)" }, 900: { value: "color-mix(in srgb, var(--brand) 32%, black)" }, 950: { value: "color-mix(in srgb, var(--brand) 20%, black)" },
         },
       },
     },

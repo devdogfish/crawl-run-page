@@ -4,9 +4,9 @@
 // (prototype: pick one layout, then remove that control).
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Box, Container, Heading, RadioCard, Separator, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Container, Heading, HStack, RadioCard, Separator, Stack, Text } from "@chakra-ui/react";
 import { LuMonitor, LuMoon, LuSun } from "react-icons/lu";
-import { LAYOUTS, useLayout, type Layout } from "@/components/app-shell";
+import { DEFAULT_BRAND, LAYOUTS, applyBrand, savedBrand, useLayout, type Layout } from "@/components/app-shell";
 
 const THEMES = [
   { value: "light", label: "Light", description: "Always light", icon: LuSun },
@@ -14,11 +14,18 @@ const THEMES = [
   { value: "system", label: "System", description: "Follow this device", icon: LuMonitor },
 ];
 
+const BRANDS = [
+  { value: "#005daa", label: "Blue" }, { value: "#0f766e", label: "Teal" }, { value: "#6d28d9", label: "Violet" },
+  { value: "#be123c", label: "Crimson" }, { value: "#c2410c", label: "Orange" }, { value: "#334155", label: "Slate" },
+];
+
 export default function SettingsPage() {
   const { layout, setLayout } = useLayout();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false); // the saved theme is only known in the browser
-  useEffect(() => setMounted(true), []);
+  const [brand, setBrand] = useState(DEFAULT_BRAND);
+  useEffect(() => { setMounted(true); setBrand(savedBrand()); }, []);
+  const chooseBrand = (hex: string) => { setBrand(hex); applyBrand(hex); };
 
   return (
     <Box>
@@ -27,6 +34,20 @@ export default function SettingsPage() {
         <Separator mt="6" />
         <Row title="Theme" help="Saved in this browser.">
           <Choices value={mounted ? theme ?? "system" : undefined} onChange={setTheme} items={THEMES} />
+        </Row>
+        <Separator />
+        <Row title="Primary color" help="Buttons, switches, links and focus rings. Saved in this browser.">
+          <HStack gap="3" wrap="wrap">
+            {BRANDS.map((b) => (
+              <Box key={b.value} as="button" aria-label={b.label} title={b.label} onClick={() => chooseBrand(b.value)}
+                boxSize="8" rounded="full" bg={b.value} borderWidth="2px" borderColor="bg"
+                outlineWidth="2px" outlineStyle="solid" outlineColor={brand.toLowerCase() === b.value ? "fg" : "transparent"} cursor="pointer" />
+            ))}
+            <input type="color" aria-label="Custom color" value={brand} onChange={(e) => chooseBrand(e.target.value)}
+              style={{ width: 32, height: 32, padding: 0, border: 0, background: "none", cursor: "pointer" }} />
+            <Text textStyle="sm" color="fg.muted" fontFamily="mono">{brand.toUpperCase()}</Text>
+            {brand.toLowerCase() !== DEFAULT_BRAND && <Button size="xs" variant="ghost" onClick={() => chooseBrand(DEFAULT_BRAND)}>Reset</Button>}
+          </HStack>
         </Row>
         <Separator />
         <Row title="Navigation layout" help="Saved in this browser.">
