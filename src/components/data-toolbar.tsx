@@ -1,6 +1,6 @@
 "use client";
 
-// One toolbar for every data panel (logs, pages): search · filter segments · count · copy · download
+// One toolbar for every data panel (logs, pages): search · filter segments (optional) · count · copy · download
 import { useState } from "react";
 import { HStack, IconButton, Input, InputGroup, SegmentGroup, Text } from "@chakra-ui/react";
 import { LuCheck, LuCopy, LuDownload, LuSearch, LuX } from "react-icons/lu";
@@ -12,9 +12,9 @@ export function DataToolbar<V extends string>({
   query: string;
   onQuery: (q: string) => void;
   placeholder: string;
-  segments: { value: V; label: string }[];
-  value: V;
-  onValue: (v: V) => void;
+  segments?: { value: V; label: string }[];
+  value?: V;
+  onValue?: (v: V) => void;
   count: string;
   copyLabel: string;
   onCopy: () => Promise<void> | void;
@@ -35,10 +35,12 @@ export function DataToolbar<V extends string>({
       >
         <Input size="xs" placeholder={placeholder} value={query} onChange={(e) => onQuery(e.target.value)} />
       </InputGroup>
-      <SegmentGroup.Root size="xs" value={value} onValueChange={(e) => onValue(e.value as V)}>
-        <SegmentGroup.Indicator />
-        <SegmentGroup.Items items={segments} />
-      </SegmentGroup.Root>
+      {segments && (
+        <SegmentGroup.Root size="xs" value={value} onValueChange={(e) => onValue?.(e.value as V)}>
+          <SegmentGroup.Indicator />
+          <SegmentGroup.Items items={segments} />
+        </SegmentGroup.Root>
+      )}
       <Text textStyle="xs" color="fg.muted" ms="auto" fontVariantNumeric="tabular-nums" whiteSpace="nowrap">{count}</Text>
       <Tooltip content={copyLabel}>
         <IconButton aria-label="Copy" size="xs" variant="ghost" onClick={copy}>{copied ? <LuCheck /> : <LuCopy />}</IconButton>
