@@ -6,7 +6,7 @@ Words like **issue**, **element**, **shared markup** and **baseline** are define
 
 Status: proposal. Nothing here is built yet. Build order is at the end; the tickets are in [PLAN.md](../PLAN.md) (T2.2 to T2.5).
 
-This lives inside the existing v2 backend ([ADR 0001](adr/0001-extend-v2-backend.md)): the database is its `intelligence.db`, and every new route is under `/api/v3` (integration plan T1.1). The package and file names below are a proposed layout for the new read side, not the backend's current one.
+This lives inside the existing v2 backend ([ADR 0001](adr/0001-extend-v2-backend.md)): the database is its `intelligence.db`, and every new route is under `/api/v3`, like the crawl run page's. The package and file names below are a proposed layout for the new read side, not the backend's current one.
 
 ---
 
@@ -29,7 +29,7 @@ This lives inside the existing v2 backend ([ADR 0001](adr/0001-extend-v2-backend
                      └────────┬────────┘                     (the only code that knows it)
                               │ sqlite3
                      ┌────────▼────────┐
-                     │ intelligence.db │                   ← written by the crawl and `analyze` (integration plan Tier 0, T2.2, T2.3)
+                     │ intelligence.db │                   ← written by the crawl, and by `analyze` (PLAN.md T2.2, T2.3)
                      └─────────────────┘
 ```
 
@@ -162,7 +162,7 @@ What the core hides (and therefore what its tests cover):
 
 ## 4. Storage additions
 
-These tables go into `intelligence.db`, written by the `analyze` steps (integration plan T2.2, T2.3); the read side reads them. No screenshots or element boxes ([ADR 0002](adr/0002-live-render-only-preview.md)): the preview finds an element by its selector in the live render.
+These tables go into `intelligence.db`, written by the `analyze` steps (PLAN.md T2.2, T2.3); the read side reads them. No screenshots or element boxes ([ADR 0002](adr/0002-live-render-only-preview.md)): the preview finds an element by its selector in the live render.
 
 ```sql
 CREATE TABLE page (                 -- one row per page of a site, stable across crawls

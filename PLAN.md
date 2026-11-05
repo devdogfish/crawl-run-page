@@ -1,8 +1,8 @@
-# Plan: what to build, in what order
+# Plan: what's left to build, in order
 
-Status: agreed · 2026-11-05
+Status: updated 2026-11-05
 
-This is the one plan for moving the prototype into the real app: every ticket, its order, and when each tier is done. It replaces `SLICES.md`, whose acceptance criteria are now the **Done when** lists under each tier.
+The one plan for moving the prototype into the real app. It lists only what isn't built yet, in order, with a **Done when** list for each part.
 
 Designs it points to:
 - [SPEC.md](SPEC.md): the crawl run page (UI, log format, tables, endpoints).
@@ -10,48 +10,82 @@ Designs it points to:
 - [docs/ai.md](docs/ai.md): the three AI systems (navigation, the MCP server, Ask AI).
 - Decisions: [docs/adr/](docs/adr/). Terms: [CONTEXT.md](CONTEXT.md).
 
-It starts from the existing backend (FastAPI + SQLite + Playwright, `backend/`, the v2 "intelligence" stack). The question that orders it: **what has to be built before the next fresh crawl starts, and what can wait until it's running or finished?**
+---
+
+## 1. Where things stand
+
+**Built: Tier 0 (capture) and Tier 1 (the crawl run page)**, inside the existing v2 backend and `intelligence.db` ([ADR 0001](docs/adr/0001-extend-v2-backend.md)):
+- **Capture during a crawl:**
+  - schema migrations;
+  - the crawl dialog's settings reach the crawler;
+  - steps with timings, and a run recorder that saves progress samples;
+  - the request log in the one format (SPEC §4.3);
+  - an outcome row for every URL, including skipped ones;
+  - stored stylesheets;
+  - element selector and HTML on axe results.
+- **The run page on real data, under `/api/v3`:**
+  - sites and the crawls list, and starting a crawl;
+  - the crawl summary with progress, ETA and history;
+  - logs, the Pages tab and metrics samples;
+  - pause, resume and settings while paused.
+
+**Open: align the real `/crawls` pages with the prototype** (§2). The real app's crawls list and run page have drifted from what we designed, mostly in the UI. They have to run on real data **and** have exactly the prototype's layout. This comes before Tier 2.
+
+**Next: Tier 2** (§4): Pages, page detail and Issues on real data, then Ask AI on the gateway. **Then Tier 3** (§5): the MCP server and navigation.
+
+The rule that ordered Tiers 0 and 1 still applies to anything new that's captured: **if it isn't recorded during the crawl, it's gone; everything derived from stored data can be built later and re-run** (`POST /crawls/{id}/analyze`).
 
 ---
 
-## 1. Verdict: don't rewrite the backend. Rewrite its edges.
+## 2. Alignment: the `/crawls` pages, on real data, laid out exactly like the prototype
 
-The v2 backend splits cleanly into three parts, and they deserve different treatment.
+**Goal:** `/<site>/crawls` and `/<site>/crawls/<id>` in the real app are the prototype's pages fed with real data. Same layout, same components, same states, same behaviour: 100%, not "close". The only thing that changes is where the data comes from.
 
-| Part | What it is today | Verdict |
-|---|---|---|
-| **Capture** (writes, during the crawl) | `Crawl`, `PlaywrightPageVisitor`, `HttpxDiscovery`, `CrawlStore`, `ArtifactStore`, `UrlIdentity`. One navigation per page captures raw + rendered HTML, redirect chain (HTTP + meta/JS), axe desktop + mobile, links, assets, images, performance evidence. | **Keep.** This is the expensive part to get right and it already captures more than the UI needs. Add a few fields (§3), don't restructure. |
-| **Analysis** (post-crawl, reads stored data only) | `CheckSuite` + `checks/*`, `FindingsLedger`, `ChangedPageLedger`, Lighthouse, `RuleStore`/`RuleMatcher`. Re-runnable with `POST /crawls/{id}/analyze`. | **Keep the engines, add one more step** that produces the shapes the UI reads (elements with HTML hash and pattern, stable pages, snapshots). Because it re-runs on stored data, none of this blocks the crawl. |
-| **Read side** (API, live updates, read models) | `api.py` routes shaped for the Vue app, WebSocket fan-out of in-memory events, `overview.py`/`OverviewFacts` cache. | **Replace.** New routers and a new read-model core speaking this frontend's language ([pages-and-issues.md](docs/pages-and-issues.md) §3). Old routes stay until the Vue app is retired, then go. |
+**The prototype is the source of truth,** not this document or a screenshot. That means the code in this repo: `src/routes/crawls.tsx`, `src/routes/crawl-run.tsx`, and the components they use (`log-viewer`, `data-toolbar`, `crawl-charts`, `step-ui`, `crawl-settings-dialog`, `app-navbar`, `app-shell`), plus `src/lib/types.ts` and `src/lib/settings.ts`. SPEC.md §3 explains the decisions behind them.
 
-Why not a full rewrite: the deletion test. Delete `Crawl` + `CrawlStore` and every subtle thing they handle (pause at visit boundaries, compare-and-set status transitions, crash recovery, rate-limit auto-pause, redirect settle windows, duplicate final URLs, artifact dedup) has to be rediscovered. Delete `api.py` and `overview.py` and nothing is lost that the new UI needs: it asks different questions.
+**How to align:**
+1. **Use the prototype's files, not rewrites of them.** Where the real app has its own version of a page or component, replace it with the prototype's file. Then change only the data layer: replace the simulator hooks (`useCrawlRun`, `CRAWLS`, `pageAt`) with API queries that return the same types. Keep markup, styles, spacing and copy as they are.
+2. **Data that doesn't fit the layout is a data problem, not a layout problem.** If the API returns a different shape, map it to the prototype's types in the query hook. If a value is missing, fix the API, or show the prototype's own empty or "~" state; don't add, drop or rearrange UI to work around it. One known difference: the real pipeline's steps (Discover, Crawl, External links, Checks, Compare, Lighthouse) replace the prototype's Parse, Transform, Load and Publish. The step list layout stays the same, only the rows change.
+3. **Compare side by side, state by state.** Run the prototype (`pnpm dev`) and the real app at the same viewport widths (1440 px and 390 px), in light and dark mode. For each state below, put the real page next to the prototype's and fix every difference: layout, spacing, type, colour, icons, copy, empty states, tooltips.
+4. **Delete what only the prototype needs:** the grey Prototype bar, the scenario switcher and the simulators.
 
-### What changes in SPEC.md's plan
+**States to compare** (the prototype reaches them with its Prototype bar: Healthy run, Rate limited, Fails after crawl; Restart; Skip stage):
+- Crawls list: default, searched, filtered by each status, an empty result, the last page.
+- Run page: running (Crawl step selected, each tab: Logs, Metrics, Pages), rate-limited (the alert on the crawl step), paused (badge, frozen clock, Settings and Resume), each later step running, succeeded, failed (failed step selected, "Not run · an earlier step failed" below it), and the full-site Lighthouse row before, during and after its run.
+- Dialogs: New crawl, settings while paused (Target and Discovery locked), read-only settings from the `⋯` menu.
 
-SPEC.md §4–5 were written assuming a crawler we couldn't touch, so they add a separate `crawl_events.py` with its own writer thread and `crawls.db`. Now that we know the backend, that's the wrong seam (see [ADR 0001](docs/adr/0001-extend-v2-backend.md)):
+One state for reference: a running crawl with the Crawl step and its Logs tab selected.
 
-- **No second database, no second writer.** New tables (`crawl_steps`, `crawl_samples`) go into `intelligence.db` and are written through `CrawlStore`.
-- **The seam already exists: `Crawl`'s injected `publish` callback.** Today it goes straight to `CrawlService._publish_engine_event` → WebSocket subscribers. Put a **run recorder** behind it that persists steps, progress samples and log lines; WebSocket fan-out becomes optional. `Crawl` barely changes.
-- **Pipeline stages become steps.** `CrawlService` already moves through stages (`crawling` → `checking` → `done`); each becomes a `crawl_steps` row with start/finish times.
-- **`checkpoint()` isn't needed for pause.** `Crawl` already handles pause/resume/stop at a visit boundary through `CrawlStore.transition()`. Only "reload throughput settings on resume" is new.
-- **Live updates: poll + SSE, as SPEC D17 decided.** Persisted state survives reconnects and server restarts; the in-memory WebSocket fan-out doesn't. Don't build the new UI on the WebSocket.
+![Crawl 812 while crawling: the run page as it should look](docs/images/crawl-run-reference.webp)
 
-The SPEC's UI, log format (§4.3), table shapes (§5.2) and endpoint payloads (§6) still stand.
+(In this capture the log area is blank. The target shows the log lines, as the prototype does.)
 
----
+**Done when:**
 
-## 2. The rule that orders everything
+**Layout**
+- [ ] For every state above, the real page and the prototype's are the same at 1440 px and 390 px, in light and dark mode, side by side.
+- [ ] The real app's `/crawls` pages use the prototype's route and component files; diffs against this repo touch only data hooks and imports.
 
-> **If it isn't recorded during the crawl, it's gone. Everything derived from stored data can be built later and re-run.**
+**Run page**
+- [ ] Each fact appears once on the page. Progress, ETA, Pages, Errors and the rate-limit alert come from real numbers; on a typical crawl the ETA is within ±10% by halfway.
+- [ ] A running crawl's step statuses change within ~2 s without a reload. After a failure, the failed step is selected and later steps show "Not run · an earlier step failed".
 
-So the tickets fall into three tiers:
+**Logs**
+- [ ] New lines appear within ~1 s and the view follows the bottom; scrolling up pauses it and shows "↓ N new lines". After a network drop, the stream resumes without gaps or duplicates.
+- [ ] Every request has one line with its outcome first (`200 GET …`, `301 GET … → …`, `ERR GET … (timed out)`); lifecycle lines are muted. ~50K lines scroll smoothly; "Warnings & errors" narrows to failures. Selection, Copy and Download work, and the download is the whole log.
 
-| Tier | Built | Examples |
-|---|---|---|
-| **0 · Before the crawl starts** | Capture-time data that can't be recovered afterwards, and the settings that decide what's crawled | step timings, progress samples, request log, skipped URLs, stylesheets, the dialog's settings |
-| **1 · While it runs** | Read side of the crawl run page, so you can watch it | summary, crawls list, logs, Pages tab, pause/resume |
-| **2 · After it finishes** | Read models over stored data; re-run with `analyze` until right | pages across crawls, snapshots, issues, elements, shared markup, rule catalog, custom rules, preview |
-| **3 · Later** | Everything else | MCP, full-site Lighthouse job, retry from step, retention, removing v1 |
+**Metrics and Pages tabs**
+- [ ] Charts update while the Metrics tab is open and stop polling when it closes.
+- [ ] Pages filters show correct counts and reset to page 1; search covers all pages. A 3-hop server chain expands; a JS redirect shows Status 200 and a "Client" badge; loops show "Loop" and count as errors; one-hop redirects don't expand. Paging stays stable while rows are added.
+
+**Crawls list, sites and controls**
+- [ ] The site switcher lists every site with its logo; switching changes the crawls list and facts, and is remembered after a reload.
+- [ ] `/<site>/crawls` shows real crawls with working search, status filters, counts, pagination and CSV; a row opens its run page.
+- [ ] New crawl starts from the current site's URL and opens the new run page. Pause stops new requests within ~1 s and the clock stops; Resume continues. While paused, Target and Discovery can't change (UI locked, API `422`); throughput settings can, and the change shows in the log and the rate after resuming.
+
+**Real data** (check with SQL on a small QA-site crawl)
+- [ ] Steps have times, samples arrive every ~5 s, every request has a log line, skipped URLs have rows, stylesheets are stored, settings are persisted, and `analyze` still runs.
+- [ ] The crawler is no slower with the recorder running.
 
 ---
 
@@ -75,57 +109,9 @@ The two sides use the same words for different things. Don't rename tables now (
 
 ---
 
-## 4. Tickets
+## 4. Tier 2: Pages, Issues, page detail and Ask AI
 
-Sizes: **S** ≤ half a day, **M** ~1 day, **L** 2–3 days. "Verify" means: check the existing code first; it may already be done.
-
-### Tier 0 · Before the fresh crawl
-
-The goal is a crawl whose data is complete for everything the new UI will show, even though the UI isn't wired up yet. Do them in this order; T0.1 and T0.2 unblock the rest.
-
-| # | Ticket | Size | Why it can't wait |
-|---|---|---|---|
-| **T0.1** | **Schema migrations.** `create_schema` is `CREATE … IF NOT EXISTS`, which doesn't add columns to existing tables. Add a `PRAGMA user_version` migration list (numbered `ALTER`/`CREATE` steps, run at startup). **Back up `intelligence.db` and `data/artifacts/` first.** | S | Every other Tier 0 ticket adds columns or tables to a database that has old crawls in it. Those old crawls are your baselines and ETA history: don't lose them. |
-| **T0.2** | **Crawl settings from the dialog reach the crawler.** Extend `CrawlRequest` with the dialog's fields (`site`, `url`, `discovery`, `exclude`, `render_js`, `respect_robots`, `delay_ms`, `timeout_s`, `concurrency`, `max_retries`, `lighthouse_sample`) plus `trigger`. Persist them as one `settings` JSON on `crawls`, plus a `site` column. Map onto `VisitPolicy` and the seed logic: `exclude` filters the queue and sitemap entries; `discovery` turns sitemap seeding / link following on or off; `respect_robots` gates on `RobotsResult`. `lighthouse_sample` replaces the `lighthouse=true` flag. `concurrency` is locked at the engine's current value (Decision 2). **Verify** `max_retries` (today "up to 3 attempts") and `render_js` (always Playwright): if the engine can't honour a field yet, reject non-default values with a `422` instead of silently ignoring them. | M | These decide *what* gets crawled. A crawl started with the wrong exclusions or discovery mode can't be fixed afterwards. |
-| **T0.3** | **Steps.** Add `crawl_steps` (SPEC §5.2, in `intelligence.db`). Map the real pipeline to steps, replacing the prototype's Parse/Transform/Load/Publish: **Discover** (robots + sitemaps seed) → **Crawl** (queue loop) → **External links** (`_run_external_checks`) → **Checks** (reclassify + `CheckSuite`) → **Compare** (`FindingsLedger.record/compare` + `ChangedPageLedger`) → **Lighthouse** (sample). Full-site Lighthouse stays a job. Write start/finish/status/error from the places `CrawlService` already changes stage and `Crawl.run()` already moves between phases. | M | Step durations are what "usual duration" and the ETA are computed from. If this crawl doesn't record them, the *next* crawl has no ETA either. |
-| **T0.4** | **Run recorder behind `publish`.** One small module that `CrawlService` passes as `Crawl`'s `publish` callback. It persists what `Crawl` already emits: `progress`/`stats` every 5–10 s → `crawl_steps` (latest counters) + `crawl_samples` (time series: items done, rate, queue); counters as **cumulative** totals (`codes` 2xx/3xx/4xx/429/5xx/timeout, `discovered`, `queue`, `render_ms_median`). Throttle to one sample per 5 s. It can still forward to the WebSocket fan-out so the Vue app keeps working. **Verify** what the `progress`/`stats` events carry today; add the missing counters inside `Crawl`. | M | The throughput/queue chart, response-code bar and rate history are time series. You can't reconstruct them later. |
-| **T0.5** | **Request log in the one format.** Every HTTP request (each redirect hop, each retry, sitemap/robots fetches, external HEAD checks) → one `crawl_logs` line with `step_id`, `level`, `status`, `url`, `data`, in SPEC §4.3's format (`200 GET /x (412 ms)`, `301 GET /a → /b (88 ms)`, `ERR GET /x (30.0 s, timed out)`); lifecycle lines (`—   START`, `SEED`, `PROGRESS` every 15–30 s, `THROTTLE`, `PAUSE`, `RESUME`, `DONE`). One formatter function; no hand-formatted strings at call sites. **Verify** `crawl_logs`' current columns and add `step_id`, `status`, `url`, `data` if missing. Batch inserts (the recorder can buffer for ~1 s) so 50K lines don't slow the crawl. | M | Logs are only ever written once. |
-| **T0.6** | **Every URL gets an outcome row, including skipped ones.** The Pages tab needs one row per URL with `kind` (ok / redirect / client_error / server_error / timeout / loop / skipped), first status, `hops` with `side` (server for HTTP, client for meta refresh / JavaScript), `final_url`, `fetch_ms`, `render_ms`, `note`. Most of it exists across `visits`, `redirect_hops` and `persist_failed_visit`. **Gaps to verify:** URLs skipped by the `ASSET` regex (today only logged as `non_html`), by `exclude`, by robots.txt, off-origin finals, duplicate finals and the `max_requests` guard each need a row with a reason; `fetch_ms` (TTFB) and `render_ms` per visit. Store it in the existing tables plus a view, or a `crawl_pages` table (SPEC §5.2) written alongside `persist_visit`: either is fine as long as it's written during the crawl. | M | A skipped URL that isn't recorded is invisible forever. |
-| **T0.7** | **Store stylesheets.** Save each stylesheet body the page loads, content-addressed in `ArtifactStore` (same gzip + hash as HTML), with a page → stylesheet link (`page_assets` already lists them). Deduped, a whole site's CSS is a few MB. **Don't store script bodies**: the preview iframe is sandboxed without `allow-scripts`, so JavaScript never runs there, and the rendered DOM already holds its effects. Keep scripts' URL, hash and size (already captured for the minification check). Images, video and fonts stay unstored (SPEC §6.6). | S | The live render shows the page as crawled. Pointing it at the live site's CSS works until the CSS changes, and then old crawls render wrong. |
-| **T0.8** | **Element data on axe instances.** For each failing element, **verify** the stored target selector and the HTML snippet (keep at least ~2 KB untrimmed, so the HTML hash is stable). The HTML hash, the element pattern (selector without positions) and shared-markup counts are derived later (T2.3). No screenshots or element boxes (Decision 1). | S | Selector and HTML come from the live DOM. |
-| **T0.9** | **Smoke crawl.** Start a small crawl on the QA site (`max_requests` ≈ 300, www.sterbccm.com) and check with SQL: steps have times, samples arrive every ~5 s, every request has a log line, skipped URLs have rows, stylesheets are stored, settings are persisted, `analyze` still runs. Then start the full crawl. | S | Cheaper than finding a gap 20 minutes into the real crawl. |
-
-Optional before the crawl, if it's a long one: **T1.6 (live settings on resume)**. Today a 429 auto-pauses the crawl; resuming with the same delay just hits 429 again.
-
-**Done when** (Tier 0):
-- [ ] The smoke crawl (T0.9) has step times, samples every ~5 s, a log line per request, a row per skipped URL, stored stylesheets and its settings, and `analyze` still runs.
-- [ ] The crawler is no slower with the recorder running (records are buffered, never written inline per request).
-
-### Tier 1 · While it runs (the crawl run page)
-
-| # | Ticket | Size |
-|---|---|---|
-| **T1.1** | **New router + base path.** v1 already owns `/api/...` and v2 `/api/v2/...`. Mount the new routes at `/api/v3` (one constant in the frontend), with short-lived read-only connections, as v2 already does. | S |
-| **T1.2** | **Sites + crawls list.** `GET /sites` (from `SITE_PROFILES` + the four site ids; add `rbcits`/`rbcits-qa` profiles), `GET /crawls?site=&status=&q=&page=` with counts and facts (SPEC §6.0). `POST /crawls` → `CrawlService.create_crawl` with T0.2's settings. | M |
-| **T1.3** | **Crawl summary** `GET /crawls/{id}` (SPEC §6.1) from `crawls` + `crawl_steps` + latest samples: `progress_pct` weighted by usual step durations, `eta_at`, `pages.expected` (median of the last 5 successful crawls of the site), `history`. `ETag`/`304`. Map v2's statuses (`interrupted`, `stopped` …) to the UI's. | M |
-| **T1.4** | **Backfill history** for crawls made before T0.3: crawl durations and page counts from `crawls` and `pages`, so the first fresh crawl already shows an expected page count and an ETA. One-off script. | S |
-| **T1.5** | **Logs** `GET /crawls/{id}/logs` with `step`, `after`, `before`, `limit`, `level`, `q`, `status` + `GET …/logs/download`. Polling `?after=` first; SSE (`…/logs/stream`) when the polling version works. | M |
-| **T1.6** | **Pause / resume / settings** → the existing `transition()`. `PATCH …/settings` only while paused, editable keys only, writes the `UPDATE` log line; `Crawl` re-reads throughput settings when it resumes. | S |
-| **T1.7** | **Pages tab** `GET …/pages?filter=&q=&page=`, `…/pages/counts`, `…/pages.csv` over T0.6's rows (SPEC §6.4). | M |
-| **T1.8** | **Samples** `GET …/steps/{step}/samples?since=` for the Metrics tab. | S |
-| **T1.9** | **Frontend:** replace `crawls-list.ts`, `crawl.ts`, `pages.ts` and `sites.ts` with queries (TanStack Query, `refetchInterval: 2000` while running); delete `PrototypeBar`; enable New crawl. | L |
-
-**Done when** (Tier 1):
-- [ ] The site switcher lists every site with its logo; switching changes the crawls list and facts, and is remembered after a reload.
-- [ ] `/<site>/crawls` shows real crawls with working search, status filters, counts, pagination and CSV; a row opens its run page.
-- [ ] A running crawl's step statuses change within ~2 s without a reload. After a failure, the failed step is selected and later steps show "Not run · an earlier step failed".
-- [ ] Logs: new lines appear within ~1 s and the view follows the bottom; scrolling up pauses it and shows "↓ N new lines". After a network drop, the stream resumes without gaps or duplicates.
-- [ ] Every request has one log line with its outcome first (`200 GET …`, `301 GET … → …`, `ERR GET … (timed out)`); lifecycle lines are muted. ~50K lines scroll smoothly, and "Warnings & errors" narrows to failures. Selection, Copy and Download work; the download is the whole log.
-- [ ] Progress, ETA, pages, errors and the rate-limit alert come from real numbers; on a typical crawl the ETA is within ±10% by halfway. Each fact appears once on the page. Charts poll only while the Metrics tab is open.
-- [ ] Pages tab: filters show correct counts and reset to page 1; search covers all pages. A 3-hop server chain expands; a JS redirect shows Status 200 and a "Client" badge; loops show "Loop" and count as errors; one-hop redirects don't expand. Paging stays stable while rows are added.
-- [ ] New crawl starts from the current site's URL and opens the new run page. Pause stops new requests within ~1 s and the clock stops; Resume continues. While paused, Target and Discovery can't change (UI locked, API `422`); throughput settings can, and the change shows in the log and the rate after resuming.
-
-### Tier 2 · After the crawl (Pages, Issues, page detail)
+Sizes: **S** ≤ half a day, **M** ~1 day, **L** 2–3 days.
 
 All of this reads stored data. Build it against the finished crawl and re-run `analyze` until the numbers are right.
 
@@ -136,7 +122,7 @@ All of this reads stored data. Build it against the finished crawl and re-run `a
 | **T2.3** | **Elements.** A pipeline step that turns `axe_instances` and check results into `element` rows: `html_hash`, `pattern` (selector with `:nth-*` positions removed), shared-markup counts per crawl, and a **stable element `id`**: a short hash of `(page, rule, selector, html_hash)`, the same in every crawl, so links and the assistant's references survive new crawls ([pages-and-issues.md](docs/pages-and-issues.md) §3 "Ids"). Settle the id before anything links to it. Issue status (new / existing / fixed) by element identity `(page, rule, selector, html_hash)`, consistent with `FindingsLedger.compare` (or replacing it for the new API). | L |
 | **T2.4** | **Read-model core** `core/pages.py` and `core/issues.py` (`find_pages`, `get_page`, `find_issues`, `get_issue` by element id, latest crawl by default) and `core/handoff.py` (the prompt text for an issue or a page, shared by Copy as prompt, Ask AI and the MCP prompt), tested through their interface against a seeded database ([pages-and-issues.md](docs/pages-and-issues.md) §3, §5). Plus a site-level `issues_by_rule` for the Issues page and rule detail. | L |
 | **T2.5** | **Routes** for Pages, page detail, Issues, rule detail, `GET /api/v3/issues/{id}`; exports (`?format=prompt|json`). Frontend swaps `site-pages.ts`, `page-issues.ts`, `site-issues.ts` for queries, and `resolveIssue` in `refs.ts` for `GET /api/v3/issues/{id}` (chips and fix cards get a loading state); the page detail's `?issue=` takes the element id instead of a position in the list. | L |
-| **T2.6** | **Preview endpoint.** Serve a snapshot's rendered HTML with stylesheet links rewritten to `/api/v3/assets/{hash}` (T0.7) and a `<base>` for images; Source view serves the raw HTML. Frontend: remove the Screenshot mode from `page-detail.tsx` / `page-preview.tsx`; the issue-panel crop uses the live render. | M |
+| **T2.6** | **Preview endpoint.** Serve a snapshot's rendered HTML with stylesheet links rewritten to `/api/v3/assets/{hash}` (the stylesheets stored during the crawl) and a `<base>` for images; Source view serves the raw HTML. Frontend: remove the Screenshot mode from `page-detail.tsx` / `page-preview.tsx`; the issue-panel crop uses the live render. | M |
 | **T2.7** | **Custom rules on the server.** Move them from `localStorage` to the existing `RuleStore`/`RuleMatcher`. Add what the dialog has and the backend may not: scope (content / attributes / source), found vs missing, page type filter, priority, category. Match counts per page from `rule_match_cache`. | M |
 | **T2.8** | **Lighthouse scores** `GET …/lighthouse?scope=sample` from `LighthouseStore`, and per-page performance on Pages. | S |
 | **T2.9** | **Ask AI on the corporate gateway** ([ai.md](docs/ai.md) §5, §6, [ADR 0003](docs/adr/0003-three-ai-systems.md)). Includes `assistant/gateway.py` with its fake, which navigation reuses. `GET /api/v3/assistant/seed` (visible prompts from `core/handoff.py`), `POST /api/v3/chat` (adds the system prompt, accepts only user and assistant messages, streams server-sent events), `GET /api/v3/assistant/system`. `gateway.py` is the only code that knows the gateway, with `fake_gateway.py` for tests. Frontend: seeds from the seed route; `streamAnswer` in `mock-ai.ts` becomes the chat call; delete the scripted answers. Needs T2.4; answers to the gateway questions in ai.md §6 first. | M |
@@ -149,7 +135,9 @@ All of this reads stored data. Build it against the finished crawl and re-run `a
 - [ ] Every filter and the URL state survive a reload.
 - [ ] Ask AI (T2.9): Fix, Explain and Summarize send exactly the prompt the panel shows; answers stream in; chips and fix cards resolve from ids on any page; a gateway error shows as a short message.
 
-### Tier 3 · Later
+---
+
+## 5. Tier 3: the MCP server, navigation and later work
 
 AI systems ([docs/ai.md](docs/ai.md)). Both need T2.4; neither needs the other or T2.9:
 
@@ -172,8 +160,9 @@ Other later work:
 
 ---
 
-## 5. Decisions (agreed 2026-11-05)
+## 6. Decisions (agreed 2026-11-05)
 
-1. **No screenshots; Live render is the only preview mode** ([ADR 0002](docs/adr/0002-live-render-only-preview.md)). The crawler captures no screenshots or element boxes. The page preview renders the stored HTML with the stored stylesheets (T0.7), and the crop in the issue panel comes from the live render too. The frontend drops the Screenshot / Live render toggle.
-2. **Concurrency is locked for now.** The dialog shows the engine's current value read-only, and the API rejects any other value with a `422`. A real worker pool (per-host pacing, rate-limit guard across workers) is a Tier 3 ticket.
-3. **The old `intelligence.db` is kept and migrated in place** (T0.1). Its crawls are the baselines for new/fixed and the history for ETAs.
+1. **No screenshots; Live render is the only preview mode** ([ADR 0002](docs/adr/0002-live-render-only-preview.md)). The crawler captures no screenshots or element boxes. The page preview renders the stored HTML with the stored stylesheets, and the crop in the issue panel comes from the live render too. The frontend drops the Screenshot / Live render toggle.
+2. **Concurrency is locked for now.** The dialog shows the engine's current value read-only, and the API rejects any other value with a `422`. A real worker pool is in Tier 3.
+3. **The old `intelligence.db` is kept and migrated in place.** Its crawls are the baselines for new/fixed and the history for ETAs.
+4. **Three AI systems, each limited to one kind of output** ([ADR 0003](docs/adr/0003-three-ai-systems.md)).

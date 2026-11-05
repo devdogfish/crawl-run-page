@@ -655,7 +655,7 @@ Moved out of this spec: the read side behind Pages, page detail and Issues (issu
 - **Prototype-only code:**
   - `src/lib/crawl.ts` and `src/lib/pages.ts` are simulators;
   - `PrototypeBar` in the page switches scenarios and skips stages.
-  - All of these are removed when the run page reads the API (PLAN.md T1.9).
+  - All of these are removed in the real app, where the run page reads the API.
 - **Reusable components:** `LogViewer`, `DataToolbar`, `CrawlChart`, `CodesBar`, `HistoryChart` (`compact`), and `StageIcon`, `STATUS` and `StageAreaChart` in `step-ui.tsx`.
 - **Data fetching:**
   - poll the summary every 2s while `status === "running"`; TanStack Query's `refetchInterval` works well for this;

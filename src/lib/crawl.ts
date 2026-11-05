@@ -1,4 +1,4 @@
-// PROTOTYPE SIMULATOR. Replaced by the API (PLAN.md T1.9).
+// PROTOTYPE SIMULATOR. In the real app the run page reads the API (SPEC.md §6).
 // A crawl-heavy run: one long crawl (~90% of the run), then short processing steps.
 // Supports pause/resume and live settings changes, like the real run page will.
 import { useCallback, useEffect, useState } from "react";
