@@ -15,8 +15,8 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  Badge, Box, Button, ButtonGroup, Container, DataList, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Pagination, Portal,
-  Select, Span, Stack, Text, createListCollection,
+  Badge, Box, Button, ButtonGroup, Container, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Pagination, Portal,
+  Select, Stack, Text, createListCollection,
 } from "@chakra-ui/react";
 import { LuChevronLeft, LuChevronRight, LuLink, LuX } from "react-icons/lu";
 
@@ -26,7 +26,7 @@ import { crawlsFor } from "@/lib/crawls-list";
 import { ENVIRONMENTS } from "@/lib/settings";
 import {
   CATEGORIES, LH_SAMPLE, PAGE_TYPES, RULES, YEARS, crawlChoices, fullLighthouse, issuesIn, linksTo, normalizeTarget, pagesFor, ruleMatches,
-  severity, totalIssues, typeLabel, yearOf, type Category, type Change, type PageView, type RuleId,
+  severity, totalIssues, yearOf, type Category, type Change, type PageView, type RuleId,
 } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
 
@@ -115,8 +115,6 @@ function Pages() {
   }, [filtered, comparing, s.change, s.sort, rule, cat]);
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const inCrawl = all.filter((p) => p.change !== "removed");
-  const audited = inCrawl.filter((p) => p.perf != null).length;
   const active = (["q", "type", "year", "rule", "links"] as const).some((k) => s[k] !== defaults[k]);
   const crawlLabel = (id: string) => { const c = crawls.find((x) => x.id === id); return c ? `#${c.id} · ${fmtDay(c.startedAt)}` : `#${id}`; };
 
@@ -124,14 +122,15 @@ function Pages() {
     ...rows.map(({ p, matches }) => [p.path, p.title, p.type, p.status, totalIssues(p), p.critical, p.change ?? "", p.lastChanged ?? "", ...(rule ? [matches] : [])]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
 
-  // Columns appear only when they say something: Matches with a rule, Change while comparing
-  const cols = ["minmax(280px, 3fr)", "96px", "56px", "132px", ...(rule ? ["72px"] : []), ...(comparing ? ["84px"] : []), "92px"].join(" ");
+  // Page · Issues · Matches (only with a rule) · Last changed. Type is visible in the path; status shows only when it isn't 200;
+  // the New / Changed / Removed badge sits next to the date, since both answer "what happened to this page".
+  const cols = ["minmax(0, 1fr)", "150px", ...(rule ? ["72px"] : []), "170px"].join(" ");
 
   return (
     <Box bg="bg" minH="100vh">
       <Box borderBottomWidth="1px" bg="bg.subtle">
         <Container maxW="7xl" pt="7" pb="5">
-          <Flex justify="space-between" align={{ base: "start", md: "center" }} direction={{ base: "column", md: "row" }} gap="4" mb="5">
+          <Flex justify="space-between" align={{ base: "start", md: "center" }} direction={{ base: "column", md: "row" }} gap="4">
             <Heading size="xl" fontWeight="semibold">Pages</Heading>
             <HStack gap="2" wrap="wrap">
               <ScopeSelect label="Crawl" value={s.crawl} onChange={(v) => {
@@ -148,15 +147,6 @@ function Pages() {
             </HStack>
           </Flex>
 
-          <DataList.Root orientation="vertical" size="sm" display="grid" gridTemplateColumns={{ base: "repeat(2, 1fr)", md: "repeat(5, minmax(0, 1fr))" }} gap="5">
-            <Fact label="Pages in this crawl">{inCrawl.length.toLocaleString("en-US")}</Fact>
-            <Fact label="New" muted={!comparing}>{comparing ? <Delta n={all.filter((p) => p.change === "new").length} color="green.fg" /> : "—"}</Fact>
-            <Fact label="Changed" muted={!comparing}>{comparing ? <Delta n={all.filter((p) => p.change === "changed").length} color="blue.fg" /> : "—"}</Fact>
-            <Fact label="Removed" muted={!comparing}>{comparing ? <Delta n={all.filter((p) => p.change === "removed").length} color="red.fg" /> : "—"}</Fact>
-            <Fact label="Lighthouse coverage">
-              {fullLighthouse(a) ? "Full site" : <>Sample · <Span color="fg.muted">{audited.toLocaleString("en-US")} of {fmtNum(inCrawl.length)}</Span></>}
-            </Fact>
-          </DataList.Root>
         </Container>
       </Box>
 
@@ -171,7 +161,7 @@ function Pages() {
               { value: "removed", label: `Removed ${fmtNum(counts.removed)}` },
             ] : undefined}
             value={s.change} onValue={(change) => set({ change })}
-            count={active ? `${rows.length.toLocaleString("en-US")} matches` : ""}
+            count={active ? `${rows.length.toLocaleString("en-US")} matches` : comparing ? "" : `${counts.all.toLocaleString("en-US")} pages`}
             copyLabel="Copy URLs" onCopy={() => navigator.clipboard.writeText(rows.map(({ p }) => p.path).join("\n"))}
             downloadLabel="Download these pages (.csv)" onDownload={() => downloadText(toCsv(), `pages-${site}-${s.crawl}.csv`, "text/csv")}
           />
@@ -217,12 +207,11 @@ function Pages() {
           )}
 
           <Box overflowX="auto">
-            <Box minW="820px">
+            <Box minW="640px">
               <Grid templateColumns={cols} gap="3" px="3" py="2" borderBottomWidth="1px" textStyle="xs" fontWeight="medium" color="fg.muted">
-                <Text>Page</Text><Text>Type</Text><Text>Status</Text>
+                <Text>Page</Text>
                 <Text>{cat ? CATEGORIES.find((c) => c.id === cat)!.label : "Issues"}</Text>
                 {rule && <Text textAlign="right">Matches</Text>}
-                {comparing && <Text>Change</Text>}
                 <Text>Last changed</Text>
               </Grid>
               {rows.length === 0 ? (
@@ -230,7 +219,7 @@ function Pages() {
                   {links && links.from.size === 0 ? `No page in crawl #${s.crawl} links to ${target}.` : "No pages match these filters."}
                 </Text>
               ) : pageRows.map(({ p, matches }) => (
-                <PageRowView key={p.i} p={p} cols={cols} cat={cat} matches={rule ? matches : null} comparing={comparing}
+                <PageRowView key={p.i} p={p} cols={cols} cat={cat} matches={rule ? matches : null}
                   changedOn={p.lastChanged != null ? dates.get(p.lastChanged) ?? null : null} since={crawlsFor(site).at(-1)!.startedAt} />
               ))}
             </Box>
@@ -259,8 +248,8 @@ function Pages() {
   );
 }
 
-function PageRowView({ p, cols, cat, matches, comparing, changedOn, since }: {
-  p: PageView; cols: string; cat: Category | null; matches: number | null; comparing: boolean; changedOn: Date | null; since: Date;
+function PageRowView({ p, cols, cat, matches, changedOn, since }: {
+  p: PageView; cols: string; cat: Category | null; matches: number | null; changedOn: Date | null; since: Date;
 }) {
   const removed = p.change === "removed";
   const n = cat ? issuesIn(p, cat) : totalIssues(p);
@@ -269,32 +258,24 @@ function PageRowView({ p, cols, cat, matches, comparing, changedOn, since }: {
     <Grid templateColumns={cols} gap="3" px="3" py="2" alignItems="center" textStyle="xs"
       borderBottomWidth="1px" borderColor="border.muted" _hover={{ bg: "bg.subtle" }} fontVariantNumeric="tabular-nums">
       <Stack gap="0" minW="0">
-        <Text textStyle="sm" truncate color={removed ? "fg.muted" : undefined} title={p.title}>{p.title}</Text>
+        <HStack gap="2" minW="0">
+          <Text textStyle="sm" truncate color={removed ? "fg.muted" : undefined} title={p.title}>{p.title}</Text>
+          {p.status !== 200 && <Badge size="xs" variant="subtle" flexShrink={0} colorPalette={p.status === 301 ? "blue" : p.status === 404 ? "orange" : "red"}>{p.status}</Badge>}
+        </HStack>
         <Text fontFamily="mono" color="fg.muted" truncate title={p.path}>{p.path}</Text>
       </Stack>
-      <Text color="fg.muted">{typeLabel(p.type)}</Text>
-      <Box><Badge size="xs" variant="subtle" colorPalette={p.status === 200 ? "green" : p.status === 301 ? "blue" : p.status === 404 ? "orange" : "red"}>{p.status}</Badge></Box>
       <HStack gap="2">
         {n == null ? <Text color="fg.subtle">Not audited</Text> : <Text fontWeight="medium" color={n === 0 ? "fg.subtle" : undefined}>{n}</Text>}
         {p.critical > 0 && (!cat || cat === "accessibility") && <Badge size="xs" variant="subtle" colorPalette="red">{p.critical} critical</Badge>}
       </HStack>
       {matches != null && <Text textAlign="right" fontWeight="medium">{matches}</Text>}
-      {comparing && <Box>{change ? <Badge size="xs" variant="outline" colorPalette={change.color}>{change.label}</Badge> : <Text color="fg.subtle">—</Text>}</Box>}
-      <Text color="fg.muted">{changedOn ? fmtDay(changedOn) : p.lastChanged != null ? `#${p.lastChanged}` : `Before ${fmtDay(since)}`}</Text>
+      <HStack gap="2">
+        {change && <Badge size="xs" variant="outline" colorPalette={change.color}>{change.label}</Badge>}
+        {!removed && <Text color="fg.muted">{changedOn ? fmtDay(changedOn) : `Before ${fmtDay(since)}`}</Text>}
+      </HStack>
     </Grid>
   );
 }
-
-function Fact({ label, muted, children }: { label: string; muted?: boolean; children: React.ReactNode }) {
-  return (
-    <DataList.Item>
-      <DataList.ItemLabel>{label}</DataList.ItemLabel>
-      <DataList.ItemValue display="block" fontWeight="medium" fontVariantNumeric="tabular-nums" color={muted ? "fg.subtle" : undefined}>{children}</DataList.ItemValue>
-    </DataList.Item>
-  );
-}
-
-const Delta = ({ n, color }: { n: number; color: string }) => <Span color={n ? color : "fg.subtle"}>{n.toLocaleString("en-US")}</Span>;
 
 // ───────── Selects ─────────
 type Item = { value: string; label: string; hint?: string; mono?: boolean };
