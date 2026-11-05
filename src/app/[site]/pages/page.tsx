@@ -16,13 +16,13 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import NextLink from "next/link";
 import {
-  Badge, Box, Button, Container, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Portal,
-  Select, Stack, Text,
+  Badge, Box, Button, Container, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Stack, Text,
 } from "@chakra-ui/react";
 import { LuLink, LuX } from "react-icons/lu";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
-import { FilterSelect, useItems, type Item } from "@/components/filter-select";
+import { FilterSelect } from "@/components/filter-select";
+import { ScopeSelect } from "@/components/scope-select";
 import { TablePagination } from "@/components/table-pagination";
 import { useSite } from "@/components/site-context";
 import { crawlsFor } from "@/lib/crawls-list";
@@ -271,33 +271,5 @@ function PageRowView({ p, cols, cat, matches, changedOn, since, href }: {
       </HStack>
       </NextLink>
     </Grid>
-  );
-}
-
-// ───────── Selects ─────────
-// Crawl / baseline pickers in the header: crawl id + date, environment or distance as a hint
-function ScopeSelect({ label, value, onChange, items }: { label: string; value: string; onChange: (v: string) => void; items: Item[] }) {
-  const collection = useItems(items);
-  return (
-    <Select.Root collection={collection} size="sm" w="48" value={[value]} onValueChange={(e) => e.value[0] && onChange(e.value[0])} aria-label={label}>
-      <Select.HiddenSelect />
-      <Select.Control>
-        <Select.Trigger bg="bg"><Select.ValueText /></Select.Trigger>
-        <Select.IndicatorGroup><Select.Indicator /></Select.IndicatorGroup>
-      </Select.Control>
-      <Portal>
-        <Select.Positioner>
-          <Select.Content maxH="80">
-            {items.map((item) => (
-              <Select.Item key={item.value} item={item}>
-                <Text flex="1">{item.label}</Text>
-                {item.hint && <Text textStyle="xs" color="fg.muted">{item.hint}</Text>}
-                <Select.ItemIndicator />
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
-    </Select.Root>
   );
 }

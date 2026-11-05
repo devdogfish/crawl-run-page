@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Button, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
-import { LuChartColumn, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
+import { LuChartColumn, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
 
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { useSite } from "@/components/site-context";
@@ -17,6 +17,7 @@ import { SITES, SITE_IDS, type SiteId } from "@/lib/sites";
 export const SECTIONS = [
   { id: "crawls", label: "Crawls", icon: LuList },
   { id: "pages", label: "Pages", icon: LuFileText },
+  { id: "issues", label: "Issues", icon: LuCircleAlert },
   { id: "analytics", label: "Analytics", icon: LuChartColumn },
   { id: "settings", label: "Settings", icon: LuSettings },
 ] as const;

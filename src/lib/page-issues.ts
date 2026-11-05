@@ -178,7 +178,9 @@ export type Instance = {
 // ───────── Building the page and its issues together ─────────
 type Slot = { rule: string; group: string; selector: string; shared: number | null };
 
-export function pageIssues(p: PageView, crawl: number, baseline: number | null, sitePages: number) {
+// The page's issue elements without the HTML: what the Issues page aggregates across the site.
+// Same order (and so the same instance ids) as pageIssues, so links to ?issue= line up.
+export function issueSlots(p: PageView, crawl: number, baseline: number | null, sitePages: number): Instance[] {
   const A = p.issues.accessibility, crit = p.critical;
   const slots: Slot[] = [];
   const add = (n: number, rule: string, group: string, sel: (j: number) => string, shared: number | null) => {
@@ -243,6 +245,11 @@ export function pageIssues(p: PageView, crawl: number, baseline: number | null, 
     }
   }
 
+  return instances;
+}
+
+export function pageIssues(p: PageView, crawl: number, baseline: number | null, sitePages: number) {
+  const instances = issueSlots(p, crawl, baseline, sitePages);
   const { html, snippets } = buildHtml(p, instances);
   for (const it of instances) it.snippet = snippets.get(it.k) ?? fixedSnippet(it);
   return { instances, html };
