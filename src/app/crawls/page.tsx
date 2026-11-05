@@ -1,21 +1,19 @@
 "use client";
 
 // Crawls · /crawls
-// Same frame as the run page: header (title + primary action) → facts row → one data panel
+// Same frame as the run page: facts row → one data panel
 // (shared toolbar + table + pagination). Rows open /crawls/[crawlId].
 import { useMemo, useState } from "react";
 import NextLink from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  Badge, Box, Button, ButtonGroup, Container, DataList, Flex, Grid, HStack, Heading, IconButton, Pagination, Progress, Span, Text,
+  Badge, Box, ButtonGroup, Container, DataList, Flex, Grid, HStack, IconButton, Pagination, Progress, Span, Text,
 } from "@chakra-ui/react";
-import { LuChevronLeft, LuChevronRight, LuPlus } from "react-icons/lu";
+import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
 
-import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { StageIcon } from "@/components/step-ui";
 import { CRAWLS, type CrawlListStatus, type CrawlRow } from "@/lib/crawls-list";
-import { DEFAULT_SETTINGS, ENVIRONMENTS, hostOf, type Environment } from "@/lib/settings";
+import { ENVIRONMENTS, hostOf, type Environment } from "@/lib/settings";
 import { fmtDur, fmtNum, type StageStatus } from "@/lib/types";
 
 type Filter = "all" | "active" | "failed" | "success";
@@ -35,8 +33,6 @@ const fmtDate = (d: Date) =>
   d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
 
 export default function CrawlsPage() {
-  const router = useRouter();
-  const [newOpen, setNewOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -62,16 +58,9 @@ export default function CrawlsPage() {
   return (
     <Box bg="bg" minH="100vh">
       <Box borderBottomWidth="1px" bg="bg.subtle">
-        <Container maxW="7xl" pt="8" pb="5">
-          <Flex gap="4" align="center" wrap="wrap">
-            <Box>
-              <Heading size="xl" fontWeight="semibold">Crawls</Heading>
-              <Text textStyle="sm" color="fg.muted" mt="1">Every crawl across environments, newest first.</Text>
-            </Box>
-            <Button size="sm" ms="auto" onClick={() => setNewOpen(true)}><LuPlus />New crawl</Button>
-          </Flex>
+        <Container maxW="7xl" py="5">
 
-          <DataList.Root orientation="vertical" size="sm" mt="6" display="grid" gridTemplateColumns={{ base: "repeat(2, 1fr)", md: "repeat(4, minmax(0, 1fr))" }} gap="5">
+          <DataList.Root orientation="vertical" size="sm" display="grid" gridTemplateColumns={{ base: "repeat(2, 1fr)", md: "repeat(4, minmax(0, 1fr))" }} gap="5">
             <Fact label="Running now">{counts.active}</Fact>
             <Fact label="Crawls, last 30 days">{recent.length}</Fact>
             <Fact label="Success rate">{successRate.toFixed(0)}%</Fact>
@@ -117,10 +106,6 @@ export default function CrawlsPage() {
         </Flex>
       </Container>
 
-      <CrawlSettingsDialog
-        open={newOpen} onOpenChange={setNewOpen} mode="create" initial={DEFAULT_SETTINGS}
-        onSubmit={(s) => router.push(`/crawls/813?settings=${encodeURIComponent(JSON.stringify(s))}`)}
-      />
     </Box>
   );
 }

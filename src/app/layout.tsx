@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Provider } from "@/components/ui/provider";
+import { AppNavbar } from "@/components/app-navbar";
 
 export const metadata: Metadata = {
   title: "Crawls",
@@ -10,7 +11,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <Provider>{children}</Provider>
+        <Provider>
+          <AppNavbar />
+          {children}
+        </Provider>
       </body>
     </html>
   );
