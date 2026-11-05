@@ -65,37 +65,51 @@ Step ids and names are examples; use your pipeline's own. The UI reads whatever 
 | D23 | Breadcrumb. | `Crawls › {crawl_id}`; title "Crawl {crawl_id}". |
 | D24 | The crawler is already built; just make it easy to add logs in the right places, and store everything in SQLite. | One small module (`crawl_events.py`, §4.1) is the only thing the crawler imports. It is called at 7 points (§4.2), and a single background writer thread does batched SQLite inserts (§5). |
 | D25 | Three typography styles next to each other look bad. | **Monospace only for code-like text** (URLs, log lines, commands). Numbers, times and durations use the normal font with tabular digits. A label + value pair is one font and size, with only the value emphasised. |
-| D26 | Should the filter tabs match the search input's size? | Yes. All controls in a toolbar share one height (32px) and one text size (12px). The reference tools (GitHub Actions log search, Vercel log filters) do the same; the mismatch came from Chakra's default sizes. |
+| D26 | Should the filter tabs match the search input's size? | We tried matching them (32px) and **reverted**: the small `xs` segment group reads as more minimal. Search box, segments and icon buttons keep their own Chakra sizes. |
 | D27 | Logs should be more consistent; an INFO/ERROR column isn't useful. What should a log line contain? | As in normal CI/crawler logs: **time + one plain sentence**, with severity shown only by colour. Every message follows `Verb subject (details)`, one template per kind of event. Structured fields go in `data` for filtering and export, not into the visible line (§4.3). |
 | D28 | The HTTP code must be in the line, because every request is logged. | Request lines use an access-log template with the **status first**, so it lines up down the page: `200 GET /product/10065 (412 ms)`, `301 GET /p/1 → /product/1 (88 ms)`, `ERR GET /x (30.0 s, timed out after 30s)`. Level follows the status class, and the log viewer is virtualised, so ~50K lines per crawl is fine (§4.3, §5.2). |
+| D29 | Crawler logs are all requests, but the other steps (except Lighthouse) make no requests. Keep one consistent style across the app. | **One line format for every step:** `<outcome> <ACTION> <subject>[ → <target>] (<duration>[, details])`. The outcome is the HTTP status for requests, `OK`/`ERR` for other work, and `—` for lifecycle events (start, progress, pause, settings, done). So `200 GET /product/1 (412 ms)`, `OK  AUDIT /product/1 (3.1 s, performance 80)`, `OK  BUILD table fct_prices (31.0 s, 48,146 rows)` and `—   PAUSE crawl (by you, 12,309 pages done)` all line up the same way (§4.3). |
+| D30 | Add a crawls page in the same enterprise style. | `/crawls`: title + **New crawl** → facts row (running now, crawls in the last 30 days, success rate, median production duration) → one data panel with the shared toolbar (search, status segments, copy, CSV), a table and pagination. Rows open `/crawls/{id}`. |
+| D31 | Pause at any point; Pause turns into Resume; when paused, open the crawl settings. Immutable settings are locked; request delay and timeout are mutable. What else? | **Pause** (any time while the run is active) → status **Paused** (yellow), the clock stops, and the actions become **Settings** + **Resume**. In the settings dialog, **Target** (environment + URL) and **Discovery** (sources, exclude paths, render JS, robots.txt) are **locked**, because they define *what* is crawled and changing them mid-run would mix results. **Throughput** is editable: request delay, request timeout, **concurrency**, **max retries** and **Lighthouse sample size** (that step hasn't run yet). Save, or Save and resume. Each change is logged (`—   UPDATE settings (delay 250 → 500 ms, timeout 30 → 20 s)`). While running or finished, the same dialog opens read-only from the `⋯` menu. |
+| D32 | The environment is attached to the URL input; changing it changes the URL. Disabled for an existing crawl, enabled when creating one. | An attached select + input (`Group attached`): picking Production / Staging / Development fills in that environment's base URL. In **New crawl** both are editable; for an existing crawl both are disabled, with the hint "Start a new crawl to crawl another environment". |
 
 ---
 
 ## 3. UI spec
 
-Route: **`/crawls/[crawlId]`** (`src/app/crawls/[crawlId]/page.tsx`).
+Routes: **`/crawls`** (`src/app/crawls/page.tsx`) and **`/crawls/[crawlId]`** (`src/app/crawls/[crawlId]/page.tsx`).
+
+### 3.0 Crawls page (`/crawls`)
+- **Header:** title "Crawls", a one-line description, and a primary **New crawl** button that opens the settings dialog in *create* mode (§3.5).
+- **Facts row:** Running now · Crawls, last 30 days · Success rate · Median duration (production).
+- **Data panel:**
+  - the shared `DataToolbar` with search (id, URL, environment), segments **All · Running · Failed · Succeeded** with counts, copy IDs and CSV download;
+  - columns: Crawl (id) · Target (host) · Environment (outline badge: Production gray, Staging purple, Development teal) · Status (icon + label; running/paused rows add a tiny progress bar) · Pages · Errors · Duration · Started (UTC) · Trigger (Schedule / Manual);
+  - 20 rows per page; each row links to the run page.
 
 ### 3.1 Header
 - **Breadcrumb:** `Crawls › {crawl_id}`.
-- **Title:** "Crawl {crawl_id}" plus **one** status badge: Crawling, Processing, Succeeded or Failed (a pulsing dot while running).
+- **Title:** "Crawl {crawl_id}" plus **one** status badge: Crawling, Processing, **Paused** (yellow), Succeeded or Failed (a pulsing dot while running).
 - **Actions** (right):
+  - **while running:** `Pause`;
+  - **while paused:** `Settings` (opens the dialog in *paused* mode) and `Resume` (primary);
   - `Retry from {step}`, only when failed;
   - `Logs` (download all logs);
-  - a `⋯` menu with "Run Lighthouse on full site" (enabled after the sample succeeds) and "Copy link".
+  - a `⋯` menu with "Run Lighthouse on full site" (enabled after the sample succeeds), "View settings" / "Edit settings", and "Copy link".
 - **Facts row** (Chakra `DataList`, 6 items):
 
 | Fact | Content | Source |
 |---|---|---|
 | Progress | Small bar + %, only while running. When finished, this slot shows **Trigger**. | `progress_pct` / `trigger` |
 | Started | Absolute time, UTC. | `crawls.started_at` |
-| Elapsed / Duration | Plus "· done ~HH:MM" while running. | `elapsed_sec`, `eta_at` |
+| Elapsed / Duration | Plus "· done ~HH:MM" while running, or "· paused". Paused time doesn't count. | `elapsed_sec`, `eta_at` |
 | Pages | Fetched; while crawling "/ ~48.2K", with a tooltip "median of the last 5 crawls". | `pages.done`, `crawls.expected_pages` |
 | Errors | % of fetched, plus the count. | crawl `counters.codes` |
-| Config | Crawler version · concurrency. | `crawls.config` |
+| Target | Host · environment, with a tooltip of the throughput settings. | `crawls.url`, `crawls.environment`, `crawls.settings` |
 
 ### 3.2 Step list (left, sticky)
 - **Row content:** icon, name, one-line subtitle, and duration (or `~usual` if not started). Running rows add a thin progress bar.
-- **Statuses:** `pending`, `waiting`, `running`, `success`, `failed` and `blocked` ("Not run · an earlier step failed").
+- **Statuses:** `pending`, `waiting`, `running`, `paused` (pause icon, yellow), `success`, `failed` and `blocked` ("Not run · an earlier step failed").
 - **Selection:**
   - the running step is auto-selected (or the failed step after a failure);
   - once the user clicks a row, that choice sticks;
@@ -132,13 +146,24 @@ Route: **`/crawls/[crawlId]`** (`src/app/crawls/[crawlId]/page.tsx`).
 - **Status semantics:** a client-side redirect shows `200`. Loops count as Errors.
 - **Pagination:** 50 rows per page (Chakra `Pagination`). Changing the filter or search resets to page 1.
 
-### 3.5 Visual rules
+### 3.5 Crawl settings dialog
+One component (`src/components/crawl-settings-dialog.tsx`) with three modes:
+
+| Section | Fields | create | paused | running / finished |
+|---|---|---|---|---|
+| Target | Environment + URL (attached; picking an environment fills its URL) | editable | 🔒 locked | read-only |
+| Discovery | Find pages from (sitemap and links / sitemap only / links only), exclude paths, render JavaScript, respect robots.txt | editable | 🔒 locked | read-only |
+| Throughput | Request delay (ms), request timeout (s), concurrency (workers), max retries (per URL), Lighthouse sample (pages) | editable | **editable** | read-only |
+
+Footer: **create** → Cancel / Start crawl · **paused** → Cancel / Save / **Save and resume** · **view** → Close. A short alert at the top explains the mode.
+
+### 3.6 Visual rules
 - Each fact once (D6). Badges only where they add something.
 - **Typography (D25):**
   - monospace only for URLs, log lines and commands;
   - numbers use the body font with `fontVariantNumeric="tabular-nums"`;
   - one font and size per label/value pair.
-- **Toolbars (D26):** controls are 32px tall with 12px text.
+- **Toolbars (D26):** the filter segments stay at Chakra's small `xs` size.
 - **Colours:** a dark log surface in both themes. Lighthouse colours follow Lighthouse's own scale; status colours follow `STATUS` in `src/components/step-ui.tsx`.
 
 ---
@@ -165,9 +190,16 @@ class CrawlRecorder:
         crawl_id_var.set(crawl_id)
 
     # ── lifecycle ──────────────────────────────────────────────
-    def crawl_started(self, site: str, trigger: str, config: dict, steps: list[tuple[str, str]]):
+    def crawl_started(self, environment: str, url: str, trigger: str, settings: dict, steps: list[tuple[str, str]]):
         """steps = [(step_id, name), ...] in order. Also stores expected_pages / expected_sec medians (§5.4)."""
-        _q.put(("crawl_started", dict(id=self.crawl_id, site=site, trigger=trigger, config=config, steps=steps, ts=now())))
+        _q.put(("crawl_started", dict(id=self.crawl_id, environment=environment, url=url, trigger=trigger,
+                                      settings=settings, steps=steps, ts=now())))
+
+    def checkpoint(self) -> dict:
+        """Call before each request (or each unit of work). Blocks while the crawl is paused and returns the
+        current throughput settings (delay_ms, timeout_s, concurrency, max_retries, lighthouse_sample).
+        Reads crawls.status/settings from SQLite at most once per second (cached), so it is cheap."""
+        return _control.wait_until_running(self.crawl_id)   # see §5.5
 
     def step_started(self, step_id: str, items_total: int | None = None):
         step_var.set(step_id)
@@ -202,16 +234,30 @@ class CrawlRecorder:
         _q.put(("lighthouse", dict(crawl_id=self.crawl_id, scope=scope, url=url, **scores)))
 
 
-def log_request(url: str, status: int | None, ms: int, *, method: str = "GET",
-                redirect_to: str | None = None, detail: str | None = None, attempt: int | None = None):
-    """Call once per HTTP request (every hop and retry). Builds the standard request line (§4.3)."""
-    code = "ERR" if status is None else str(status)
-    took = f"{ms / 1000:.1f} s" if ms >= 1000 else f"{ms} ms"
-    extra = ", ".join(x for x in [took, detail] if x)
-    msg = f"{code} {method} {url}" + (f" → {redirect_to}" if redirect_to else "") + f" ({extra})"
-    level = logging.ERROR if status is None or status >= 500 else logging.WARNING if status >= 400 else logging.INFO
-    log.log(level, msg, extra={"data": {"url": url, "status": status, "ms": ms, "method": method,
-                                         "redirect_to": redirect_to, "attempt": attempt}})
+def log_line(outcome: str | int | None, action: str, subject: str, *, ms: float | None = None,
+             to: str | None = None, details: tuple[str, ...] = (), data: dict | None = None):
+    """The ONE log format for every step (§4.3): "<outcome> <ACTION> <subject>[ → <to>] (<duration>, details)".
+    outcome: HTTP status (int) for requests, "OK"/"ERR" for other work, "—" for lifecycle events, None = "ERR"."""
+    out = "ERR" if outcome is None else str(outcome)
+    took = None if ms is None else f"{ms:.0f} ms" if ms < 1000 else f"{ms / 1000:.1f} s"
+    extra = ", ".join(x for x in (took, *details) if x)
+    msg = f"{out:<3} {action} {subject}" + (f" → {to}" if to else "") + (f" ({extra})" if extra else "")
+    code = int(out) if out.isdigit() else 0
+    level = (EVENT if out == "—"                                   # shown muted
+             else logging.ERROR if out == "ERR" or code >= 500
+             else logging.WARNING if code >= 400 else logging.INFO)
+    log.log(level, msg, extra={"data": {"outcome": out, "action": action, "subject": subject, "ms": ms, "to": to, **(data or {})}})
+
+def log_request(url: str, status: int | None, ms: float, *, method: str = "GET", to: str | None = None, details=()):
+    """Every HTTP request (each redirect hop and retry): 200 GET /x (412 ms)."""
+    log_line(status, method, url, ms=ms, to=to, details=tuple(details), data={"url": url, "status": status})
+
+def log_event(action: str, subject: str, *details: str):
+    """Lifecycle lines: START, SEED, PROGRESS, THROTTLE, PAUSE, UPDATE, RESUME, RETRY."""
+    log_line("—", action, subject, details=details)
+
+EVENT = logging.DEBUG + 5
+logging.addLevelName(EVENT, "EVENT")
 
 
 class DbLogHandler(logging.Handler):
@@ -225,7 +271,7 @@ class DbLogHandler(logging.Handler):
                             status=data.get("status"), url=data.get("url"), data=data or None)))
 
 log = logging.getLogger("crawler")
-log.setLevel(logging.INFO)
+log.setLevel(EVENT)  # INFO and up, plus the EVENT level
 log.addHandler(DbLogHandler())   # keep your existing console handler as it is
 ```
 
@@ -235,10 +281,12 @@ log.addHandler(DbLogHandler())   # keep your existing console handler as it is
 
 | When in the crawler | Call | Feeds in the UI |
 |---|---|---|
-| A crawl is created | `rec.crawl_started(site, trigger, config, steps)` | breadcrumb, header facts, step list (all `pending`), expected pages, usual durations |
+| A crawl is created | `rec.crawl_started(environment, url, trigger, settings, steps)` + `log_event("START", f"crawl {url}", "64 workers", …)` | breadcrumb, header facts, step list (all `pending`), expected pages, usual durations |
+| Before each request / unit of work | `settings = rec.checkpoint()`, then use `settings["delay_ms"]`, `["timeout_s"]`, … | Pause/Resume, live throughput changes (D31) |
 | Each step begins | `rec.step_started("crawl", items_total=None)`; processing steps pass the page count; Lighthouse passes the sample size | step status, "Started", progress denominator |
 | Every 5–10s while a step runs (a timer, or every N items) | **crawl:** `rec.progress(done, rate, codes={...}, discovered=n, queue=n, render_ms_median=n)` · **others:** `rec.progress(done, rate)` | progress bar, ETA, Metrics charts, response-code bar, queue, facts row "Pages"/"Errors" |
-| **Every HTTP request** (each redirect hop and each retry too) | `log_request(url, status, ms, redirect_to=…, detail=…)` | Logs tab (one line per request) |
+| **Every HTTP request** (each redirect hop and each retry too) | `log_request(url, status, ms, to=…, details=…)` | Logs tab (one line per request) |
+| Each unit of work in the other steps (a batch, a model, a table write, an audit, a dashboard) | `log_line("OK" or "ERR", "PARSE" / "BUILD" / "UPSERT" / "AUDIT" / …, subject, ms=…, details=…)` | Logs tab of that step |
 | Each URL finishes, **including** redirects, errors, timeouts and skips | `rec.page(n, url, status=…, kind=…, hops=[…], …)` | Pages table, filter counts, CSV |
 | Backoff starts / ends | `rec.rate_limited(until)` / `rec.rate_limited(None)` | rate-limit alert |
 | Each Lighthouse audit | `rec.lighthouse_result("sample"\|"full", url, {performance, accessibility, best_practices, seo})` | Scores tab |
@@ -253,43 +301,38 @@ log.addHandler(DbLogHandler())   # keep your existing console handler as it is
 | Part | Stored | Shown in the UI |
 |---|---|---|
 | Time | `ts` (UTC) | `HH:MM:SS` in the gutter |
-| Severity | `level` (INFO / WARNING / ERROR) | **colour only**: errors red, warnings yellow, info default. No level column. |
+| Severity | `level` (EVENT / INFO / WARNING / ERROR), derived from the outcome | **colour only**: errors red, warnings yellow, events muted, info default. No level column. |
 | Step | `step_id` (from the context variable) | which tab the line appears in, not repeated per line |
 | Message | `message` | one plain sentence, in the fixed shape below |
 | Fields | `data` JSON (url, status, attempts, duration…) | not shown; used for filtering, export and debugging |
 
-**Message shape: `Verb subject (details)`.** Past tense, the subject (a URL, a count or a name) right after the verb, and extra numbers in parentheses separated by commas. Each kind of event always uses the same template, so lines line up when you scan them. Scrapy's progress line works the same way: `Crawled N pages (at X pages/min)`.
+**One format for every step (D29):**
 
-Use the `crawler` logger anywhere (`from crawl_events import log`). Attach machine-readable fields with `extra={"data": {...}}`.
+```
+<outcome> <ACTION> <subject>[ → <target>] (<duration>[, details])
+```
 
-**Request lines (every request).** These follow an access-log template with the status code first, `<status> <METHOD> <path>[ → <target>] (<duration>[, detail])`, built by `log_request()`:
-
-| Case | Line | Level (colour) |
+| Part | Values | Why |
 |---|---|---|
-| Success | `200 GET /product/10065 (412 ms)` | INFO (default) |
-| Server redirect hop | `301 GET /p/10065 → /product/10065 (88 ms)` | INFO |
-| Client-side redirect (seen after render) | `200 GET /m/product/10065 → /product/10065 (595 ms, client-side JavaScript)` | INFO |
-| Client error | `404 GET /product/10066 (120 ms)` | WARNING (yellow) |
-| Rate limited | `429 GET /product/10067 (41 ms, backing off)` | WARNING |
-| Server error, after retries | `503 GET /product/10068 (900 ms, after 3 attempts)` | ERROR (red) |
-| No response | `ERR GET /search?q=1 (30.0 s, timed out after 30s)` | ERROR |
-| Redirect loop | `ERR GET /product/10069 (0 ms, redirect loop, gave up after 10 hops)` | ERROR |
+| outcome (3 chars, first) | HTTP status for requests (`200`, `301`, `404`, `429`, `503`); `OK` / `ERR` for other work; `—` for lifecycle events; `ERR` when a request got no response | The first column always answers "did it work?". It also sets the colour: 4xx yellow, 5xx/`ERR` red, `—` muted. |
+| ACTION (uppercase verb) | Requests: `GET`. Work: `PARSE`, `BUILD`, `UPSERT`, `INSERT`, `AUDIT`, `REFRESH`, `POST`. Events: `START`, `SEED`, `PROGRESS`, `THROTTLE`, `PAUSE`, `UPDATE`, `RESUME`, `RETRY`, `DONE`, `STOP` | A short, fixed vocabulary, so you can scan or search by action. |
+| subject | URL path, table/model name, page range, step id | What it acted on. |
+| `→ target` | redirect target | Only for redirects. |
+| `(duration, details)` | duration first (`412 ms`, `3.1 s`, `1m 30s`), then comma-separated facts | Always the same order. |
 
-**Other lines** use `Verb subject (details)`:
+Built by `log_line()` / `log_request()` / `log_event()` (§4.1). Never format messages by hand at call sites.
 
-| Level | When | Template (example) | `data` |
-|---|---|---|---|
-| INFO | Step start: the command or config used | `$ crawler run shop.example.com --max-concurrency 64` | — |
-| INFO | Seeds loaded | `Seeded 1,200 URLs from sitemap.xml (expecting ~48,200 pages)` | `{seeds, expected}` |
-| INFO | **Progress every 15–30s** (same numbers as `progress`) | `Crawled 10,512 pages (39/s, 6,120 queued)` | `{done, rate, queue}` |
-| INFO | Step finished | `Finished crawl: 49,350 pages (+2.4% vs expected)` | `{done, errors}` |
-| WARNING | Rate limited | `Rate limited by shop.example.com (429, backing off 30s, concurrency 64 → 16)` | `{until, concurrency}` |
-| INFO | Rate limit over | `Resumed full speed (concurrency 64)` | `{concurrency}` |
-| ERROR | Render/browser crash | `Failed to render /product/10091 (Target closed)` | `{url, error}` |
-| ERROR | Step failure, with the cause and a hint if known | `Failed model fct_prices (Numeric value '1.299,00' is not recognized)` | `{error, hint}` |
-| INFO | Retry marker (written by the retry endpoint) | `Retrying from this step (attempt 2, reusing crawl output)` | `{attempt}` |
+**Examples, by step**
 
-Keep the templates in one place (e.g. small helper functions such as `log_timeout(url, after_s)` in `crawl_events.py`), so every call site produces exactly the same shape.
+| Step | Lines |
+|---|---|
+| Crawl | `—   START crawl https://shop.example.com (64 workers, delay 250 ms, timeout 30 s)` · `—   SEED 1,200 URLs from sitemap.xml (expecting ~48,200 pages)` · `200 GET /product/10065 (412 ms)` · `301 GET /p/10065 → /product/10065 (88 ms)` · `200 GET /m/product/1 → /product/1 (595 ms, client-side JavaScript)` · `404 GET /product/10066 (120 ms)` · `429 GET /product/10067 (41 ms, will retry)` · `503 GET /product/10068 (900 ms, after 3 attempts)` · `ERR GET /search?q=1 (30.0 s, timed out)` · `ERR GET /product/10069 (redirect loop after 10 hops)` · `—   THROTTLE shop.example.com (429 responses, 64 → 16 workers, backing off 30 s)` · `—   PROGRESS 10,512 pages (39/s, 6,120 queued)` · `OK  DONE crawl (23m 23s, 49,350 pages, +2.4% vs expected)` |
+| Parse | `—   START parse (49,350 pages)` · `OK  PARSE pages 1–10,000 (11.0 s, 9,754 products, 246 skipped)` · `OK  DONE parse (52.5 s, 48,146 products, 1,204 skipped)` |
+| Transform | `OK  BUILD table int_price_history (21.4 s)` · `ERR BUILD table fct_prices (14.0 s, Numeric value '1.299,00' is not recognized, 3,412 prices use a comma decimal separator)` · `ERR STOP transform (52.5 s, 1 model failed, later steps not run)` |
+| Load | `OK  UPSERT table PRODUCTS (12.3 s, 48,146 rows)` · `OK  INSERT audit row (100 ms)` |
+| Lighthouse | `OK  AUDIT /product/10065 (3.1 s, performance 80)` · `ERR AUDIT /search?q=31 (60.0 s, timed out)` · `OK  DONE lighthouse (1m 30s, 200 pages, performance 72, accessibility 91, best practices 96, SEO 98)` |
+| Publish | `OK  REFRESH dashboard pricing_overview (1.2 s)` · `OK  POST message to #pricing (300 ms)` |
+| Any step (written by the API) | `—   PAUSE crawl (by you, 12,309 pages done)` · `—   UPDATE settings (delay 250 → 500 ms, timeout 30 → 20 s)` · `—   RESUME crawl (64 workers, delay 500 ms, timeout 20 s)` · `—   RETRY transform (attempt 2, reusing crawl output)` |
 
 **Volume:** ~1 line per request, so roughly 50K lines per crawl. The viewer is virtualised and filters on the server ("Warnings & errors" = `level IN ('WARNING','ERROR')`, or by status class), so this is fine. Progress summaries every 15–30s keep the log readable while it scrolls.
 
@@ -315,16 +358,21 @@ PRAGMA foreign_keys = ON;
 ```sql
 CREATE TABLE crawls (
   id                 TEXT PRIMARY KEY,                 -- shown in the breadcrumb
-  site               TEXT NOT NULL,
-  status             TEXT NOT NULL CHECK (status IN ('running','success','failed','cancelled')),
+  environment        TEXT NOT NULL,                    -- production | staging | development (locked after start)
+  url                TEXT NOT NULL,                    -- base URL (locked after start)
+  status             TEXT NOT NULL CHECK (status IN ('running','paused','success','failed','cancelled')),
   trigger            TEXT NOT NULL,                    -- 'schedule' | 'manual' | ...
-  config             TEXT NOT NULL DEFAULT '{}',       -- JSON: crawler_version, concurrency, lighthouse_sample_size
+  settings           TEXT NOT NULL DEFAULT '{}',       -- JSON, see §5.5: locked {discovery, exclude, render_js, respect_robots}
+                                                       --            editable {delay_ms, timeout_s, concurrency, max_retries, lighthouse_sample}
+  paused_at          TEXT,                             -- set while paused
+  paused_sec         INTEGER NOT NULL DEFAULT 0,       -- total paused time, excluded from elapsed/ETA
   expected_pages     INTEGER,                          -- median pages of the last 5 successful crawls (§5.4)
   rate_limited_until TEXT,
   started_at         TEXT NOT NULL,
   finished_at        TEXT
 );
-CREATE INDEX crawls_site_started ON crawls (site, started_at);
+CREATE INDEX crawls_env_started ON crawls (environment, started_at);
+CREATE INDEX crawls_status ON crawls (status, started_at);
 
 CREATE TABLE crawl_steps (                             -- one row per step AND per follow-up job
   crawl_id     TEXT NOT NULL REFERENCES crawls(id) ON DELETE CASCADE,
@@ -418,7 +466,7 @@ threading.Thread(target=_writer, args=("crawls.db",), daemon=True).start()
 
 | Record | SQL |
 |---|---|
-| `crawl_started` | `INSERT crawls(status='running')` + one `crawl_steps` row per step (`pending`; the first is `waiting`), with `expected_sec` from §5.4 |
+| `crawl_started` | `INSERT crawls(status='running', environment, url, settings)` + one `crawl_steps` row per step (`pending`; the first is `waiting`), with `expected_sec` from §5.4 |
 | `step_started` | `UPDATE crawl_steps SET status='running', started_at, items_total`; the next step → `waiting` |
 | `progress` | `UPDATE crawl_steps SET items_done, rate, counters` + `INSERT crawl_samples` |
 | `page` | `INSERT crawl_pages` (compute `redirect_side` and `hop_count` from `hops`) |
@@ -434,7 +482,7 @@ Flush the queue on shutdown (`atexit`), so the last lines and the final status a
 ```sql
 -- expected_pages: median pages of the last 5 successful crawls of this site
 SELECT items_done FROM crawl_steps s JOIN crawls c ON c.id = s.crawl_id
-WHERE c.site = :site AND c.status = 'success' AND s.step_id = 'crawl'
+WHERE c.environment = :environment AND c.status = 'success' AND s.step_id = 'crawl'
 ORDER BY c.started_at DESC LIMIT 5;          -- take the median in Python: statistics.median(rows)
 
 -- expected_sec per step: same query over the last 10 crawls, (julianday(finished_at) - julianday(started_at)) * 86400
@@ -444,7 +492,35 @@ The API computes at read time:
 - **`eta_at`:** remaining items ÷ the median of the last ~6 sample rates, plus the `expected_sec` of the steps not started yet;
 - **`error_pct`:** from `counters.codes`.
 
-### 5.5 Retention and size
+### 5.5 Pause, resume and live settings
+
+The API writes the control state; the crawler reads it through `rec.checkpoint()`.
+
+| Action | API writes | Crawler sees |
+|---|---|---|
+| Pause | `crawls.status='paused'`, `paused_at=now`, log `—   PAUSE <step> (by <user>, …)` | `checkpoint()` blocks before the next request. In-flight requests finish normally. |
+| Edit settings (only while paused) | `crawls.settings` (editable keys only), log `—   UPDATE settings (…changes…)` | The new values come back from `checkpoint()` after resume. |
+| Resume | `status='running'`, `paused_sec += now - paused_at`, `paused_at=NULL`, log `—   RESUME <step> (…)` | `checkpoint()` returns again, with the current settings. |
+
+```python
+class _Control:
+    def __init__(self): self._cache = {}          # crawl_id -> (fetched_at, status, settings)
+    def wait_until_running(self, crawl_id: str) -> dict:
+        while True:
+            fetched, status, settings = self._cache.get(crawl_id, (0, None, None))
+            if time.monotonic() - fetched > 1.0:   # re-read at most once per second
+                row = read_db.execute("SELECT status, settings FROM crawls WHERE id = ?", (crawl_id,)).fetchone()
+                status, settings = row[0], json.loads(row[1])
+                self._cache[crawl_id] = (time.monotonic(), status, settings)
+            if status != "paused":
+                return settings
+            time.sleep(1.0)                        # or asyncio.sleep in an async crawler
+_control = _Control()
+```
+
+Concurrency changes take effect when the crawler next sizes its worker pool. The simplest way is to check `settings["concurrency"]` after each `checkpoint()` and add or retire workers to match.
+
+### 5.6 Retention and size
 - About 50K page rows plus ~50K request log lines per crawl comes to roughly 15–25 MB. That's fine for SQLite. Batched inserts (§5.3) keep 50+ lines/s cheap.
 - Keep `crawls` and `crawl_steps` forever (history and medians).
 - Daily, delete `crawl_logs`, `crawl_samples` and `crawl_pages` for crawls older than 30–90 days (`DELETE … WHERE crawl_id IN (…)`). Then run `PRAGMA incremental_vacuum` (with `auto_vacuum=INCREMENTAL` set at creation), or a `VACUUM` now and then.
@@ -455,12 +531,23 @@ The API computes at read time:
 
 All under `/api`. Times are ISO 8601 UTC. Pydantic models mirror the payloads below.
 
+### 6.0 Crawls list and create
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/crawls?status=running,paused&q=&environment=&page=1&page_size=20` | `{ "items": [CrawlRow], "total": 64, "counts": { "all": 64, "running": 1, "failed": 4, "success": 58 }, "facts": { "running": 1, "last_30_days": 50, "success_rate": 96, "median_duration_sec": { "production": 1465 } } }` |
+| `GET /api/environments` | `[{ "id": "production", "label": "Production", "url": "https://shop.example.com" }, …]`, so the dialog can fill in the URL |
+| `POST /api/crawls` `{ environment, url, settings }` | Validates and starts a crawl → `201 { "id": "813" }`; the UI navigates to `/crawls/813` |
+
+`CrawlRow`: `{ "id", "environment", "url", "status", "progress_pct", "pages", "error_pct", "duration_sec", "started_at", "trigger" }`
+
 ### 6.1 Crawl summary: polled every 2s while running
 `GET /api/crawls/{crawl_id}`
 ```json
 {
-  "id": "812", "site": "shop.example.com", "status": "running", "trigger": "schedule",
-  "config": { "crawler_version": "v14", "concurrency": 64 },
+  "id": "812", "environment": "production", "url": "https://shop.example.com", "status": "running", "trigger": "schedule",
+  "settings": { "discovery": "sitemap+links", "exclude": ["/search", "/cart"], "render_js": true, "respect_robots": true,
+                "delay_ms": 250, "timeout_s": 30, "concurrency": 64, "max_retries": 2, "lighthouse_sample": 200 },
+  "paused_at": null,
   "started_at": "2026-11-04T02:00:00Z", "finished_at": null,
   "elapsed_sec": 293, "eta_at": "2026-11-04T02:24:10Z", "progress_pct": 21,
   "pages": { "done": 10500, "expected": 48200, "errors": 231, "error_pct": 2.2 },
@@ -532,6 +619,9 @@ Filters:
 ### 6.5 Actions
 | Endpoint | Purpose |
 |---|---|
+| `POST /api/crawls/{id}/pause` | `running` → `paused`; writes the PAUSE log line (§5.5). `409` if not running. |
+| `POST /api/crawls/{id}/resume` | `paused` → `running`; writes the RESUME line. `409` if not paused. |
+| `PATCH /api/crawls/{id}/settings` `{ "delay_ms": 500, "timeout_s": 20 }` | Only the editable keys (D31). `409` unless paused; `422` if a locked key (environment, url, discovery, exclude, render_js, respect_robots) is sent. Writes the UPDATE line with the old → new values. |
 | `POST /api/crawls/{id}/retry` `{ "from_step": "transform" }` | Asks your orchestrator to re-run from that step, reusing the crawl output. Sets that step and the later ones back to `pending`/`waiting`, `attempt += 1`, and writes the retry marker log line. |
 | `POST /api/crawls/{id}/jobs` `{ "type": "lighthouse_full" }` | `202`; the job appears in `steps` as `kind: "job"`. `409` if one is already running or the crawl hasn't succeeded. |
 | `GET /api/crawls/{id}/lighthouse?scope=sample\|full` | `{ "pages": 200, "median": { "performance": 72, "accessibility": 91, "best_practices": 96, "seo": 98 } }` |

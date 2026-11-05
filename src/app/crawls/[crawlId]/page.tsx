@@ -10,13 +10,13 @@
 // PROTOTYPE: data comes from the simulator in src/lib/crawl.ts and src/lib/pages.ts.
 // SLICES.md describes how to replace it with the FastAPI endpoints in SPEC.md.
 import { Fragment, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Alert, Badge, Box, Breadcrumb, Button, ButtonGroup, Container, DataList, EmptyState, Flex, Grid, HStack, Heading, IconButton,
   Menu, Pagination, Portal, Progress, ProgressCircle, Span, Stack, Tabs, Text,
 } from "@chakra-ui/react";
 import {
-  LuArrowRight, LuChevronLeft, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuGauge, LuRotateCcw, LuSkipForward, LuTimer,
+  LuArrowRight, LuChevronLeft, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuGauge, LuPause, LuPlay, LuRotateCcw, LuSettings2, LuSkipForward, LuTimer,
 } from "react-icons/lu";
 
 import { STAGE_COLORS, STATUS, StageAreaChart, StageIcon } from "@/components/step-ui";
@@ -25,6 +25,9 @@ import { LogViewer } from "@/components/log-viewer";
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import NextLink from "next/link";
 import { Tooltip } from "@/components/ui/tooltip";
+import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
+import { CRAWLS, type CrawlRow } from "@/lib/crawls-list";
+import { DEFAULT_SETTINGS, ENVIRONMENTS, hostOf, type CrawlSettings } from "@/lib/settings";
 import { ESTIMATED_PAGES, FULL_LH_SEC, PREVIOUS_CRAWLS, useCrawlRun, type CrawlScenario, type FullJob } from "@/lib/crawl";
 import { PAGE_FILTERS, matches, pageAt, redirectSide, type PageFilter, type PageRow } from "@/lib/pages";
 import { fmtClock, fmtDur, fmtNum, stageDuration, type LogLine, type Stage, type StageStatus } from "@/lib/types";
@@ -35,13 +38,25 @@ const SCENARIOS: { v: CrawlScenario; label: string }[] = [
   { v: "failure", label: "Fails after crawl" },
 ];
 
+// Prototype: settings come from the "New crawl" dialog (?settings=…) or from the crawl's row in the list
+function useInitialSettings(row: CrawlRow | undefined): CrawlSettings {
+  const raw = useSearchParams().get("settings");
+  try { if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }; } catch { /* fall through */ }
+  return row ? { ...DEFAULT_SETTINGS, environment: row.environment, url: row.url } : DEFAULT_SETTINGS;
+}
+
 export default function CrawlRunPage() {
-  const [scenario, setScenario] = useState<CrawlScenario>("healthy");
+  const crawlId = useCrawlId();
+  const row = CRAWLS.find((c) => c.id === crawlId);
+  const settings = useInitialSettings(row);
+  const finished = !!row && row.status !== "running" && row.status !== "paused";
+  const [scenario, setScenario] = useState<CrawlScenario>(row?.status === "failed" ? "failure" : "healthy");
+  const [replay, setReplay] = useState(false); // prototype bar restarts a finished crawl live
   const [runKey, setRunKey] = useState(0);
-  const restart = (s: CrawlScenario) => { setScenario(s); setRunKey((k) => k + 1); };
+  const restart = (s: CrawlScenario) => { setScenario(s); setRunKey((k) => k + 1); setReplay(true); };
   return (
     <Box bg="bg" minH="100vh">
-      <Run key={`${scenario}-${runKey}`} scenario={scenario} onScenario={restart} />
+      <Run key={`${scenario}-${runKey}`} scenario={scenario} settings={settings} finished={finished && !replay} onScenario={restart} />
     </Box>
   );
 }
@@ -68,12 +83,12 @@ function useSteps(run: RunView): StepInfo[] {
   const c = state.crawl;
   const crawl: StepInfo = {
     id: "crawl", name: "Crawl", kind: "crawl",
-    status: c.status === "running" ? "running" : "success",
+    status: c.status === "running" ? (state.paused ? "paused" : "running") : "success",
     sub: c.status === "running" ? `${fmtNum(c.done)} of ~${fmtNum(ESTIMATED_PAGES)} pages` : `${fmtNum(c.done)} pages`,
     dur: (c.endedAt ?? state.t) - c.startedAt, expected: 1260, progress: run.crawlPct, startedAt: 0, logs: c.logs,
   };
   const tail: StepInfo[] = state.tail.map((s, i) => ({
-    id: s.id, name: s.name, kind: "tail", stage: s, status: s.status,
+    id: s.id, name: s.name, kind: "tail", stage: s, status: s.status === "running" && state.paused ? "paused" : s.status,
     sub: s.status === "waiting" ? `Waiting on ${i === 0 ? "Crawl" : state.tail[i - 1].name}`
       : s.status === "blocked" ? "Not run · an earlier step failed"
       : s.status === "failed" ? "Failed" : s.description,
@@ -90,14 +105,14 @@ function jobStep(j: FullJob): StepInfo {
   };
 }
 
-function Run({ scenario, onScenario }: { scenario: CrawlScenario; onScenario: (s: CrawlScenario) => void }) {
-  const run = useCrawlRun(scenario);
+function Run({ scenario, settings, finished, onScenario }: { scenario: CrawlScenario; settings: CrawlSettings; finished: boolean; onScenario: (s: CrawlScenario) => void }) {
+  const run = useCrawlRun(scenario, settings, finished);
   const steps = useSteps(run);
   const job = run.state.fullLh ? jobStep(run.state.fullLh) : null;
   const all = job ? [...steps, job] : steps;
 
   // Follow the active step until the user picks one
-  const active = steps.find((s) => s.status === "running") ?? steps.find((s) => s.status === "failed") ?? (job?.status === "running" ? job : undefined);
+  const active = steps.find((s) => s.status === "running" || s.status === "paused") ?? steps.find((s) => s.status === "failed") ?? (job?.status === "running" ? job : undefined);
   const [picked, setPicked] = useState<string | null>(null);
   const selected = all.find((s) => s.id === (picked ?? active?.id)) ?? job ?? steps[steps.length - 1];
 
@@ -124,16 +139,19 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
   const crawlId = useCrawlId();
   const { state } = run;
   const c = state.crawl;
+  const paused = run.runStatus === "paused";
   const running = run.runStatus === "crawling" || run.runStatus === "processing";
-  const palette = run.runStatus === "failed" ? "red" : run.runStatus === "success" ? "green" : "blue";
+  const active = running || paused;
+  const palette = run.runStatus === "failed" ? "red" : run.runStatus === "success" ? "green" : paused ? "yellow" : "blue";
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const fetched = Object.values(c.codes).reduce((a, n) => a + n, 0);
   const errPct = fetched ? (run.errors / fetched) * 100 : 0;
-  const label = run.runStatus === "crawling" ? "Crawling" : run.runStatus === "processing" ? "Processing" : run.runStatus === "failed" ? "Failed" : "Succeeded";
+  const label = { crawling: "Crawling", processing: "Processing", paused: "Paused", failed: "Failed", success: "Succeeded" }[run.runStatus];
   const lhDone = state.tail.find((s) => s.id === "lighthouse")?.status === "success";
 
   const downloadAll = () => {
     const lines = [c.logs, ...state.tail.map((s) => s.logs)].flat();
-    const text = lines.map((l) => `${fmtClock(l.t)}  ${l.level.toUpperCase().padEnd(5)}  ${l.msg}`).join("\n");
+    const text = lines.map((l) => `${fmtClock(l.t)}  ${l.msg}`).join("\n");
     const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
     Object.assign(document.createElement("a"), { href: url, download: `crawl-${crawlId}.log` }).click();
     URL.revokeObjectURL(url);
@@ -160,6 +178,9 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
           </HStack>
           <HStack gap="2" ms="auto">
             {run.failed && <Button size="sm" onClick={run.retry}><LuRotateCcw />Retry from {run.failed.name}</Button>}
+            {paused && <Button size="sm" variant="outline" onClick={() => setSettingsOpen(true)}><LuSettings2 />Settings</Button>}
+            {running && <Button size="sm" variant="outline" onClick={run.pause}><LuPause />Pause</Button>}
+            {paused && <Button size="sm" onClick={run.resume}><LuPlay />Resume</Button>}
             <Button size="sm" variant="outline" onClick={downloadAll}><LuDownload />Logs</Button>
             <Menu.Root positioning={{ placement: "bottom-end" }}>
               <Menu.Trigger asChild>
@@ -171,6 +192,9 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
                     <Menu.Item value="lh" disabled={!lhDone || !!state.fullLh} onClick={onFullLighthouse}>
                       <LuGauge />Run Lighthouse on full site
                     </Menu.Item>
+                    <Menu.Item value="settings" onClick={() => setSettingsOpen(true)}>
+                      <LuSettings2 />{paused ? "Edit settings" : "View settings"}
+                    </Menu.Item>
                     <Menu.Item value="copy" onClick={() => navigator.clipboard.writeText(location.href)}>
                       <LuCopy />Copy link to run
                     </Menu.Item>
@@ -181,11 +205,16 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
           </HStack>
         </Flex>
 
+        <CrawlSettingsDialog
+          open={settingsOpen} onOpenChange={setSettingsOpen} mode={paused ? "paused" : "view"} initial={state.settings}
+          onSubmit={(next, { resume }) => { run.updateSettings(next); if (resume) run.resume(); }}
+        />
+
         <DataList.Root orientation="vertical" size="sm" mt="5" display="grid" gridTemplateColumns={{ base: "repeat(2, 1fr)", md: "repeat(6, minmax(0, 1fr))" }} gap="5">
-          {running ? (
+          {active ? (
             <Fact label="Progress">
               <HStack gap="2" w="full">
-                <Progress.Root value={run.overallPct} size="xs" flex="1" maxW="24" colorPalette="blue">
+                <Progress.Root value={run.overallPct} size="xs" flex="1" maxW="24" colorPalette={paused ? "yellow" : "blue"}>
                   <Progress.Track><Progress.Range transition="width 0.25s linear" /></Progress.Track>
                 </Progress.Root>
                 <Span fontVariantNumeric="tabular-nums">{run.overallPct}%</Span>
@@ -195,8 +224,9 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
             <Fact label="Trigger">Schedule · daily 02:00</Fact>
           )}
           <Fact label="Started">Nov 4, 02:00 UTC</Fact>
-          <Fact label={running ? "Elapsed" : "Duration"}>
+          <Fact label={active ? "Elapsed" : "Duration"}>
             {fmtDur(state.t)}
+            {paused && <Span color="fg.muted"> · paused</Span>}
             {running && run.runEta != null && <Span color="fg.muted"> · done ~{fmtClock(state.t + run.runEta).slice(0, 5)}</Span>}
           </Fact>
           <Fact label="Pages">
@@ -211,7 +241,11 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
             <Span color={errPct > 5 ? "red.fg" : undefined}>{errPct.toFixed(1)}%</Span>
             <Span color="fg.muted"> · {fmtNum(run.errors)}</Span>
           </Fact>
-          <Fact label="Config">crawler v14 · 64 workers</Fact>
+          <Fact label="Target">
+            <Tooltip content={`${state.settings.concurrency} workers · delay ${state.settings.delayMs} ms · timeout ${state.settings.timeoutS} s`} showArrow>
+              <Span>{hostOf(state.settings.url)} <Span color="fg.muted">· {ENVIRONMENTS[state.settings.environment].label}</Span></Span>
+            </Tooltip>
+          </Fact>
         </DataList.Root>
       </Container>
     </Box>
@@ -304,7 +338,7 @@ function StepButton({ step: s, selected, onSelect }: { step: StepInfo; selected:
         </Stack>
         <Text textStyle="xs" color="fg.muted" fontVariantNumeric="tabular-nums" pt="0.5">{s.dur != null ? fmtDur(s.dur) : `~${fmtDur(s.expected)}`}</Text>
       </HStack>
-      {s.status === "running" && (
+      {(s.status === "running" || s.status === "paused") && (
         <Progress.Root value={s.progress} size="xs" mt="2" ms="6.5" colorPalette="blue">
           <Progress.Track h="1"><Progress.Range transition="width 0.25s linear" /></Progress.Track>
         </Progress.Root>
@@ -335,7 +369,7 @@ function StepPane({ run, step, onFullLighthouse }: { run: RunView; step: StepInf
           <HStack gap="2.5">
             <StageIcon status={step.status} />
             <Heading size="md" fontWeight="semibold">{step.name}</Heading>
-            {step.status !== "running" && step.status !== "success" && (
+            {step.status !== "running" && step.status !== "paused" && step.status !== "success" && (
               <Badge size="sm" variant="subtle" colorPalette={STATUS[step.status].palette}>{STATUS[step.status].label}</Badge>
             )}
           </HStack>

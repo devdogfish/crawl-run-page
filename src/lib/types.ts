@@ -5,12 +5,14 @@ export type StageStatus =
   | "pending" // a later stage, not reached yet
   | "waiting" // the next stage, blocked on the one before
   | "running"
+  | "paused" // running step while the user has paused the run
   | "success"
   | "warning" // finished, but with rejected rows / soft issues
   | "failed"
   | "blocked"; // never ran because an earlier stage failed
 
-export type LogLevel = "info" | "warn" | "error" | "cmd";
+// Log levels only drive colour. "event" = lifecycle lines (start, progress, pause, settings, done), shown muted.
+export type LogLevel = "info" | "warn" | "error" | "event" | "cmd";
 export type LogLine = { t: number; level: LogLevel; msg: string };
 export type Sample = { t: number; rowsPerSec: number; rows: number };
 

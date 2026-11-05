@@ -4,7 +4,7 @@
 import { Chart, useChart } from "@chakra-ui/charts";
 import { Icon, Spinner } from "@chakra-ui/react";
 import { Area, AreaChart, Tooltip, XAxis, YAxis } from "recharts";
-import { LuCircleCheck, LuCircleDashed, LuCircleDot, LuCircleX, LuLock, LuTriangleAlert } from "react-icons/lu";
+import { LuCircleCheck, LuCircleDashed, LuCircleDot, LuCirclePause, LuCircleX, LuLock, LuTriangleAlert } from "react-icons/lu";
 
 import { fmtClock, fmtNum, type Stage, type StageStatus } from "@/lib/types";
 
@@ -12,6 +12,7 @@ export const STATUS: Record<StageStatus, { label: string; palette: string }> = {
   pending: { label: "Pending", palette: "gray" },
   waiting: { label: "Waiting", palette: "gray" },
   running: { label: "Running", palette: "blue" },
+  paused: { label: "Paused", palette: "yellow" },
   success: { label: "Succeeded", palette: "green" },
   warning: { label: "Warnings", palette: "orange" },
   failed: { label: "Failed", palette: "red" },
@@ -24,6 +25,7 @@ export function StageIcon({ status, size = "md" }: { status: StageStatus; size?:
   const boxSize = size === "sm" ? 4 : 5;
   if (status === "running") return <Spinner size="sm" color="blue.solid" borderWidth="2px" />;
   const map = {
+    paused: [LuCirclePause, "yellow.solid"],
     success: [LuCircleCheck, "green.solid"],
     warning: [LuTriangleAlert, "orange.solid"],
     failed: [LuCircleX, "red.solid"],

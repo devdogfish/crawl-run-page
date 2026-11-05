@@ -14,8 +14,8 @@ import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { fmtClock, type LogLine } from "@/lib/types";
 
 type Row = LogLine & { n: number };
-const LEVEL_COLOR: Record<LogLine["level"], string> = { info: "gray.300", cmd: "white", warn: "orange.300", error: "red.300" };
-const LEVEL_TAG: Record<LogLine["level"], string> = { info: "INFO", cmd: "CMD", warn: "WARN", error: "ERROR" };
+// Severity is colour only (no level column): errors red, warnings yellow, lifecycle events muted.
+const LEVEL_COLOR: Record<LogLine["level"], string> = { info: "gray.300", cmd: "white", event: "gray.500", warn: "orange.300", error: "red.300" };
 
 export function LogViewer({ lines, running, fileName, h = "560px" }: { lines: LogLine[]; running: boolean; fileName: string; h?: string }) {
   const [query, setQuery] = useState("");
@@ -36,7 +36,7 @@ export function LogViewer({ lines, running, fileName, h = "560px" }: { lines: Lo
   const unseen = Math.max(0, rows.length - seenAt);
 
   const selected = sel ? lines.slice(Math.min(sel.a, sel.b) - 1, Math.max(sel.a, sel.b)) : [];
-  const asText = (ls: LogLine[]) => ls.map((l) => `${fmtClock(l.t)}  ${LEVEL_TAG[l.level].padEnd(5)}  ${l.msg}`).join("\n");
+  const asText = (ls: LogLine[]) => ls.map((l) => `${fmtClock(l.t)}  ${l.msg}`).join("\n");
 
   const copy = () => navigator.clipboard.writeText(asText(selected.length ? selected : rows));
   const pick = (n: number, shift: boolean) =>
