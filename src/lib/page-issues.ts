@@ -151,7 +151,7 @@ export const RULE_CATALOG: Record<string, Rule> = {
     why: "The JPEG is about 3× larger than the same image in AVIF, which slows the largest contentful paint.",
     howToFix: "Serve AVIF/WebP with a <picture> fallback, or let the image CDN pick the format.",
     refs: [lh("performance/uses-webp-images", "Serve images in modern formats")],
-    fix: (s) => `<picture>\n  <source srcset="/media/hero.avif" type="image/avif">\n  ${s}\n</picture>`,
+    fix: (s) => `<picture>\n  <source srcset="${s.match(/src="([^"]+)\.jpg"/)?.[1] ?? "hero"}.avif" type="image/avif">\n  ${s}\n</picture>`,
   },
   "unused-javascript": {
     id: "unused-javascript", title: "Most of this script isn't used on the page", category: "performance", severity: "minor", source: "Lighthouse",
@@ -267,6 +267,14 @@ const LOREM = [
 ];
 
 function buildHtml(p: PageView, instances: Instance[]) {
+  // Asset URLs as the live site would have them; the preview swaps each for a placeholder (see asset-placeholders.ts)
+  const slugOf = p.path.split("/").filter(Boolean).pop() ?? "page";
+  const year = p.path.match(/\/(20\d{2})\//)?.[1] ?? "2025";
+  const heroSrc = `/assets/rbccm/images/insights/${year}/${slugOf}.jpg`;
+  const chartSrc = (j: number) => `/assets/rbccm/images/insights/${year}/${slugOf}-figure-${j + 1}.png`;
+  const media = p.type === "podcast"
+    ? `<audio controls src="/assets/rbccm/audio/podcasts/${slugOf}.mp3"></audio>`
+    : p.type === "video" ? `<video controls width="880" height="495" src="/assets/rbccm/video/${slugOf}.mp4"></video>` : "";
   const snippets = new Map<number, string>();
   const by = (rule: string, group?: string) => instances.filter((x) => x.rule === rule && (!group || x.group === group) && x.status !== "fixed");
   // ix(...) marks the element of an instance; the attribute is stripped from snippets and the Source view
@@ -289,8 +297,8 @@ function buildHtml(p: PageView, instances: Instance[]) {
     ...unused.map((_, j) => record(unused, j, `<script src="/assets/vendor-${j + 1}.js"></script>`)),
   ].filter(Boolean).join("\n    ");
 
-  const chartFig = (j: number) => record(charts, j, `<img${attr(charts, j)} src="${chartSvg(j)}" width="560" height="220">`);
-  const figures = Array.from({ length: Math.max(2, charts.length) }, (_, j) => `<figure class="chart">\n          ${j < charts.length ? chartFig(j) : `<img src="${chartSvg(j)}" alt="Chart: issuance by quarter" width="560" height="220">`}\n          <figcaption>Figure ${j + 1}. ${["Direct lending volume", "Spread to SOFR", "Default rate", "Refinancing wall", "Sponsor activity"][j % 5]}</figcaption>\n        </figure>`);
+  const chartFig = (j: number) => record(charts, j, `<img${attr(charts, j)} src="${chartSrc(j)}" width="560" height="220">`);
+  const figures = Array.from({ length: Math.max(2, charts.length) }, (_, j) => `<figure class="chart">\n          ${j < charts.length ? chartFig(j) : `<img src="${chartSrc(j)}" alt="Chart: issuance by quarter" width="560" height="220">`}\n          <figcaption>Figure ${j + 1}. ${["Direct lending volume", "Spread to SOFR", "Default rate", "Refinancing wall", "Sponsor activity"][j % 5]}</figcaption>\n        </figure>`);
   const sections = Array.from({ length: Math.max(2, headings.length) }, (_, j) => {
     const h = j < headings.length ? record(headings, j, `<h4${attr(headings, j)}>${["What changed this quarter", "Where we see risk", "Deals to watch"][j]}</h4>`) : `<h3>${["What changed this quarter", "Where we see risk", "Deals to watch"][j]}</h3>`;
     const link = inline[j * 2] ? record(inline, j * 2, `<a class="inline"${attr(inline, j * 2)} href="/en/insights/credit">credit outlook</a>`) : `<a href="/en/insights/credit">credit outlook</a>`;
@@ -320,7 +328,8 @@ function buildHtml(p: PageView, instances: Instance[]) {
         <p class="eyebrow">${typeLabel(p.type)} · ${p.path.match(/\/(20\d{2})\//)?.[1] ?? "2025"}</p>
         <h1>${p.h1}</h1>
         <p class="byline">By Sarah Chen and David Roy, Credit Strategy</p>
-        ${hero.length ? record(hero, 0, `<img class="hero"${attr(hero, 0)} src="${heroSvg()}" alt="Toronto skyline at dusk" width="880" height="300">`) : `<img class="hero" src="${heroSvg()}" alt="Toronto skyline at dusk" width="880" height="300">`}
+        ${hero.length ? record(hero, 0, `<img class="hero"${attr(hero, 0)} src="${heroSrc}" alt="Toronto skyline at dusk" width="880" height="300">`) : `<img class="hero" src="${heroSrc}" alt="Toronto skyline at dusk" width="880" height="300">`}
+        ${media}
         <p class="lead">${LOREM[(p.i + 1) % 4]}</p>
         ${callout.length ? `<div class="callout">\n          ${callout.map((_, j) => record(callout, j, `<p${attr(callout, j)} style="color: #a3b1c2">${["Key takeaway: spreads tightened 40 bp.", "Defaults stay below average.", "Refinancing peaks in 2027.", "Covenant quality is slipping."][j]}</p>`)).join("\n          ")}\n        </div>` : `<div class="callout"><p>Key takeaway: spreads tightened 40 bp.</p></div>`}
       ${sections.join("\n      ")}
@@ -363,7 +372,7 @@ a{color:#005daa} .site-header{display:flex;align-items:center;gap:32px;padding:1
 main{max-width:880px;margin:0 auto;padding:24px 24px 48px} .crumbs{font-size:13px;color:#5b6876} .crumbs a{color:#5b6876}
 .eyebrow{text-transform:uppercase;font-size:12px;letter-spacing:.08em;color:#005daa;margin:24px 0 4px} h1{font-size:38px;line-height:1.15;margin:0 0 12px}
 .byline{color:#5b6876;font-size:14px} .hero{width:100%;height:auto;border-radius:6px;display:block;margin:20px 0}
-.lead{font-size:19px} .callout{background:#f1f5fa;border-left:4px solid #005daa;padding:12px 20px;margin:24px 0} .callout p{margin:6px 0;font-weight:600}
+video{display:block;width:100%;height:auto;margin:20px 0} .lead{font-size:19px} .callout{background:#f1f5fa;border-left:4px solid #005daa;padding:12px 20px;margin:24px 0} .callout p{margin:6px 0;font-weight:600}
 h3,h4{font-size:22px;margin:32px 0 8px} a.inline{text-decoration:none} figure{margin:24px 0} figure img{width:100%;height:auto;border:1px solid #e3e8ee;border-radius:4px}
 figcaption{font-size:13px;color:#5b6876} table{border-collapse:collapse;width:100%;font-size:14px} th,td{border-bottom:1px solid #e3e8ee;padding:8px;text-align:left}
 .badge{vertical-align:middle;margin-left:8px} .newsletter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f7f9fb;padding:16px;border-radius:6px;margin-top:32px}
@@ -374,13 +383,9 @@ footer{background:#f1f5fa;padding:24px 48px;font-size:13px} .legal{display:flex;
 @media (max-width:700px){.site-header{flex-wrap:wrap;padding:12px 16px;gap:12px}.site-header nav{order:3;width:100%;overflow:auto;gap:16px}h1{font-size:28px}footer{padding:16px}.cookie-banner{margin:0 16px 16px}}
 `;
 
-const heroSvg = () => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b2a4a"/><stop offset="1" stop-color="#2f80cc"/></linearGradient></defs><rect width="880" height="300" fill="url(#g)"/>${Array.from({ length: 22 }, (_, j) => `<rect x="${j * 40 + 6}" y="${150 + ((j * 37) % 90)}" width="30" height="${150 - ((j * 37) % 90)}" fill="#071d33"/>`).join("")}<rect x="430" y="40" width="10" height="260" fill="#071d33"/></svg>`)}`;
-const chartSvg = (j: number) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="560" height="220"><rect width="560" height="220" fill="#fff"/>${Array.from({ length: 12 }, (_, k) => { const h = 30 + ((k * 53 + j * 31) % 150); return `<rect x="${24 + k * 44}" y="${200 - h}" width="28" height="${h}" fill="${k > 8 ? "#005daa" : "#9cc3e8"}"/>`; }).join("")}<line x1="16" y1="200" x2="548" y2="200" stroke="#5b6876"/></svg>`)}`;
 
-// Inline prototype images (data: URIs) shown as the file paths a real page would have
-let imgN = 0;
-const readable = (markup: string) => markup.replace(/ data-ix="\d+"/g, "")
-  .replace(/src="data:image\/svg\+xml;utf8,([^"]+)"/g, (_, d) => `src="/media/${d.includes("linearGradient") ? "hero-toronto.jpg" : `charts/figure-${(imgN++ % 5) + 1}.png`}"`);
+// Markup as the crawler stored it: without the prototype's data-ix markers
+const readable = (markup: string) => markup.replace(/ data-ix="\d+"/g, "");
 
 // Source view: the HTML without the prototype's data-ix markers, and the line each instance is on
 export function sourceLines(html: string) {

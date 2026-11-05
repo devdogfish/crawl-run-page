@@ -661,6 +661,7 @@ Architecture, storage and the MCP build guide: [`docs/backend-and-mcp.md`](docs/
 ```
 
 - **Priority** is fixed per severity and not configurable: Critical P1, Serious P2, Moderate P3, Minor P4.
+- **Assets aren't stored.** The crawler keeps each page's HTML, not its images, video or audio (too much storage). The preview swaps each one for a neutral placeholder of the same size that names the file ("Image · 880 × 300 · not stored", an "Audio not stored" bar), so the layout stays right and nobody mistakes it for the real content. The Source view and issue snippets keep the original markup.
 - **Where to fix** is not inferred. TeamSite's HTML doesn't reliably say who owns an element or which content field it came from (research/teamsite-cms-traces.md), and the preview shows where it is. What the tool states is deterministic: the selector, and "same markup on N pages" from the HTML hash (one fix covers all of them).
 
 **API.**

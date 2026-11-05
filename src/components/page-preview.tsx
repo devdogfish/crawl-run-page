@@ -9,9 +9,10 @@
 // issue is a dot on a rail at the left edge, at its element's height. Hover a dot to outline it, click to select.
 // PROTOTYPE: both modes render the generated HTML; in the real app "screenshot" is an image and the
 // boxes come from the crawl (no stored HTML needed). Live render is what the extra ~15% storage would buy.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
+import { withPlaceholders } from "@/lib/asset-placeholders";
 
 export type Layer = "issues" | "tab" | "headings" | "landmarks" | "alt";
 type Rect = { x: number; y: number; w: number; h: number };
@@ -41,6 +42,7 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
+  const doc = useMemo(() => withPlaceholders(html), [html]); // the crawler stores no images, video or audio
   const [width, setWidth] = useState(0);
   const [docH, setDocH] = useState(1200);
   const [boxes, setBoxes] = useState<Map<number, Rect>>(new Map());
@@ -130,7 +132,7 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
     <Box ref={wrap} position="relative" overflow="hidden" h={crop != null ? `${height ?? 200}px` : `${docH * scale}px`} bg="white" rounded="l2" borderWidth="1px">
       <Box position="absolute" top="0" left="0" w={`${viewport}px`} h={`${docH}px`} transformOrigin="top left"
         style={{ transform: `translate(${tx}px, ${ty}px) scale(${s})` }}>
-        <iframe ref={frame} srcDoc={html} sandbox="allow-same-origin" title="Crawled page" onLoad={measure}
+        <iframe ref={frame} srcDoc={doc} sandbox="allow-same-origin" title="Crawled page" onLoad={measure}
           style={{ width: viewport, height: docH, border: 0, display: "block", pointerEvents: "none" }} />
 
         {/* Overlay, in page pixels */}
