@@ -4,13 +4,12 @@
 
 import { DEFAULT_SITE, envUrl, type SiteId } from "@/lib/sites";
 
-export type Environment = "production" | "staging" | "development";
+export type Environment = "production" | "qa";
 
 // Environment names. Each site defines its own URL per environment (src/lib/sites.ts).
 export const ENVIRONMENTS: Record<Environment, { label: string }> = {
   production: { label: "Production" },
-  staging: { label: "Staging" },
-  development: { label: "Development" },
+  qa: { label: "QA" },
 };
 
 export type Discovery = "sitemap+links" | "sitemap" | "links";

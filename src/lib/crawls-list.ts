@@ -27,15 +27,15 @@ const r = (i: number, salt: number) => {
 function history(site: SiteId, newestId: number, count: number, salt: number, livePct: number | null): CrawlRow[] {
   return Array.from({ length: count }, (_, i) => {
     const id = newestId - i;
-    const env: Environment = i === 0 || r(i, 1 + salt) < 0.62 ? "production" : r(i, 2 + salt) < 0.7 ? "staging" : "development";
+    const env: Environment = i === 0 || r(i, 1 + salt) < 0.62 ? "production" : "qa";
     const day = Math.floor(i * 0.62);
     const scheduled = env === "production";
     const startedAt = new Date(Date.UTC(2026, 10, 4 - day, scheduled ? 2 : 9 + Math.floor(r(i, 3 + salt) * 8), scheduled ? 0 : Math.floor(r(i, 4 + salt) * 60)));
-    const pagesBase = (env === "production" ? 48_200 : env === "staging" ? 47_600 : 12_400) * (site === "rbcits" ? 0.4 : 1);
+    const pagesBase = (env === "production" ? 48_200 : 47_600) * (site === "rbcits" ? 0.4 : 1);
     const roll = r(i, 5 + salt);
     const live = i === 0 && livePct != null;
     const status: CrawlListStatus = live ? "running" : roll < 0.08 ? "failed" : roll < 0.11 ? "cancelled" : "success";
-    const durationSec = live ? 540 : Math.round((env === "development" ? 380 : 1_400) * (site === "rbcits" ? 0.45 : 1) * (0.9 + r(i, 6 + salt) * 0.25) + (i === 17 ? 390 : 0));
+    const durationSec = live ? 540 : Math.round((env === "qa" ? 1_250 : 1_400) * (site === "rbcits" ? 0.45 : 1) * (0.9 + r(i, 6 + salt) * 0.25) + (i === 17 ? 390 : 0));
     return {
       id: String(id),
       site,

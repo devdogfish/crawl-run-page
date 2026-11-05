@@ -26,7 +26,7 @@ const FILTERS: { v: Filter; label: string; match: (c: CrawlRow) => boolean }[] =
 ];
 const STATUS_LABEL: Record<CrawlListStatus, string> = { running: "Running", paused: "Paused", success: "Succeeded", failed: "Failed", cancelled: "Cancelled" };
 const STATUS_ICON: Record<CrawlListStatus, StageStatus> = { running: "running", paused: "paused", success: "success", failed: "failed", cancelled: "blocked" };
-const ENV_COLOR: Record<Environment, string> = { production: "gray", staging: "purple", development: "teal" };
+const ENV_COLOR: Record<Environment, string> = { production: "gray", qa: "purple" };
 const COLS = "88px minmax(180px, 2fr) 120px 132px 96px 72px 96px 120px 92px";
 const PAGE_SIZE = 20;
 

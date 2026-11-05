@@ -5,7 +5,7 @@
 // immediately and are listed under the answer so the user sees what changed.
 // PROTOTYPE: answers come from `onAsk` in the page (scripted from the page's own data), not a model.
 import { useEffect, useRef, useState } from "react";
-import { Badge, Box, Button, CloseButton, Flex, HStack, IconButton, Input, Span, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, CloseButton, Flex, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
 import { LuArrowUp, LuCheck, LuSparkles } from "react-icons/lu";
 
 export type AiReply = { text: string; actions: string[] };
@@ -43,17 +43,11 @@ export function AiPanel({ open, onClose, context, suggestions, onAsk, ask }: {
     <Flex direction="column" position="fixed" right="0" top="var(--sticky-top, 3.5rem)" bottom="0" w={{ base: "100%", md: "380px" }}
       bg="bg" borderStartWidth="1px" zIndex="docked" shadow={{ base: "lg", lg: "none" }}>
       <HStack px="4" h="12" borderBottomWidth="1px" justify="space-between" flexShrink={0}>
-        <HStack gap="2"><Box color="brand.fg"><LuSparkles /></Box><Text textStyle="sm" fontWeight="semibold">Assistant</Text>
-          <Badge size="xs" variant="subtle" colorPalette="gray">Prototype</Badge></HStack>
+        <HStack gap="2"><LuSparkles /><Text textStyle="sm" fontWeight="medium">Ask AI</Text></HStack>
         <CloseButton size="xs" onClick={onClose} aria-label="Close assistant" />
       </HStack>
 
-      <Box px="4" py="2.5" borderBottomWidth="1px" bg="bg.subtle">
-        <Text textStyle="xs" color="fg.muted" mb="1.5">Knows about</Text>
-        <Flex gap="1.5" wrap="wrap">
-          {context.map((c) => <Badge key={c} size="sm" variant="outline" colorPalette="gray" maxW="full"><Span truncate>{c}</Span></Badge>)}
-        </Flex>
-      </Box>
+      <Text px="4" py="2" borderBottomWidth="1px" textStyle="xs" color="fg.muted" truncate>Context: {context.join(" · ")}</Text>
 
       <Stack flex="1" overflowY="auto" px="4" py="4" gap="4">
         {msgs.length === 0 && (

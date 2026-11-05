@@ -4,7 +4,6 @@
 //
 // Logos are the official files from each site (public/sites/). The "-white" versions are for dark mode:
 // RBC CM's is official; RBC IS's applies the same treatment (wordmark white, shield unchanged).
-// TODO: replace the staging/development URLs with the real ones.
 import type { Environment } from "@/lib/settings";
 
 export type SiteId = "rbccm" | "rbcits";
@@ -25,8 +24,7 @@ export const SITES: Record<SiteId, Site> = {
     logo: { light: "/sites/rbccm.svg", dark: "/sites/rbccm-white.svg" },
     environments: {
       production: "https://www.rbccm.com",
-      staging: "https://staging.rbccm.com", // placeholder
-      development: "https://dev.rbccm.com", // placeholder
+      qa: "https://www.sterbccm.com",
     },
   },
   rbcits: {
@@ -37,8 +35,7 @@ export const SITES: Record<SiteId, Site> = {
     logo: { light: "/sites/rbcis.svg", dark: "/sites/rbcis-white.svg" },
     environments: {
       production: "https://www.rbcis.com",
-      staging: "https://staging.rbcis.com", // placeholder
-      development: "https://dev.rbcis.com", // placeholder
+      qa: "https://www.sterbcits.com",
     },
   },
 };

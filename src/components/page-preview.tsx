@@ -88,8 +88,10 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
   const cropRect = crop != null ? boxes.get(crop) : undefined;
 
   // Crop: zoom in (up to 1:1) and centre the element
-  const cropScale = Math.min(1, (width / viewport) * 1.8);
-  const tx = cropRect ? Math.min(0, Math.max(width - viewport * cropScale, width / 2 - (cropRect.x + cropRect.w / 2) * cropScale)) : 0;
+  // Crop: zoom in, but never so far that the element (plus some context) doesn't fit
+  const cropScale = Math.min(1, (width / viewport) * 1.8, cropRect && height ? (height - 32) / Math.max(1, cropRect.h) : 1, cropRect ? (width - 48) / Math.max(1, cropRect.w) : 1);
+  const cx = cropRect ? width / 2 - (cropRect.x + cropRect.w / 2) * cropScale : 0; // centre the element
+  const tx = viewport * cropScale > width ? Math.min(0, Math.max(width - viewport * cropScale, cx)) : cx;
   const ty = cropRect && height ? Math.min(0, Math.max(height - docH * cropScale, height / 2 - (cropRect.y + cropRect.h / 2) * cropScale)) : 0;
   const s = crop != null ? cropScale : scale;
   const lab = 11 / s; // labels stay ~11px on screen whatever the scale
@@ -122,7 +124,7 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
             const dim = selected != null && !on && !hi && crop == null;
             return (
               <Box key={it.k} position="absolute" left={`${r.x - 3}px`} top={`${r.y - 3}px`} w={`${r.w + 6}px`} h={`${r.h + 6}px`}
-                border={`${(on ? 3 : 2) / s}px solid ${SEV_COLOR[sev]}`} bg={on ? `${SEV_COLOR[sev]}22` : undefined} rounded="sm"
+                border={`${(on ? 3 : 2) / s}px solid ${SEV_COLOR[sev]}`} bg={on && crop == null ? `${SEV_COLOR[sev]}22` : undefined} rounded="sm"
                 opacity={dim ? 0.35 : 1} cursor="pointer" onClick={(e) => { e.stopPropagation(); onSelect?.(it.k); }}
                 boxShadow={on ? `0 0 0 ${4 / s}px ${SEV_COLOR[sev]}44` : undefined}
                 css={hi && !on ? { animation: "pulse 1.2s ease-in-out infinite", "@keyframes pulse": { "50%": { boxShadow: `0 0 0 ${6 / s}px ${SEV_COLOR[sev]}55` } } } : undefined}>
