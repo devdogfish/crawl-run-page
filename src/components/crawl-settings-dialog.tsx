@@ -1,7 +1,7 @@
 "use client";
 
 // Crawl settings, used in three modes:
-//   create → everything editable ("New crawl" on /crawls)
+//   create → everything editable ("New crawl" in the navbar)
 //   paused → target + discovery locked, throughput editable (Settings while a crawl is paused)
 //   view   → read-only (running or finished crawl)
 import { useState } from "react";

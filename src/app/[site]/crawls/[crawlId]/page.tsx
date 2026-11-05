@@ -1,6 +1,6 @@
 "use client";
 
-// Crawl run page · /crawls/[crawlId]
+// Crawl run page · /[site]/crawls/[crawlId]
 // Built like CI/orchestration run pages (GitHub Actions, Vercel, Dagster):
 //   page header (breadcrumbs, status, actions) → facts row → two panes:
 //   step list on the left, the selected step on the right with Logs | Metrics | Pages | Scores tabs.
@@ -10,7 +10,7 @@
 // PROTOTYPE: data comes from the simulator in src/lib/crawl.ts and src/lib/pages.ts.
 // SLICES.md describes how to replace it with the FastAPI endpoints in SPEC.md.
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Alert, Badge, Box, Breadcrumb, Button, ButtonGroup, Container, DataList, EmptyState, Flex, Grid, HStack, Heading, IconButton,
   Menu, Pagination, Portal, Progress, ProgressCircle, Span, Stack, Tabs, Text,
@@ -27,8 +27,8 @@ import NextLink from "next/link";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { CRAWLS, type CrawlRow } from "@/lib/crawls-list";
-import { DEFAULT_SETTINGS, ENVIRONMENTS, defaultSettings, hostOf, type CrawlSettings } from "@/lib/settings";
-import { SITES } from "@/lib/sites";
+import { ENVIRONMENTS, defaultSettings, hostOf, type CrawlSettings } from "@/lib/settings";
+import { SITES, type SiteId } from "@/lib/sites";
 import { useSite } from "@/components/site-context";
 import { ESTIMATED_PAGES, FULL_LH_SEC, PREVIOUS_CRAWLS, useCrawlRun, type CrawlScenario, type FullJob } from "@/lib/crawl";
 import { PAGE_FILTERS, matches, pageAt, redirectSide, type PageFilter, type PageRow } from "@/lib/pages";
@@ -41,19 +41,20 @@ const SCENARIOS: { v: CrawlScenario; label: string }[] = [
 ];
 
 // Prototype: settings come from the "New crawl" dialog (?settings=…) or from the crawl's row in the list
-function useInitialSettings(row: CrawlRow | undefined): CrawlSettings {
+function useInitialSettings(row: CrawlRow | undefined, site: SiteId): CrawlSettings {
   const raw = useSearchParams().get("settings");
-  try { if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }; } catch { /* fall through */ }
-  return row ? { ...defaultSettings(row.site), environment: row.environment, url: row.url } : DEFAULT_SETTINGS;
+  try { if (raw) return { ...defaultSettings(site), ...JSON.parse(raw) }; } catch { /* fall through */ }
+  return row ? { ...defaultSettings(row.site), environment: row.environment, url: row.url } : defaultSettings(site);
 }
 
 export default function CrawlRunPage() {
   const crawlId = useCrawlId();
   const row = CRAWLS.find((c) => c.id === crawlId);
-  const settings = useInitialSettings(row);
-  // Opening a crawl selects its site in the switcher
-  const { site, setSite } = useSite();
-  useEffect(() => { if (settings.site !== site) setSite(settings.site); }, [settings.site]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A crawl belongs to one site: if the URL names another site, send it to the right one
+  const site = useSite();
+  const settings = useInitialSettings(row, site);
+  const router = useRouter();
+  useEffect(() => { if (row && row.site !== site) router.replace(`/${row.site}/crawls/${row.id}`); }, [row, site, router]);
   const finished = !!row && row.status !== "running" && row.status !== "paused";
   const [scenario, setScenario] = useState<CrawlScenario>(row?.status === "failed" ? "failure" : "healthy");
   const [replay, setReplay] = useState(false); // prototype bar restarts a finished crawl live
@@ -167,7 +168,7 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
       <Container maxW="7xl" pt="5" pb="5">
         <Breadcrumb.Root size="sm" mb="3">
           <Breadcrumb.List>
-            <Breadcrumb.Item><Breadcrumb.Link asChild><NextLink href="/crawls">Crawls</NextLink></Breadcrumb.Link></Breadcrumb.Item>
+            <Breadcrumb.Item><Breadcrumb.Link asChild><NextLink href={`/${state.settings.site}/crawls`}>Crawls</NextLink></Breadcrumb.Link></Breadcrumb.Item>
             <Breadcrumb.Separator />
             <Breadcrumb.Item><Breadcrumb.CurrentLink>{crawlId}</Breadcrumb.CurrentLink></Breadcrumb.Item>
           </Breadcrumb.List>

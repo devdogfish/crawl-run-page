@@ -69,23 +69,24 @@ Step ids and names are examples; use your pipeline's own. The UI reads whatever 
 | D27 | Logs should be more consistent; an INFO/ERROR column isn't useful. What should a log line contain? | As in normal CI/crawler logs: **time + one plain sentence**, with severity shown only by colour. Every message follows `Verb subject (details)`, one template per kind of event. Structured fields go in `data` for filtering and export, not into the visible line (§4.3). |
 | D28 | The HTTP code must be in the line, because every request is logged. | Request lines use an access-log template with the **status first**, so it lines up down the page: `200 GET /product/10065 (412 ms)`, `301 GET /p/1 → /product/1 (88 ms)`, `ERR GET /x (30.0 s, timed out after 30s)`. Level follows the status class, and the log viewer is virtualised, so ~50K lines per crawl is fine (§4.3, §5.2). |
 | D29 | Crawler logs are all requests, but the other steps (except Lighthouse) make no requests. Keep one consistent style across the app. | **One line format for every step:** `<outcome> <ACTION> <subject>[ → <target>] (<duration>[, details])`. The outcome is the HTTP status for requests, `OK`/`ERR` for other work, and `—` for lifecycle events (start, progress, pause, settings, done). So `200 GET /product/1 (412 ms)`, `OK  AUDIT /product/1 (3.1 s, performance 80)`, `OK  BUILD table fct_prices (31.0 s, 48,146 rows)` and `—   PAUSE crawl (by you, 12,309 pages done)` all line up the same way (§4.3). |
-| D30 | Add a crawls page in the same enterprise style. | `/crawls`: title + **New crawl** → facts row (running now, crawls in the last 30 days, success rate, median production duration) → one data panel with the shared toolbar (search, status segments, copy, CSV), a table and pagination. Rows open `/crawls/{id}`. |
+| D30 | Add a crawls page in the same enterprise style. | `/[site]/crawls`: title + **New crawl** → facts row (running now, crawls in the last 30 days, success rate, median production duration) → one data panel with the shared toolbar (search, status segments, copy, CSV), a table and pagination. Rows open `/{site}/crawls/{id}`. |
 | D31 | Pause at any point; Pause turns into Resume; when paused, open the crawl settings. Immutable settings are locked; request delay and timeout are mutable. What else? | **Pause** (any time while the run is active) → status **Paused** (yellow), the clock stops, and the actions become **Settings** + **Resume**. In the settings dialog, **Target** (environment + URL) and **Discovery** (sources, exclude paths, render JS, robots.txt) are **locked**, because they define *what* is crawled and changing them mid-run would mix results. **Throughput** is editable: request delay, request timeout, **concurrency**, **max retries** and **Lighthouse sample size** (that step hasn't run yet). Save, or Save and resume. Each change is logged (`—   UPDATE settings (delay 250 → 500 ms, timeout 30 → 20 s)`). While running or finished, the same dialog opens read-only from the `⋯` menu. |
 | D32 | The environment is attached to the URL input; changing it changes the URL. Disabled for an existing crawl, enabled when creating one. | An attached select + input (`Group attached`): picking Production / Staging / Development fills in that environment's base URL. In **New crawl** both are editable; for an existing crawl both are disabled, with the hint "Start a new crawl to crawl another environment". |
 | D33 | The top-left should be the RBC CM logo, and I want to crawl other websites too (e.g. RBC ITS), switching there. | A **navbar** on every page: a **site switcher** on the left (logo + short name; the menu lists every site with its full name) and **New crawl** on the right. The page title and subtitle were dropped; the navbar carries the context. Everything is scoped to the selected site: the crawls list and facts, New crawl (environments fill in that site's URLs), and the run page (opening a crawl selects its site). Switching site on a run page goes to that site's crawls list. Sites live in one config (`src/lib/sites.ts` / `GET /api/sites`), so adding a website is one entry. |
+| D34 | Use the real logos and make it look good; the website must be the first URL segment, without changing the breadcrumbs; the list page needs a title. | **Official logos**, from rbccm.com and rbcis.com, in `public/sites/`: full colour in light mode, white wordmark in dark mode (RBC CM's white version is official; RBC IS's applies the same treatment). The navbar shows the logo itself, then a divider and "Crawler". **URLs:** `/{site}/crawls` and `/{site}/crawls/{id}` (e.g. `/rbccm/crawls/812`). The switcher navigates to `/{other site}/crawls`; `/` opens the site used last; an unknown site is a 404; a crawl opened under the wrong site redirects to its own. **Breadcrumbs stay** `Crawls › {id}`. The list page title is **Crawl history**. rbcits.com now redirects to RBC Investor Services (rbcis.com), so that site is labelled RBC Investor Services, with the URL segment kept as `rbcits`. |
 
 ---
 
 ## 3. UI spec
 
-Routes: **`/crawls`** (`src/app/crawls/page.tsx`) and **`/crawls/[crawlId]`** (`src/app/crawls/[crawlId]/page.tsx`).
+Routes: **`/[site]/crawls`** (`src/app/[site]/crawls/page.tsx`) and **`/[site]/crawls/[crawlId]`** (`src/app/[site]/crawls/[crawlId]/page.tsx`).
 
 ### 3.0 Navbar (every page)
-- **Left, site switcher:** the current site's logo (or a lettered mark until a logo file is set), its short name ("RBC CM") and a chevron. The menu lists every site (mark, short name, full name, a check on the current one). The choice is remembered per browser.
+- **Left, site switcher:** the current site's **official logo** (colour in light mode, white wordmark in dark mode) and a chevron, then a divider and the product name "Crawler". The menu lists every site (logo, production host, a check on the current one). Choosing one navigates to `/{site}/crawls`. The last site used is remembered per browser, for `/`.
 - **Right:** **New crawl**, which opens the settings dialog in *create* mode (§3.6) for the current site.
 
-### 3.1 Crawls page (`/crawls`)
-- Shows the **current site's** crawls only. No page title (D33).
+### 3.1 Crawls page (`/[site]/crawls`)
+- Shows the **current site's** crawls only, under the title **Crawl history** (D34).
 - **Facts row** (for the current site): Running now · Crawls, last 30 days · Success rate · Median duration (production).
 - **Data panel:**
   - the shared `DataToolbar` with search (id, URL, environment), segments **All · Running · Failed · Succeeded** with counts, copy IDs and CSV download;
@@ -658,6 +659,6 @@ Filters:
 
 ## 8. Out of scope / later
 - Changes to how the crawler crawls. This spec only defines what it reports.
-- The crawl list page (`/crawls`).
+- The crawl list page (`/[site]/crawls`).
 - An accessibility (axe) results UI.
 - Permalinks to log lines, cancel, notifications.

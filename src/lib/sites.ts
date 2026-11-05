@@ -1,18 +1,19 @@
-// Websites this tool can crawl. Add a site here and it appears in the switcher (top-left),
-// gets its own crawls list, and its environments fill in the URL in "New crawl".
+// Websites this tool can crawl. The first URL segment is the site id (/rbccm/crawls, /rbcits/crawls/431).
+// Add a site here and it appears in the switcher (top-left), with its own crawl history; its environments
+// fill in the URL in "New crawl".
 //
-// TODO: replace the staging/development URLs with the real ones, and set `logo` to an official
-// logo file in /public/sites (e.g. "/sites/rbccm.svg"). Until then a lettered mark is shown.
+// Logos are the official files from each site (public/sites/). The "-white" versions are for dark mode:
+// RBC CM's is official; RBC IS's applies the same treatment (wordmark white, shield unchanged).
+// TODO: replace the staging/development URLs with the real ones.
 import type { Environment } from "@/lib/settings";
 
 export type SiteId = "rbccm" | "rbcits";
 
 export type Site = {
   id: SiteId;
-  name: string; // full name, shown in the switcher menu
-  short: string; // shown next to the logo
-  mark: string; // letters for the placeholder mark
-  logo?: string; // path under /public, e.g. "/sites/rbccm.svg"
+  name: string; // full name (menu, dialog)
+  short: string; // compact name (facts row, alt text)
+  logo: { light: string; dark: string }; // under /public
   environments: Record<Environment, string>; // base URL per environment
 };
 
@@ -21,7 +22,7 @@ export const SITES: Record<SiteId, Site> = {
     id: "rbccm",
     name: "RBC Capital Markets",
     short: "RBC CM",
-    mark: "CM",
+    logo: { light: "/sites/rbccm.svg", dark: "/sites/rbccm-white.svg" },
     environments: {
       production: "https://www.rbccm.com",
       staging: "https://staging.rbccm.com", // placeholder
@@ -30,13 +31,14 @@ export const SITES: Record<SiteId, Site> = {
   },
   rbcits: {
     id: "rbcits",
-    name: "RBC Investor & Treasury Services",
-    short: "RBC ITS",
-    mark: "ITS",
+    // rbcits.com now redirects to RBC Investor Services (rbcis.com)
+    name: "RBC Investor Services",
+    short: "RBC IS",
+    logo: { light: "/sites/rbcis.svg", dark: "/sites/rbcis-white.svg" },
     environments: {
-      production: "https://www.rbcits.com",
-      staging: "https://staging.rbcits.com", // placeholder
-      development: "https://dev.rbcits.com", // placeholder
+      production: "https://www.rbcis.com",
+      staging: "https://staging.rbcis.com", // placeholder
+      development: "https://dev.rbcis.com", // placeholder
     },
   },
 };

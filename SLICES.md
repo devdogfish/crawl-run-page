@@ -11,7 +11,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 
 | # | Slice | Crawler: add calls | Backend | Frontend | Done when |
 |---|---|---|---|---|---|
-| 1 | Crawls list + run shell | `crawl_started`, `step_started/finished/failed` | schema, writer, `GET /crawls`, `GET /crawls/{id}` | crawls page, header, facts, step list | real crawls list, and a real crawl's status and steps show live |
+| 1 | Crawls list + run shell | `crawl_started`, `step_started/finished/failed` | schema, writer, `GET /crawls`, `GET /{site}/crawls/{id}` | crawls page, header, facts, step list | real crawls list, and a real crawl's status and steps show live |
 | 2 | Logs | `DbLogHandler`, `log_request` / `log_line` / `log_event` | logs, SSE, download | `LogViewer` on real data | every step logs in the one format; live logs follow, search, copy and download |
 | 3 | Metrics + ETA | `progress(...)`, `rate_limited(...)` | samples, ETA, medians, history | Metrics tab, progress/ETA, sparkline | charts and ETA come from real numbers |
 | 4 | Pages table | `page(...)` per URL | pages, counts, CSV | Pages tab | redirects/errors/skips can be filtered, paged and exported |
@@ -21,7 +21,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 
 ## Slice 1: Schema, writer, crawls list and run page shell
 
-**Goal:** `/crawls` lists real crawls, and `/crawls/{id}` renders a real crawl whose statuses update while it runs.
+**Goal:** `/[site]/crawls` lists real crawls, and `/{site}/crawls/{id}` renders a real crawl whose statuses update while it runs.
 
 **Crawler (calls only)**
 - Add `crawl_events.py` (SPEC §4.1) and start the writer thread once per process (§5.3).
@@ -37,7 +37,7 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 - `GET /api/crawls/{crawl_id}` (SPEC §6.1): id, environment, url, status, trigger, settings, timestamps, `elapsed_sec` and `steps[]`. Leave `progress_pct`, `eta_at`, `pages` and `history` null until slice 3. Use read-only connections, plus `ETag`/`304`.
 
 **Frontend**
-- Move `src/app/crawls/page.tsx` and `src/app/crawls/[crawlId]/page.tsx` into your app at the same routes. Copy `src/components/*`, `src/lib/types.ts` and `src/lib/settings.ts`.
+- Move `src/app/[site]/crawls/page.tsx` and `src/app/[site]/crawls/[crawlId]/page.tsx` into your app at the same routes. Copy `src/components/*`, `src/lib/types.ts` and `src/lib/settings.ts`.
 - **Navbar:** mount `AppNavbar` inside `SiteProvider` (see `src/app/layout.tsx`). Load the sites from `GET /api/sites` instead of `src/lib/sites.ts`, and put the official logo files in `/public/sites/`.
 - **Crawls page:** replace `CRAWLS` (from `src/lib/crawls-list.ts`) with a `useCrawls({ status, q, page })` query. Leave the **New crawl** button disabled until slice 5.
 - **Run page:** **delete** `PrototypeBar`, `SCENARIOS`, the `?settings=` / `CRAWLS` lookup and the `useCrawlRun` simulator usage.
@@ -47,8 +47,8 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 
 **Acceptance**
 - [ ] The site switcher lists RBC CM and RBC ITS with their logos; switching changes the crawls list and facts, and is remembered after a reload.
-- [ ] `/crawls` shows the current site's real crawls with working search, status filters, counts, pagination and CSV; a row opens its run page.
-- [ ] `/crawls/<real id>` shows the correct status badge, Started, Duration, Target and step list.
+- [ ] `/[site]/crawls` shows the current site's real crawls with working search, status filters, counts, pagination and CSV; a row opens its run page.
+- [ ] `/<site>/crawls/<real id>` shows the correct status badge, Started, Duration, Target and step list.
 - [ ] While a crawl runs, step statuses change within ~2s, without a reload.
 - [ ] After a failure, the failed step is selected and the later steps show "Not run · an earlier step failed".
 - [ ] The crawler is no slower with the writer running (records are queued, never written inline).

@@ -1,12 +1,12 @@
 "use client";
 
-// Crawls · /crawls
+// Crawl history · /[site]/crawls
 // Same frame as the run page: facts row → one data panel
-// (shared toolbar + table + pagination). Rows open /crawls/[crawlId].
+// (shared toolbar + table + pagination). Rows open /[site]/crawls/[crawlId].
 import { useMemo, useState } from "react";
 import NextLink from "next/link";
 import {
-  Badge, Box, ButtonGroup, Container, DataList, Flex, Grid, HStack, IconButton, Pagination, Progress, Span, Text,
+  Badge, Box, ButtonGroup, Container, DataList, Flex, Grid, HStack, Heading, IconButton, Pagination, Progress, Span, Text,
 } from "@chakra-ui/react";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
 
@@ -34,7 +34,7 @@ const fmtDate = (d: Date) =>
   d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
 
 export default function CrawlsPage() {
-  const { site } = useSite();
+  const site = useSite();
   const CRAWLS = useMemo(() => crawlsFor(site), [site]);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
@@ -61,7 +61,8 @@ export default function CrawlsPage() {
   return (
     <Box bg="bg" minH="100vh">
       <Box borderBottomWidth="1px" bg="bg.subtle">
-        <Container maxW="7xl" py="5">
+        <Container maxW="7xl" pt="7" pb="5">
+          <Heading size="xl" fontWeight="semibold" mb="5">Crawl history</Heading>
 
           <DataList.Root orientation="vertical" size="sm" display="grid" gridTemplateColumns={{ base: "repeat(2, 1fr)", md: "repeat(4, minmax(0, 1fr))" }} gap="5">
             <Fact label="Running now">{counts.active}</Fact>
@@ -91,7 +92,7 @@ export default function CrawlsPage() {
               </Grid>
               {pageRows.length === 0 ? (
                 <Text p="4" textStyle="sm" color="fg.muted">No crawls match.</Text>
-              ) : pageRows.map((c) => <CrawlRowView key={c.id} c={c} />)}
+              ) : pageRows.map((c) => <CrawlRowView key={c.id} c={c} site={site} />)}
             </Box>
           </Box>
           {rows.length > 0 && (
@@ -113,14 +114,14 @@ export default function CrawlsPage() {
   );
 }
 
-function CrawlRowView({ c }: { c: CrawlRow }) {
+function CrawlRowView({ c, site }: { c: CrawlRow; site: string }) {
   const live = c.status === "running" || c.status === "paused";
   return (
     <Grid
       asChild templateColumns={COLS} gap="4" px="4" py="2.5" alignItems="center" textStyle="sm"
       borderBottomWidth="1px" borderColor="border.muted" _hover={{ bg: "bg.subtle" }} fontVariantNumeric="tabular-nums"
     >
-      <NextLink href={`/crawls/${c.id}`}>
+      <NextLink href={`/${site}/crawls/${c.id}`}>
         <Text fontWeight="medium">{c.id}</Text>
         <Text color="fg.muted" truncate>{hostOf(c.url)}</Text>
         <Box><Badge size="sm" variant="outline" colorPalette={ENV_COLOR[c.environment]}>{ENVIRONMENTS[c.environment].label}</Badge></Box>

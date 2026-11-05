@@ -1,25 +1,18 @@
 "use client";
 
-// The site the user is working on (switched in the navbar). Remembered per browser.
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { DEFAULT_SITE, SITES, type SiteId } from "@/lib/sites";
+// The current website comes from the first URL segment (/rbccm/…, /rbcits/…).
+// It is also remembered per browser, so "/" opens the site used last.
+import { createContext, useContext, useEffect } from "react";
+import { DEFAULT_SITE, type SiteId } from "@/lib/sites";
 
-const KEY = "crawler.site";
-const SiteContext = createContext<{ site: SiteId; setSite: (s: SiteId) => void }>({ site: DEFAULT_SITE, setSite: () => {} });
+export const LAST_SITE_KEY = "crawler.site";
+const SiteContext = createContext<SiteId>(DEFAULT_SITE);
 
-export function SiteProvider({ children }: { children: React.ReactNode }) {
-  const [site, setSiteState] = useState<SiteId>(DEFAULT_SITE);
+export function SiteProvider({ site, children }: { site: SiteId; children: React.ReactNode }) {
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(KEY) as SiteId | null;
-      if (saved && saved in SITES) setSiteState(saved);
-    } catch { /* storage unavailable: keep the default */ }
-  }, []);
-  const setSite = useCallback((s: SiteId) => {
-    setSiteState(s);
-    try { localStorage.setItem(KEY, s); } catch { /* ignore */ }
-  }, []);
-  return <SiteContext.Provider value={{ site, setSite }}>{children}</SiteContext.Provider>;
+    try { localStorage.setItem(LAST_SITE_KEY, site); } catch { /* storage unavailable */ }
+  }, [site]);
+  return <SiteContext.Provider value={site}>{children}</SiteContext.Provider>;
 }
 
 export const useSite = () => useContext(SiteContext);
