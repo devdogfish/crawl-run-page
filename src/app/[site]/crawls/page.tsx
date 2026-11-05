@@ -6,11 +6,11 @@
 import { useMemo, useState } from "react";
 import NextLink from "next/link";
 import {
-  Badge, Box, ButtonGroup, Container, DataList, Flex, Grid, HStack, Heading, IconButton, Pagination, Progress, Span, Text,
+  Badge, Box, Container, DataList, Flex, Grid, HStack, Heading, Progress, Span, Text,
 } from "@chakra-ui/react";
-import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
+import { TablePagination } from "@/components/table-pagination";
 import { StageIcon } from "@/components/step-ui";
 import { crawlsFor, type CrawlListStatus, type CrawlRow } from "@/lib/crawls-list";
 import { useSite } from "@/components/site-context";
@@ -96,16 +96,7 @@ export default function CrawlsPage() {
             </Box>
           </Box>
           {rows.length > 0 && (
-            <Pagination.Root count={rows.length} pageSize={PAGE_SIZE} page={page} onPageChange={(e) => setPage(e.page)}>
-              <HStack justify="space-between" px="3" py="2" borderTopWidth="1px" bg="bg.subtle">
-                <Pagination.PageText format="long" textStyle="xs" color="fg.muted" fontVariantNumeric="tabular-nums" />
-                <ButtonGroup variant="ghost" size="xs">
-                  <Pagination.PrevTrigger asChild><IconButton aria-label="Previous page"><LuChevronLeft /></IconButton></Pagination.PrevTrigger>
-                  <Pagination.Items render={(pg) => <IconButton variant="ghost" color="fg.muted" _selected={{ bg: "bg.emphasized", color: "fg", fontWeight: "semibold" }}>{pg.value}</IconButton>} />
-                  <Pagination.NextTrigger asChild><IconButton aria-label="Next page"><LuChevronRight /></IconButton></Pagination.NextTrigger>
-                </ButtonGroup>
-              </HStack>
-            </Pagination.Root>
+            <TablePagination count={rows.length} pageSize={PAGE_SIZE} page={page} onPageChange={setPage} />
           )}
         </Flex>
       </Container>

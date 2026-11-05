@@ -15,12 +15,13 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  Badge, Box, Button, ButtonGroup, Container, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Pagination, Portal,
+  Badge, Box, Button, Container, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Portal,
   Select, Stack, Text, createListCollection,
 } from "@chakra-ui/react";
-import { LuChevronLeft, LuChevronRight, LuLink, LuX } from "react-icons/lu";
+import { LuLink, LuX } from "react-icons/lu";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
+import { TablePagination } from "@/components/table-pagination";
 import { useSite } from "@/components/site-context";
 import { crawlsFor } from "@/lib/crawls-list";
 import { ENVIRONMENTS } from "@/lib/settings";
@@ -226,16 +227,7 @@ function Pages() {
           </Box>
 
           {rows.length > 0 && (
-            <Pagination.Root count={rows.length} pageSize={PAGE_SIZE} page={page} onPageChange={(e) => setPage(e.page)}>
-              <HStack justify="space-between" px="3" py="2" borderTopWidth="1px" bg="bg.subtle">
-                <Pagination.PageText format="long" textStyle="xs" color="fg.muted" fontVariantNumeric="tabular-nums" />
-                <ButtonGroup variant="ghost" size="xs">
-                  <Pagination.PrevTrigger asChild><IconButton aria-label="Previous page"><LuChevronLeft /></IconButton></Pagination.PrevTrigger>
-                  <Pagination.Items render={(pg) => <IconButton variant="ghost" color="fg.muted" _selected={{ bg: "bg.emphasized", color: "fg", fontWeight: "semibold" }}>{pg.value}</IconButton>} />
-                  <Pagination.NextTrigger asChild><IconButton aria-label="Next page"><LuChevronRight /></IconButton></Pagination.NextTrigger>
-                </ButtonGroup>
-              </HStack>
-            </Pagination.Root>
+            <TablePagination count={rows.length} pageSize={PAGE_SIZE} page={page} onPageChange={setPage} />
           )}
         </Flex>
         {!fullLighthouse(a) && cat === "performance" && (

@@ -12,17 +12,18 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
-  Alert, Badge, Box, Breadcrumb, Button, ButtonGroup, Container, DataList, EmptyState, Flex, Grid, HStack, Heading, IconButton,
-  Menu, Pagination, Portal, Progress, ProgressCircle, Span, Stack, Tabs, Text,
+  Alert, Badge, Box, Breadcrumb, Button, Container, DataList, EmptyState, Flex, Grid, HStack, Heading, IconButton,
+  Menu, Portal, Progress, ProgressCircle, Span, Stack, Tabs, Text,
 } from "@chakra-ui/react";
 import {
-  LuArrowRight, LuChevronLeft, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuGauge, LuPause, LuPlay, LuRotateCcw, LuSettings2, LuSkipForward, LuTimer,
+  LuArrowRight, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuGauge, LuPause, LuPlay, LuRotateCcw, LuSettings2, LuSkipForward, LuTimer,
 } from "react-icons/lu";
 
 import { STAGE_COLORS, STATUS, StageAreaChart, StageIcon } from "@/components/step-ui";
 import { CodesBar, CrawlChart, HistoryChart } from "@/components/crawl-charts";
 import { LogViewer } from "@/components/log-viewer";
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
+import { TablePagination } from "@/components/table-pagination";
 import NextLink from "next/link";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
@@ -409,7 +410,7 @@ function StepPane({ run, step, onFullLighthouse }: { run: RunView; step: StepInf
           {tabs.map((t) => (
             <Tabs.Trigger key={t.v} value={t.v}>
               {t.label}
-              {"count" in t && t.count != null && <Badge size="xs" variant="subtle" fontVariantNumeric="tabular-nums">{fmtNum(t.count)}</Badge>}
+              {"count" in t && t.count != null && <Badge size="xs" variant="subtle" colorPalette="gray" fontVariantNumeric="tabular-nums">{fmtNum(t.count)}</Badge>}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
@@ -542,16 +543,7 @@ function PagesTable({ done }: { done: number }) {
         </Box>
       </Box>
       {rows.length > 0 && (
-        <Pagination.Root count={rows.length} pageSize={PAGE_SIZE} page={page} onPageChange={(e) => { setPage(e.page); setOpen(null); }}>
-          <HStack justify="space-between" px="3" py="2" borderTopWidth="1px" bg="bg.subtle">
-            <Pagination.PageText format="long" textStyle="xs" color="fg.muted" fontVariantNumeric="tabular-nums" />
-            <ButtonGroup variant="ghost" size="xs">
-              <Pagination.PrevTrigger asChild><IconButton aria-label="Previous page"><LuChevronLeft /></IconButton></Pagination.PrevTrigger>
-              <Pagination.Items render={(pg) => <IconButton variant="ghost" color="fg.muted" _selected={{ bg: "bg.emphasized", color: "fg", fontWeight: "semibold" }}>{pg.value}</IconButton>} />
-              <Pagination.NextTrigger asChild><IconButton aria-label="Next page"><LuChevronRight /></IconButton></Pagination.NextTrigger>
-            </ButtonGroup>
-          </HStack>
-        </Pagination.Root>
+        <TablePagination count={rows.length} pageSize={PAGE_SIZE} page={page} onPageChange={(p) => { setPage(p); setOpen(null); }} />
       )}
     </Flex>
   );
