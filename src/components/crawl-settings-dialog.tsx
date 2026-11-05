@@ -6,8 +6,8 @@
 //   view   → read-only (running or finished crawl)
 import { useState } from "react";
 import {
-  Alert, Badge, Button, CloseButton, Dialog, Field, Grid, Group, HStack, Input, NativeSelect, NumberInput, Portal,
-  Separator, Stack, Switch, Text,
+  Alert, Badge, Button, CloseButton, Dialog, Field, Grid, Group, HStack, Input, InputGroup, NativeSelect, NumberInput, Portal,
+  Stack, Switch, Text,
 } from "@chakra-ui/react";
 import { LuLock } from "react-icons/lu";
 
@@ -53,7 +53,7 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
       <Dialog.CloseTrigger asChild><CloseButton size="sm" /></Dialog.CloseTrigger>
 
       <Dialog.Body>
-        <Stack gap="6">
+        <Stack gap="7">
           {mode === "paused" && (
             <Alert.Root status="info" size="sm">
               <Alert.Indicator />
@@ -69,8 +69,7 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
 
           <Section title="Target" locked={lockedFixed}>
             <Field.Root disabled={lockedFixed}>
-              <Field.Label>{SITES[s.site].name} · environment and URL</Field.Label>
-              <Group attached w="full">
+              <Group attached w="full" aria-label={`${SITES[s.site].name}: environment and URL`}>
                 <NativeSelect.Root size="sm" w="40" flexShrink={0} disabled={lockedFixed}>
                   <NativeSelect.Field
                     value={s.environment}
@@ -82,7 +81,6 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
                 </NativeSelect.Root>
                 <Input size="sm" value={s.url} onChange={(e) => set("url", e.target.value)} />
               </Group>
-              <Field.HelperText>{lockedFixed ? "A crawl always keeps the site it started on. Start a new crawl to crawl another environment." : "Choosing an environment fills in its URL. Switch sites in the top-left."}</Field.HelperText>
             </Field.Root>
           </Section>
 
@@ -109,12 +107,12 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
           </Section>
 
           <Section title="Throughput" note={mode === "create" ? undefined : "Editable while paused"} locked={lockedLive}>
-            <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap="4">
+            <Grid templateColumns={{ base: "1fr 1fr", sm: "repeat(3, 1fr)" }} gap="4">
               <Num label="Request delay" unit="ms" help="Wait between requests, per worker" value={s.delayMs} min={0} max={10_000} step={50} disabled={lockedLive} onChange={(v) => set("delayMs", v)} />
-              <Num label="Request timeout" unit="s" help="Give up on a request after this long" value={s.timeoutS} min={1} max={120} disabled={lockedLive} onChange={(v) => set("timeoutS", v)} />
+              <Num label="Timeout" unit="s" help="Give up on a request after this long" value={s.timeoutS} min={1} max={120} disabled={lockedLive} onChange={(v) => set("timeoutS", v)} />
               <Num label="Concurrency" unit="workers" help="Requests in flight at once" value={s.concurrency} min={1} max={256} disabled={lockedLive} onChange={(v) => set("concurrency", v)} />
-              <Num label="Max retries" unit="per URL" help="For 5xx responses and timeouts" value={s.maxRetries} min={0} max={10} disabled={lockedLive} onChange={(v) => set("maxRetries", v)} />
-              <Num label="Lighthouse sample" unit="pages" help="Audited after the crawl" value={s.lighthouseSample} min={10} max={2_000} step={10} disabled={lockedLive} onChange={(v) => set("lighthouseSample", v)} />
+              <Num label="Retries" unit="per URL" help="Retries for 5xx responses and timeouts" value={s.maxRetries} min={0} max={10} disabled={lockedLive} onChange={(v) => set("maxRetries", v)} />
+              <Num label="Lighthouse sample" unit="pages" help="Pages audited after the crawl" value={s.lighthouseSample} min={10} max={2_000} step={10} disabled={lockedLive} onChange={(v) => set("lighthouseSample", v)} />
             </Grid>
           </Section>
         </Stack>
@@ -140,12 +138,11 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
 function Section({ title, note, locked, children }: { title: string; note?: string; locked: boolean; children: React.ReactNode }) {
   return (
     <Stack gap="3">
-      <HStack gap="2">
+      <HStack gap="2" minH="5">
         <Text textStyle="sm" fontWeight="semibold">{title}</Text>
         {locked ? <Badge size="sm" variant="subtle" colorPalette="gray"><LuLock />Locked</Badge>
           : note ? <Badge size="sm" variant="subtle" colorPalette="blue">{note}</Badge> : null}
       </HStack>
-      <Separator />
       {children}
     </Stack>
   );
@@ -155,14 +152,15 @@ function Num({ label, unit, help, value, min, max, step = 1, disabled, onChange 
   label: string; unit: string; help: string; value: number; min: number; max: number; step?: number; disabled: boolean; onChange: (v: number) => void;
 }) {
   return (
-    <Field.Root disabled={disabled}>
-      <Field.Label>{label} <Text as="span" color="fg.muted" fontWeight="normal">({unit})</Text></Field.Label>
+    <Field.Root disabled={disabled} title={help}>
+      <Field.Label>{label}</Field.Label>
       <NumberInput.Root size="sm" w="full" value={String(value)} min={min} max={max} step={step} disabled={disabled}
         onValueChange={(e) => Number.isFinite(e.valueAsNumber) && onChange(e.valueAsNumber)}>
         <NumberInput.Control />
-        <NumberInput.Input />
+        <InputGroup endElement={unit} endElementProps={{ me: "6", color: "fg.muted", fontSize: "xs", pointerEvents: "none" }}>
+          <NumberInput.Input />
+        </InputGroup>
       </NumberInput.Root>
-      <Field.HelperText>{help}</Field.HelperText>
     </Field.Root>
   );
 }
