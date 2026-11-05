@@ -277,7 +277,6 @@ function Sidebar({ run, steps, job, selected, onSelect, onFullLighthouse }: {
   return (
     <Stack gap="6" position={{ lg: "sticky" }} top={{ lg: "16" }}>
       <Box>
-        <SectionLabel>Steps</SectionLabel>
         <Stack gap="0.5">
           {steps.map((s) => <StepButton key={s.id} step={s} selected={s.id === selected} onSelect={onSelect} />)}
           {/* Optional full-site audit: same row as the other steps, started on demand */}
@@ -318,10 +317,6 @@ function CrawlTrend({ run }: { run: RunView }) {
       <HistoryChart compact h="12" current={current} live={live} />
     </Box>
   );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <Text textStyle="xs" fontWeight="medium" color="fg.muted" mb="2" px="2">{children}</Text>;
 }
 
 function StepButton({ step: s, selected, onSelect }: { step: StepInfo; selected: boolean; onSelect: (id: string) => void }) {
