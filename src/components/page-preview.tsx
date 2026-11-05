@@ -5,6 +5,8 @@
 //   live       → the stored HTML rendered again: any viewport width, hover to inspect any element,
 //                and accessibility layers computed from the DOM (tab order, headings, landmarks, alt text).
 //   crop       → a zoomed slice around one element, used as evidence in the issue panel.
+// Issues are shown in "focus" style: only the selected one is outlined (the page dims around it); every other
+// issue is a dot on a rail at the left edge, at its element's height. Hover a dot to outline it, click to select.
 // PROTOTYPE: both modes render the generated HTML; in the real app "screenshot" is an image and the
 // boxes come from the crawl (no stored HTML needed). Live render is what the extra ~15% storage would buy.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -12,15 +14,6 @@ import { Box, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
 
 export type Layer = "issues" | "tab" | "headings" | "landmarks" | "alt";
-// PROTOTYPE: four ways to show the issues that aren't selected. Pick one, then remove the others.
-//   focus     → only the selected issue is outlined, the page dims around it; the rest are dots on a rail at the left
-//   outline   → every issue gets a thin outline
-//   marker    → a small dot on each element's corner
-//   underline → a line under each element, like a spell checker
-export type OverlayStyle = "focus" | "outline" | "marker" | "underline";
-export const OVERLAY_STYLES: { value: OverlayStyle; label: string }[] = [
-  { value: "focus", label: "Focus" }, { value: "outline", label: "Outlines" }, { value: "marker", label: "Markers" }, { value: "underline", label: "Underlines" },
-];
 type Rect = { x: number; y: number; w: number; h: number };
 type Mark = Rect & { label: string; bad?: boolean };
 
@@ -33,8 +26,7 @@ const nameOf = (el: Element) => {
   return /[\p{L}\p{N}]/u.test(n) ? n.slice(0, 60) : "";
 };
 
-export function PagePreview({ html, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height, overlay = "focus" }: {
-  overlay?: OverlayStyle;
+export function PagePreview({ html, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height }: {
   html: string;
   instances: Instance[]; // the ones to draw (already filtered)
   selected: number | null;
@@ -148,30 +140,11 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
             const r = boxes.get(it.k)!;
             const on = it.k === selected;
             const peek = it.k === peekK || (highlightRule === it.rule && !on);
-            const sev = SEV_COLOR[RULE_CATALOG[it.rule].severity];
-            const pick = (e: React.MouseEvent) => { e.stopPropagation(); onSelect?.(it.k); };
-            if (!on && !peek && crop == null && overlay !== "focus") {
-              const faded = highlightRule != null && highlightRule !== it.rule ? 0.3 : 1;
-              if (overlay === "outline") return (
-                <Box key={it.k} position="absolute" left={u(-3, r.x * s)} top={u(-3, r.y * s)} w={u(6, r.w * s)} h={u(6, r.h * s)} rounded={u(4)} cursor="pointer"
-                  opacity={faded} boxShadow={`0 0 0 ${u(1)} ${sev}8c`} _hover={{ boxShadow: `0 0 0 ${u(1.5)} ${sev}` }} onClick={pick} />
-              );
-              if (overlay === "marker") return (
-                <Box key={it.k} as="button" aria-label={RULE_CATALOG[it.rule].title} position="absolute" left={u(-5, r.x * s)} top={u(-5, r.y * s)} w={u(10)} h={u(10)}
-                  rounded="full" bg={sev} opacity={faded} boxShadow={`0 0 0 ${u(2)} white`} cursor="pointer" _hover={{ transform: "scale(1.25)" }}
-                  onMouseEnter={() => setPeekK(it.k)} onMouseLeave={() => setPeekK(null)} onClick={pick} />
-              );
-              return ( // underline
-                <Box key={it.k} position="absolute" left={`${r.x}px`} top={u(1, (r.y + r.h) * s)} w={`${r.w}px`} h={u(2)} rounded="full" bg={sev} opacity={faded * 0.8}
-                  cursor="pointer" css={{ "&::before": { content: '""', position: "absolute", inset: `-${6 / s}px 0` } }}
-                  onMouseEnter={() => setPeekK(it.k)} onMouseLeave={() => setPeekK(null)} onClick={pick} />
-              );
-            }
             if (!on && !peek) return null;
             return (
               <Box key={it.k} position="absolute" left={u(-4, r.x * s)} top={u(-4, r.y * s)} w={u(8, r.w * s)} h={u(8, r.h * s)} rounded={u(4)} pointerEvents="none"
                 boxShadow={on
-                  ? `0 0 0 ${u(2)} ${ACCENT}${crop == null && overlay === "focus" ? `, 0 0 0 100vmax rgba(15,17,20,.10)` : ""}`
+                  ? `0 0 0 ${u(2)} ${ACCENT}${crop == null ? `, 0 0 0 100vmax rgba(15,17,20,.10)` : ""}`
                   : `0 0 0 ${u(1.5)} ${ACCENT}99`}>
                 {on && crop == null && (
                   <Tag s={s} top={u(-28)} left="0">
@@ -182,7 +155,7 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
               </Box>
             );
           })}
-          {layers.includes("issues") && crop == null && overlay === "focus" && rail.map(({ it, y, col }) => {
+          {layers.includes("issues") && crop == null && rail.map(({ it, y, col }) => {
             const on = it.k === selected;
             return (
               <Box key={`dot${it.k}`} as="button" aria-label={RULE_CATALOG[it.rule].title} position="absolute" top={u(-5, y * s)} left={u(6 + col * 12)}

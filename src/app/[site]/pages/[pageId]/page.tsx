@@ -19,7 +19,7 @@ import {
 import { LuChevronDown, LuChevronLeft, LuChevronRight, LuCopy, LuEllipsis, LuExternalLink, LuFileQuestion, LuLayers, LuSearch, LuSparkles } from "react-icons/lu";
 
 import { AiPanel, type AiReply } from "@/components/ai-panel";
-import { OVERLAY_STYLES, PagePreview, type Layer, type OverlayStyle } from "@/components/page-preview";
+import { PagePreview, type Layer } from "@/components/page-preview";
 import { useSite } from "@/components/site-context";
 import { Tooltip } from "@/components/ui/tooltip";
 import { RULE_CATALOG, SEVERITIES, issuePrompt, pageIssues, sevRank, sourceLines, type Instance } from "@/lib/page-issues";
@@ -74,7 +74,6 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const [mode, setMode] = useState<"screenshot" | "live">("screenshot");
   const [viewport, setViewport] = useState(1280);
   const [layers, setLayers] = useState<Layer[]>(["issues"]);
-  const [overlay, setOverlay] = useState<OverlayStyle>("focus"); // PROTOTYPE: compare styles, then keep one
   const comparing = b != null;
 
   const visible = useMemo(() => {
@@ -241,12 +240,8 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                   </Menu.Root>
                 </>
               )}
-              <SegmentGroup.Root size="xs" value={overlay} onValueChange={(e) => setOverlay(e.value as OverlayStyle)} ms="auto" title="Prototype: issue overlay style">
-                <SegmentGroup.Indicator />
-                <SegmentGroup.Items items={OVERLAY_STYLES} />
-              </SegmentGroup.Root>
               {current && (
-                <HStack gap="2" textStyle="xs" color="fg.muted" minW="0">
+                <HStack gap="2" ms="auto" textStyle="xs" color="fg.muted" minW="0">
                   <SevDot sev={RULE_CATALOG[current.rule].severity} />
                   <Text truncate maxW="sm">{RULE_CATALOG[current.rule].title}</Text>
                   <Button size="xs" variant="ghost" onClick={() => setTab("issues")}>Details</Button>
@@ -255,7 +250,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
             </HStack>
             <Box maxW={mode === "live" && viewport < 1280 ? `${viewport + 2}px` : "5xl"} mx="auto">
               <PagePreview html={html} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
-                onSelect={setSelected} mode={mode} viewport={mode === "live" ? viewport : 1280} layers={layers} overlay={overlay} />
+                onSelect={setSelected} mode={mode} viewport={mode === "live" ? viewport : 1280} layers={layers} />
             </Box>
           </Tabs.Content>
 
