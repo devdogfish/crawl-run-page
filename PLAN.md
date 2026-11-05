@@ -45,25 +45,75 @@ The rule that ordered Tiers 0 and 1 still applies to anything new that's capture
 
 **How to align:**
 1. **Use the prototype's files, not rewrites of them.** Where the real app has its own version of a page or component, replace it with the prototype's file. Then change only the data layer: replace the simulator hooks (`useCrawlRun`, `CRAWLS`, `pageAt`) with API queries that return the same types. Keep markup, styles, spacing and copy as they are.
-2. **Data that doesn't fit the layout is a data problem, not a layout problem.** If the API returns a different shape, map it to the prototype's types in the query hook. If a value is missing, fix the API, or show the prototype's own empty or "~" state; don't add, drop or rearrange UI to work around it. One known difference: the real pipeline's steps (Discover, Crawl, External links, Checks, Compare, Lighthouse) replace the prototype's Parse, Transform, Load and Publish. The step list layout stays the same, only the rows change.
-3. **Compare side by side, state by state.** Run the prototype (`pnpm dev`) and the real app at the same viewport widths (1440 px and 390 px), in light and dark mode. For each state below, put the real page next to the prototype's and fix every difference: layout, spacing, type, colour, icons, copy, empty states, tooltips.
-4. **Delete what only the prototype needs:** the grey Prototype bar, the scenario switcher and the simulators.
+2. **Data that doesn't fit the layout is a data problem, not a layout problem.** If the API returns a different shape, map it to the prototype's types in the query hook. If a value is missing, fix the API, or show the prototype's own empty or "~" state; don't add, drop or rearrange UI to work around it.
+3. **Stages: the layout is fixed, the list of stages may differ.** Production won't have exactly the prototype's stages. Whatever the stages are, each one uses the prototype's row in the step list and its pane: header, Logs and Metrics tabs, and the same charts. Three stages are pinned:
+   - **Crawl: copied exactly.** The same row (pages done of ~expected, progress bar) and pane: Logs, Metrics (rate, URLs discovered, queue, median render; the throughput and queue chart with its "usual" line; the responses bar) and Pages.
+   - **Transform: may be split into more stages** (for example one per model or table). Each piece is its own row with the prototype's Transform pane: Logs, and Metrics with its rate chart.
+   - **Lighthouse (the sample): copied exactly, and it runs automatically** as a normal stage of every crawl, with Logs, Metrics and Scores. Nobody starts it.
+   - **Lighthouse · full site is the only stage a user starts:** the optional last row with **Run**, shown after a successful crawl, then a normal row once it's running.
+4. **Phones are part of the alignment, not an extra.** At 390 px the prototype stacks the header facts in two columns, then the step list, the duration chart and the selected stage's pane; charts and tabs shrink to fit. The real app must do the same. Since the components are copied, this mostly comes for free; check it anyway, state by state.
+5. **Compare side by side, state by state.** Run the prototype (`pnpm dev`) and the real app at the same viewport widths (1440 px and 390 px), in light and dark mode. For each state below, put the real page next to the prototype's and fix every difference: layout, spacing, type, colour, icons, copy, empty states, tooltips.
+6. **Delete what only the prototype needs:** the grey Prototype bar, the scenario switcher and the simulators.
+
+This should be quick: copy the UI and hook it up to real data. The work is in the data hooks, not in the markup.
 
 **States to compare** (the prototype reaches them with its Prototype bar: Healthy run, Rate limited, Fails after crawl; Restart; Skip stage):
 - Crawls list: default, searched, filtered by each status, an empty result, the last page.
 - Run page: running (Crawl step selected, each tab: Logs, Metrics, Pages), rate-limited (the alert on the crawl step), paused (badge, frozen clock, Settings and Resume), each later step running, succeeded, failed (failed step selected, "Not run · an earlier step failed" below it), and the full-site Lighthouse row before, during and after its run.
 - Dialogs: New crawl, settings while paused (Target and Discovery locked), read-only settings from the `⋯` menu.
 
-One state for reference: a running crawl with the Crawl step and its Logs tab selected.
+**Reference images.** Captured from the prototype at 1440 px wide (and 390 px for the phone ones), light mode, with the Prototype bar hidden. They're a quick way to compare; when an image and the prototype disagree, the prototype wins. Re-capture them after any change to these pages.
 
-![Crawl 812 while crawling: the run page as it should look](docs/images/crawl-run-reference.webp)
+**Overall states**
 
-(In this capture the log area is blank. The target shows the log lines, as the prototype does.)
+| State | 1440 px | 390 px |
+|---|---|---|
+| Crawls list | ![Crawls list](docs/images/crawls/crawls-list.webp) | ![Crawls list, phone](docs/images/crawls/crawls-list-mobile.webp) |
+| New crawl dialog | ![New crawl dialog](docs/images/crawls/dialog-new-crawl.webp) | |
+| Running · Crawl · Logs | ![Running, Logs](docs/images/crawls/run-running-logs.webp) | ![Running, Logs, phone](docs/images/crawls/running-crawl-logs-mobile.webp) |
+| Running · Crawl · Metrics | ![Running, Metrics](docs/images/crawls/run-running-metrics.webp) | ![Running, Metrics, phone](docs/images/crawls/running-crawl-metrics-mobile.webp) |
+| Running · Crawl · Pages | ![Running, Pages](docs/images/crawls/run-running-pages.webp) | |
+| Rate limited (alert on the Crawl stage) | ![Rate limited](docs/images/crawls/run-rate-limited.webp) | |
+| Paused | ![Paused](docs/images/crawls/run-paused.webp) | |
+| Settings while paused (Target and Discovery locked) | ![Settings while paused](docs/images/crawls/dialog-settings-paused.webp) | |
+| Failed (failed stage selected, later stages not run) | ![Failed](docs/images/crawls/run-failed.webp) | |
+| Succeeded | ![Succeeded](docs/images/crawls/run-succeeded.webp) | ![Succeeded, phone](docs/images/crawls/run-succeeded-mobile.webp) |
+
+**Each stage and tab** (a finished crawl, so every chart is complete)
+
+| Stage · tab | 1440 px | 390 px |
+|---|---|---|
+| Crawl · Logs | ![](docs/images/crawls/stage-crawl-logs.webp) | ![](docs/images/crawls/stage-crawl-logs-mobile.webp) |
+| Crawl · Metrics | ![](docs/images/crawls/stage-crawl-metrics.webp) | ![](docs/images/crawls/stage-crawl-metrics-mobile.webp) |
+| Crawl · Pages | ![](docs/images/crawls/stage-crawl-pages.webp) | |
+| Parse · Logs | ![](docs/images/crawls/stage-parse-logs.webp) | ![](docs/images/crawls/stage-parse-logs-mobile.webp) |
+| Parse · Metrics | ![](docs/images/crawls/stage-parse-metrics.webp) | ![](docs/images/crawls/stage-parse-metrics-mobile.webp) |
+| Transform · Logs | ![](docs/images/crawls/stage-transform-logs.webp) | ![](docs/images/crawls/stage-transform-logs-mobile.webp) |
+| Transform · Metrics | ![](docs/images/crawls/stage-transform-metrics.webp) | ![](docs/images/crawls/stage-transform-metrics-mobile.webp) |
+| Load · Logs | ![](docs/images/crawls/stage-load-logs.webp) | ![](docs/images/crawls/stage-load-logs-mobile.webp) |
+| Load · Metrics | ![](docs/images/crawls/stage-load-metrics.webp) | ![](docs/images/crawls/stage-load-metrics-mobile.webp) |
+| Lighthouse (sample) · Logs | ![](docs/images/crawls/stage-lighthouse-logs.webp) | ![](docs/images/crawls/stage-lighthouse-logs-mobile.webp) |
+| Lighthouse (sample) · Metrics | ![](docs/images/crawls/stage-lighthouse-metrics.webp) | ![](docs/images/crawls/stage-lighthouse-metrics-mobile.webp) |
+| Lighthouse (sample) · Scores | ![](docs/images/crawls/stage-lighthouse-scores.webp) | ![](docs/images/crawls/stage-lighthouse-scores-mobile.webp) |
+| Publish · Logs | ![](docs/images/crawls/stage-publish-logs.webp) | ![](docs/images/crawls/stage-publish-logs-mobile.webp) |
+| Publish · Metrics | ![](docs/images/crawls/stage-publish-metrics.webp) | ![](docs/images/crawls/stage-publish-metrics-mobile.webp) |
+| Lighthouse · full site, running · Logs | ![](docs/images/crawls/lighthouse-full-running-logs.webp) | |
+| Lighthouse · full site, running · Metrics | ![](docs/images/crawls/lighthouse-full-running-metrics.webp) | |
+| Lighthouse · full site, running · Scores | ![](docs/images/crawls/lighthouse-full-running-scores.webp) | |
+| Lighthouse · full site, done · Scores | ![](docs/images/crawls/lighthouse-full-done-scores.webp) | |
+
+Parse, Load and Publish are the prototype's stand-ins; production's own stages (and Transform's pieces) use the same layout as these.
+
+Not captured yet: dark mode, the crawls list's search, filter and empty states, the read-only settings dialog, and stages other than Crawl while they're still running. Compare those against the prototype directly.
+
+The first screenshot shared for this (the same running state, with a blank log area) is kept at [docs/images/crawl-run-reference.webp](docs/images/crawl-run-reference.webp).
 
 **Done when:**
 
 **Layout**
 - [ ] For every state above, the real page and the prototype's are the same at 1440 px and 390 px, in light and dark mode, side by side.
+- [ ] Every stage, including production's own, uses the prototype's row and pane. Crawl and Lighthouse (sample) match exactly, the sample runs on its own, and only the full-site audit has a Run button.
+- [ ] At 390 px nothing is cut off or laid out differently from the prototype.
 - [ ] The real app's `/crawls` pages use the prototype's route and component files; diffs against this repo touch only data hooks and imports.
 
 **Run page**
