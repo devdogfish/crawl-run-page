@@ -8,7 +8,7 @@
 // PROTOTYPE: both modes render the generated HTML; in the real app "screenshot" is an image and the
 // boxes come from the crawl (no stored HTML needed). Live render is what the extra ~15% storage would buy.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Box, Text } from "@chakra-ui/react";
+import { Box, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
 
 export type Layer = "issues" | "tab" | "headings" | "landmarks" | "alt";
@@ -16,6 +16,7 @@ type Rect = { x: number; y: number; w: number; h: number };
 type Mark = Rect & { label: string; bad?: boolean };
 
 const SEV_COLOR: Record<string, string> = { critical: "#e5484d", serious: "#f76b15", moderate: "#d6a300", minor: "#8b8d98" };
+const ACCENT = "#0d74ce"; // selection and hover, like a browser inspector
 const rectOf = (el: Element): Rect => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; };
 // Rough accessible name: aria-label, alt, or visible text with at least one letter or digit (an icon glyph isn't a name)
 const nameOf = (el: Element) => {
@@ -94,7 +95,8 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
   const tx = viewport * cropScale > width ? Math.min(0, Math.max(width - viewport * cropScale, cx)) : cx;
   const ty = cropRect && height ? Math.min(0, Math.max(height - docH * cropScale, height / 2 - (cropRect.y + cropRect.h / 2) * cropScale)) : 0;
   const s = crop != null ? cropScale : scale;
-  const lab = 11 / s; // labels stay ~11px on screen whatever the scale
+  // Overlay sizes are given in screen pixels and converted to page pixels, so they look the same at any zoom
+  const u = (screenPx: number, pagePxTimesScale = 0) => `${(screenPx + pagePxTimesScale) / s}px`;
 
   const onMove = (e: React.MouseEvent) => {
     if (!live) return;
@@ -120,19 +122,16 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
           {layers.includes("issues") && drawn.map((it) => {
             const r = boxes.get(it.k)!;
             const sev = RULE_CATALOG[it.rule].severity;
-            const on = it.k === selected, hi = highlightRule === it.rule;
-            const dim = selected != null && !on && !hi && crop == null;
+            const on = it.k === selected;
+            const faded = highlightRule != null && highlightRule !== it.rule && !on;
             return (
-              <Box key={it.k} position="absolute" left={`${r.x - 3}px`} top={`${r.y - 3}px`} w={`${r.w + 6}px`} h={`${r.h + 6}px`}
-                border={`${(on ? 3 : 2) / s}px solid ${SEV_COLOR[sev]}`} bg={on && crop == null ? `${SEV_COLOR[sev]}22` : undefined} rounded="sm"
-                opacity={dim ? 0.35 : 1} cursor="pointer" onClick={(e) => { e.stopPropagation(); onSelect?.(it.k); }}
-                boxShadow={on ? `0 0 0 ${4 / s}px ${SEV_COLOR[sev]}44` : undefined}
-                css={hi && !on ? { animation: "pulse 1.2s ease-in-out infinite", "@keyframes pulse": { "50%": { boxShadow: `0 0 0 ${6 / s}px ${SEV_COLOR[sev]}55` } } } : undefined}>
-                {crop == null && (
-                  <Box position="absolute" top={`${-9 / s}px`} left={`${-9 / s}px`} minW={`${18 / s}px`} h={`${18 / s}px`} px={`${4 / s}px`} rounded="full"
-                    bg={SEV_COLOR[sev]} color="white" fontSize={`${lab}px`} fontWeight="bold" display="flex" alignItems="center" justifyContent="center" lineHeight="1">
-                    {it.k + 1}
-                  </Box>
+              <Box key={it.k} position="absolute" left={u(-3, r.x * s)} top={u(-3, r.y * s)} w={u(6, r.w * s)} h={u(6, r.h * s)}
+                rounded={u(4)} cursor="pointer" opacity={faded ? 0.25 : 1} transition="opacity 0.15s, box-shadow 0.15s"
+                boxShadow={on ? `0 0 0 ${u(2)} ${ACCENT}, 0 0 0 ${u(6)} ${ACCENT}26` : `0 0 0 ${u(1)} ${SEV_COLOR[sev]}b3`}
+                css={{ "&:hover": { boxShadow: on ? undefined : `0 0 0 ${u(1.5)} ${SEV_COLOR[sev]}` } }}
+                onClick={(e) => { e.stopPropagation(); onSelect?.(it.k); }}>
+                {on && crop == null && (
+                  <Tag s={s} top={u(-26)} left="0"><Box as="span" display="inline-block" w={u(6)} h={u(6)} rounded="full" bg={SEV_COLOR[sev]} me={u(6)} />{RULE_CATALOG[it.rule].title}</Tag>
                 )}
               </Box>
             );
@@ -141,27 +140,44 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
           {live && (["tab", "headings", "landmarks", "alt"] as const).filter((l) => layers.includes(l)).map((l) =>
             marks[l].map((m, n) => (
               <Box key={`${l}${n}`} position="absolute" left={`${m.x}px`} top={`${m.y}px`} w={`${m.w}px`} h={`${m.h}px`} pointerEvents="none"
-                border={l === "landmarks" || l === "headings" ? `${1.5 / s}px dashed ${m.bad ? "#e5484d" : l === "landmarks" ? "#8e4ec6" : "#0090ff"}` : undefined}>
-                <Box position="absolute" top={l === "tab" ? `${-8 / s}px` : 0} left={l === "tab" ? `${-8 / s}px` : 0} fontSize={`${lab}px`} lineHeight="1.3"
-                  px={`${4 / s}px`} rounded={l === "tab" ? "full" : "sm"} fontWeight="semibold" whiteSpace="nowrap"
-                  bg={m.bad ? "#e5484d" : l === "tab" ? "#0d74ce" : l === "landmarks" ? "#8e4ec6" : l === "alt" ? "#1d2733" : "#0090ff"} color="white">
-                  {m.label}
-                </Box>
+                rounded={u(3)} boxShadow={l === "landmarks" ? `inset 0 0 0 ${u(1)} ${m.bad ? "#e5484d" : "#8b8d98"}` : undefined}>
+                {l === "tab" ? (
+                  <Box position="absolute" top={u(-8)} left={u(-8)} w={u(16)} h={u(16)} rounded="full" display="flex" alignItems="center" justifyContent="center"
+                    bg={m.bad ? "#e5484d" : "#18191b"} color="white" fontSize={u(9)} fontWeight="600" boxShadow={`0 0 0 ${u(1.5)} white`} fontVariantNumeric="tabular-nums">
+                    {m.label}
+                  </Box>
+                ) : (
+                  l === "headings"
+                    // in the left margin, level by level, so the tags don't cover the text
+                    ? <Tag s={s} top="50%" transform="translateY(-50%)" right="100%" me={u(8)} bad={m.bad}>{m.label}</Tag>
+                    : <Tag s={s} top={l === "alt" ? undefined : u(-22)} bottom={l === "alt" ? u(4) : undefined} left={l === "alt" ? u(4) : "0"} bad={m.bad}>{m.label}</Tag>
+                )}
               </Box>
             )))}
 
           {live && hover && (
             <Box position="absolute" left={`${hover.x}px`} top={`${hover.y}px`} w={`${hover.w}px`} h={`${hover.h}px`} pointerEvents="none"
-              outline={`${1.5 / s}px solid #0d74ce`} bg="#0d74ce14">
-              <Box position="absolute" bottom="100%" left="0" mb={`${4 / s}px`} bg="#111" color="white" fontSize={`${lab}px`} px={`${6 / s}px`} py={`${2 / s}px`} rounded="sm" whiteSpace="nowrap">
-                <Text as="span" fontFamily="mono">{hover.tag}</Text>
-                <Text as="span" opacity={0.7}> · {Math.round(hover.w)}×{Math.round(hover.h)} · name: {hover.name || "(none)"}</Text>
-                {hover.k != null && <Text as="span" color="#ffb4a8"> · issue #{hover.k + 1}</Text>}
-              </Box>
+              boxShadow={`inset 0 0 0 ${u(1)} ${ACCENT}`} bg={`${ACCENT}0d`}>
+              <Tag s={s} bottom="100%" left="0" mb={u(4)}>
+                <Box as="span" fontFamily="mono">{hover.tag}</Box>
+                <Box as="span" opacity={0.6}> {Math.round(hover.w)}×{Math.round(hover.h)}{hover.name ? "" : " · no accessible name"}</Box>
+              </Tag>
             </Box>
           )}
         </Box>
       </Box>
+    </Box>
+  );
+}
+
+// Small dark label on the overlay (sizes in screen pixels, divided by the scale)
+function Tag({ s, bad, children, ...rest }: BoxProps & { s: number; bad?: boolean }) {
+  const u = (n: number) => `${n / s}px`;
+  return (
+    <Box position="absolute" display="flex" alignItems="center" whiteSpace="nowrap" maxW={u(360)} overflow="hidden"
+      bg={bad ? "#e5484d" : "#18191b"} color="white" fontSize={u(11)} fontWeight="500" lineHeight="1" px={u(6)} py={u(4)} rounded={u(4)}
+      boxShadow={`0 ${u(1)} ${u(3)} rgba(0,0,0,.2)`} fontFamily="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" {...rest}>
+      {children}
     </Box>
   );
 }
