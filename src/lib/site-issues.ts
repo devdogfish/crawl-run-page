@@ -9,14 +9,12 @@ import { pagesFor, siteSize, type PageView } from "@/lib/site-pages";
 import { PRIORITY, type Priority } from "@/lib/priority";
 import type { SiteId } from "@/lib/sites";
 
-// Where an element gets fixed. Template and code are one file each; content is one field type,
-// spread over one content record per page.
-export type FixSource = { key: string; owner: Owner; label: string; href: string | null };
+// Where an element gets fixed: what sourceOf reads from the HTML. Content sources are one DCR field type,
+// spread over one record per page.
+export type FixSource = { key: string; owner: Owner; label: string };
 export function fixSource(it: Instance, p: PageView): FixSource {
   const s = sourceOf(it, p);
-  if (s.owner !== "content") return { key: s.label, owner: s.owner, label: s.label, href: s.href };
-  const field = s.label.split(" · ")[1];
-  return { key: `content:${field}`, owner: "content", label: `${field} field`, href: null };
+  return { key: s.label, owner: s.owner, label: s.label };
 }
 
 // One rule on one page from one source: its current elements, how many are new, how many were fixed
@@ -97,7 +95,7 @@ export function rulesPrompt(site: SiteId, crawl: number, rows: RuleRow[]) {
     ...rows.flatMap((r) => [
       `## ${r.priority} ${r.rule.title} (${r.rule.id}${r.rule.criterion ? `, WCAG ${r.rule.criterion.split(" ")[0]}` : ""}): ${r.pages.toLocaleString("en-US")} pages`,
       `How to fix: ${r.rule.howToFix}`,
-      ...r.sources.map((s) => `- ${s.src.owner === "content" ? `CMS ${s.src.label}` : s.src.label}: ${s.pages.toLocaleString("en-US")} pages, ${s.elements.toLocaleString("en-US")} elements`), "",
+      ...r.sources.map((s) => `- ${s.src.label}: ${s.pages.toLocaleString("en-US")} pages, ${s.elements.toLocaleString("en-US")} elements`), "",
     ]),
   ].join("\n");
 }

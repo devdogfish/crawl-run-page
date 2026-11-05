@@ -404,22 +404,26 @@ export function issuePrompt(p: PageView, it: Instance) {
 }
 
 // ───────── Who fixes it, and where ─────────
-// Real app: template = markup hash seen on many pages; content = element inside a CMS rich-text field
-// (the CMS renders data-cms-entry / data-cms-field on it); code = element rendered by a component
-// (data-component, or source maps in dev builds). See SPEC.md, Developer handoff.
+// Only what the crawler can read from the page's HTML (research/teamsite-cms-traces.md). No links: we don't know
+// yet where the TeamSite source lives, and component ids only name a component on one page, not a file.
+//   template: shared markup (header, footer, cookie banner) or a region of the page template (ls:begin[head-injection], [script])
+//   code:     a custom-coded component (its own CSS/JS under /assets/rbccm/)
+//   content:  a DCR field (article body, hero image) or a page property (meta description), edited in TeamSite
 export type Owner = "code" | "template" | "content";
-export const OWNER_LABEL: Record<Owner, string> = { code: "Code", template: "Template", content: "Content (CMS)" };
-export function sourceOf(it: Instance, p: PageView): { owner: Owner; label: string; href: string } {
-  const repo = "https://github.com/rbc/rbccm-web/blob/main/";
-  const cms = `https://cms.rbccm.com/entries/${p.i}`;
+export const OWNER_LABEL: Record<Owner, string> = { code: "Code", template: "Template", content: "Content" };
+export function sourceOf(it: Instance, _p?: PageView): { owner: Owner; label: string } {
   if (it.shared != null) {
-    const file = it.rule === "link-name" ? "templates/partials/header.njk" : it.rule === "region" ? "templates/partials/cookie-banner.njk" : it.selector.startsWith("head") ? "templates/layouts/base.njk" : "templates/partials/footer.njk";
-    return { owner: "template", label: file, href: repo + file };
+    if (it.rule === "link-name") return { owner: "template", label: "Header component" };
+    if (it.rule === "region") return { owner: "template", label: "Cookie banner component" };
+    if (it.selector.startsWith("head")) return { owner: "template", label: "Page template, script region" };
+    return { owner: "template", label: "Footer component" };
   }
-  if (["label", "button-name"].includes(it.rule)) return { owner: "code", label: "src/components/NewsletterForm.tsx", href: repo + "src/components/NewsletterForm.tsx" };
-  if (["canonical", "hreflang", "render-blocking-resources", "unused-javascript"].includes(it.rule)) return { owner: "code", label: "src/layouts/ArticleLayout.tsx", href: repo + "src/layouts/ArticleLayout.tsx" };
-  const field = it.rule === "meta-description" ? "SEO description" : it.rule === "modern-image-formats" ? "Hero image" : "Body";
-  return { owner: "content", label: `CMS entry ${p.i} · ${field}`, href: cms };
+  if (["label", "button-name"].includes(it.rule)) return { owner: "code", label: "Newsletter form component" };
+  if (["canonical", "hreflang"].includes(it.rule)) return { owner: "template", label: "Page template, head-injection region" };
+  if (["render-blocking-resources", "unused-javascript"].includes(it.rule)) return { owner: "template", label: "Page template, script region" };
+  if (it.rule === "meta-description") return { owner: "content", label: "Page properties, meta description" };
+  if (it.rule === "modern-image-formats") return { owner: "content", label: "Article hero image (DCR field)" };
+  return { owner: "content", label: "Article body (DCR field)" };
 }
 
 // ───────── Handoff: the filtered list as JSON, one prompt, an API request, a local check ─────────
@@ -456,7 +460,7 @@ export function batchPrompt(p: PageView, list: Instance[], priority: (s: Severit
 
 export const apiRequest = (pageId: number, crawl: number, filters: Record<string, string[]>) => {
   const qs = Object.entries(filters).filter(([, v]) => v.length).map(([k, v]) => `${k}=${v.join(",")}`).join("&");
-  return `curl -s "https://crawler.rbccm.com/api/pages/${pageId}/issues?crawl=${crawl}${qs ? `&${qs}` : ""}"`;
+  return `curl -s "${typeof window === "undefined" ? "" : window.location.origin}/api/pages/${pageId}/issues?crawl=${crawl}${qs ? `&${qs}` : ""}"`;
 };
 
 export const localCheck = (p: PageView, it: Instance) =>

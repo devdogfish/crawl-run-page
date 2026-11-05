@@ -110,7 +110,7 @@ class Element:
     first_seen: int         # crawl id
     shared_pages: int | None   # None = only on this page
     owner: Literal["code", "template", "content"]
-    source: str             # "templates/partials/footer.njk", "Component 1653402", "Content record …/2025/03/slug · body"
+    source: str             # "Footer component", "Component 1786807680025", "Article body (DCR field)"
     source_url: str | None
     box: tuple[int, int, int, int] | None   # x, y, w, h in the screenshot
 

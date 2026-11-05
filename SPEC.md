@@ -662,10 +662,11 @@ Architecture, storage and the MCP build guide: [`docs/backend-and-mcp.md`](docs/
 ```
 
 - **Priority** is fixed per severity and not configurable: Critical P1, Serious P2, Moderate P3, Minor P4.
-- **Owner and source** (who fixes it, and where):
-  - `template` when the selector + HTML hash is seen on many pages (header, footer, banners) → the template file;
-  - `content` when the element sits in CMS-rendered rich text. The CMS adds `data-cms-entry` / `data-cms-field` attributes; the crawler reads the nearest ones → link to the CMS entry;
-  - `code` when it's rendered by a component. Components add `data-component="NewsletterForm"` (or use source maps on dev builds) → the repo file.
+- **Owner and source** (who fixes it, and where). Only what the HTML exposes today (research/teamsite-cms-traces.md); the site emits no `data-cms-*` or `data-component*` attributes and no repo or file names:
+  - `template` when the same normalised markup is on many pages (header, footer, cookie banner), or the element is in a page-template region (`ls:begin[head-injection]`, `[script]`). Source: the component or region name;
+  - `content` when the element is inside a DCR field slot (`.article-content`, `.story-main`, `.news-date`, `#description`) or comes from page properties (`[meta-description]`). Source: the field, plus the DCR path when the page exposes it (news releases: `?dcr=` in the canonical);
+  - `code` when it's inside a custom-coded component (`rbccm-*` class prefix, own CSS/JS under `/assets/rbccm/`). Source: that prefix and the TeamSite component id (`div.iw_component#<id>`, per page);
+  - No source links until we know where the TeamSite source lives; `source_url` stays null.
   - The crawler stores `owner`, `source_label`, `source_url` per issue instance.
 
 **API.**

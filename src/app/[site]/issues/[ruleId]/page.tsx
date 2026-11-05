@@ -89,7 +89,7 @@ function RuleView() {
   const backQs = ["crawl", "vs", "type", "src", "seg"].map((k) => s[k as keyof State] !== defaults[k as keyof State] ? `${k}=${s[k as keyof State]}` : "").filter(Boolean).join("&");
   const pageHref = (r: (typeof pages)[number]) =>
     `/${site}/pages/${r.p.i}?crawl=${s.crawl}${comparing ? `&vs=${s.vs}` : ""}&issue=${r.k + 1}${seg === "fixed" ? "&seg=fixed" : ""}`;
-  const api = `curl -s "https://crawler.rbccm.com/api/issues?crawl=${s.crawl}&rule=${ruleId}${s.src !== "all" ? `&source=${encodeURIComponent(s.src)}` : ""}${s.type !== "all" ? `&type=${s.type}` : ""}"`;
+  const api = () => `curl -s "${window.location.origin}/api/issues?crawl=${s.crawl}&rule=${ruleId}${s.src !== "all" ? `&source=${encodeURIComponent(s.src)}` : ""}${s.type !== "all" ? `&type=${s.type}` : ""}"`;
   const toCsv = () => ["url,title,elements,sources" + (comparing ? ",new,fixed" : ""),
     ...pages.map((r) => [r.p.path, r.p.title, r.elements, r.srcs.map((x) => x.label).join("; "), ...(comparing ? [r.added, r.fixed] : [])]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
@@ -138,8 +138,8 @@ function RuleView() {
                       bg={on ? "bg.muted" : undefined} _hover={{ bg: on ? "bg.muted" : "bg.subtle" }} aria-pressed={on}
                       opacity={s.src !== "all" && !on ? 0.6 : 1} onClick={() => set({ src: on ? "all" : x.src.key })}>
                       <Stack gap="0" minW="0">
-                        <Text textStyle="sm" fontFamily={x.src.owner === "content" ? undefined : "mono"} truncate title={x.src.label}>{x.src.label}</Text>
-                        <Text color="fg.muted">{OWNER_LABEL[x.src.owner]}{x.src.owner === "content" ? ", one record per page" : ", fix once"}</Text>
+                        <Text textStyle="sm" truncate title={x.src.label}>{x.src.label}</Text>
+                        <Text color="fg.muted">{OWNER_LABEL[x.src.owner]}{x.src.owner === "content" ? ", one record per page" : ", one fix for every page"}</Text>
                       </Stack>
                       <HStack gap="2">
                         <Box flex="1" h="1.5" rounded="full" bg="bg.emphasized" overflow="hidden"><Box h="full" w={`${Math.max(2, share * 100)}%`} bg="colorPalette.solid" /></Box>
@@ -172,7 +172,7 @@ function RuleView() {
                   { value: "all", label: "All page types" }, ...PAGE_TYPES.map((t) => ({ value: t.id, label: t.label, hint: t.prefix ?? "No match" })),
                 ]} />
                 {s.src !== "all" && row && (
-                  <Badge size="sm" variant="outline" fontFamily={s.src.startsWith("content:") ? undefined : "mono"} cursor="pointer" onClick={() => set({ src: "all" })} title="Show all sources">
+                  <Badge size="sm" variant="outline" cursor="pointer" onClick={() => set({ src: "all" })} title="Show all sources">
                     {row.sources.find((x) => x.src.key === s.src)?.src.label ?? s.src} ×
                   </Badge>
                 )}
@@ -221,7 +221,7 @@ function RuleView() {
             </Stack>
             <Stack gap="2" pt="1">
               <CopyButton icon={<LuCopy />} label="Copy as prompt" text={() => row ? rulesPrompt(site, a, [s.src === "all" ? row : { ...row, sources: row.sources.filter((x) => x.src.key === s.src) }]) : ""} />
-              <CopyButton icon={<LuTerminal />} label="Copy API request" text={() => api} />
+              <CopyButton icon={<LuTerminal />} label="Copy API request" text={api} />
             </Stack>
           </Stack>
         </Grid>

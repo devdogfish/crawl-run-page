@@ -389,7 +389,7 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
         </Box>
         <HStack gap="1.5" textStyle="xs" color="fg.muted" wrap="wrap">
           <Text>Fix in <Span color="fg" fontWeight="medium">{OWNER_LABEL[src.owner]}</Span></Text>
-          <Link href={src.href} target="_blank" rel="noopener noreferrer" fontFamily="mono" color="fg.muted" _hover={{ color: "fg" }}>{src.label}<LuExternalLink /></Link>
+          <Text color="fg">{src.label}</Text>
           {it.shared != null && <Text>· same markup on {it.shared.toLocaleString("en-US")} pages</Text>}
         </HStack>
       </Stack>

@@ -107,7 +107,7 @@ function Issues() {
       <Container maxW="7xl" py="6">
         <Flex direction="column" borderWidth="1px" rounded="l2" overflow="hidden">
           <DataToolbar<Seg>
-            query={s.q} onQuery={(q) => set({ q })} placeholder="Search rule or source file"
+            query={s.q} onQuery={(q) => set({ q })} placeholder="Search rule or source"
             segments={counts ? [
               { value: "all", label: `All in #${s.crawl} ${fmtNum(counts.all)}` },
               { value: "new", label: `New ${fmtNum(counts.new)}` },
@@ -193,7 +193,7 @@ function RuleRowView({ r, cols, showChange, href }: { r: RuleRow; cols: string; 
           </Stack>
         </HStack>
         <Stack gap="0" minW="0">
-          <Text fontFamily={top.src.owner === "content" ? undefined : "mono"} truncate title={top.src.label}>{top.src.label}</Text>
+          <Text truncate title={top.src.label}>{top.src.label}</Text>
           <Text color="fg.muted" truncate>
             {OWNER_LABEL[top.src.owner]}{r.sources.length > 1 ? `${share < 100 ? ` · ${share}% of pages` : ""} · +${r.sources.length - 1} more` : ""}
           </Text>
