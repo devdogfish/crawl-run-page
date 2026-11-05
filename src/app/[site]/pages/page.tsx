@@ -14,13 +14,15 @@
 // PROTOTYPE: data comes from src/lib/site-pages.ts. Rows don't open a page detail yet.
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import NextLink from "next/link";
 import {
   Badge, Box, Button, Container, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Portal,
-  Select, Stack, Text, createListCollection,
+  Select, Stack, Text,
 } from "@chakra-ui/react";
 import { LuLink, LuX } from "react-icons/lu";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
+import { FilterSelect, useItems, type Item } from "@/components/filter-select";
 import { TablePagination } from "@/components/table-pagination";
 import { useSite } from "@/components/site-context";
 import { crawlsFor } from "@/lib/crawls-list";
@@ -221,6 +223,7 @@ function Pages() {
                 </Text>
               ) : pageRows.map(({ p, matches }) => (
                 <PageRowView key={p.i} p={p} cols={cols} cat={cat} matches={rule ? matches : null}
+                  href={`/${site}/pages/${p.i}?crawl=${p.change === "removed" ? s.vs : s.crawl}${b != null ? `&vs=${s.vs}` : ""}`}
                   changedOn={p.lastChanged != null ? dates.get(p.lastChanged) ?? null : null} since={crawlsFor(site).at(-1)!.startedAt} />
               ))}
             </Box>
@@ -240,15 +243,16 @@ function Pages() {
   );
 }
 
-function PageRowView({ p, cols, cat, matches, changedOn, since }: {
-  p: PageView; cols: string; cat: Category | null; matches: number | null; changedOn: Date | null; since: Date;
+function PageRowView({ p, cols, cat, matches, changedOn, since, href }: {
+  p: PageView; cols: string; cat: Category | null; matches: number | null; changedOn: Date | null; since: Date; href: string;
 }) {
   const removed = p.change === "removed";
   const n = cat ? issuesIn(p, cat) : totalIssues(p);
   const change = p.change ? CHANGE_BADGE[p.change] : null;
   return (
-    <Grid templateColumns={cols} gap="3" px="3" py="2" alignItems="center" textStyle="xs"
+    <Grid asChild templateColumns={cols} gap="3" px="3" py="2" alignItems="center" textStyle="xs"
       borderBottomWidth="1px" borderColor="border.muted" _hover={{ bg: "bg.subtle" }} fontVariantNumeric="tabular-nums">
+      <NextLink href={href}>
       <Stack gap="0" minW="0">
         <HStack gap="2" minW="0">
           <Text textStyle="sm" truncate color={removed ? "fg.muted" : undefined} title={p.title}>{p.title}</Text>
@@ -265,50 +269,12 @@ function PageRowView({ p, cols, cat, matches, changedOn, since }: {
         {change && <Badge size="xs" variant="outline" colorPalette={change.color}>{change.label}</Badge>}
         {!removed && <Text color="fg.muted">{changedOn ? fmtDay(changedOn) : `Before ${fmtDay(since)}`}</Text>}
       </HStack>
+      </NextLink>
     </Grid>
   );
 }
 
 // ───────── Selects ─────────
-type Item = { value: string; label: string; hint?: string; mono?: boolean };
-// Items are rebuilt on every render; keep the collection stable while their content is the same
-function useItems(items: Item[]) {
-  const key = JSON.stringify(items);
-  return useMemo(() => createListCollection({ items }), [key]); // eslint-disable-line react-hooks/exhaustive-deps
-}
-
-// Filter dropdowns in the panel: Chakra Select (styled), xs to match the toolbar
-function FilterSelect({ value, onChange, items, w }: { value: string; onChange: (v: string) => void; items: Item[]; w: string }) {
-  const collection = useItems(items);
-  const on = value !== items[0].value; // the first item is the "no filter" value
-  return (
-    <Select.Root collection={collection} size="xs" w={w} value={[value]} onValueChange={(e) => e.value[0] && onChange(e.value[0])} positioning={{ sameWidth: false }}>
-      <Select.HiddenSelect />
-      <Select.Control>
-        <Select.Trigger borderColor={on ? "border.emphasized" : undefined} bg={on ? "bg" : undefined} fontWeight={on ? "medium" : undefined}>
-          <Select.ValueText />
-        </Select.Trigger>
-        <Select.IndicatorGroup><Select.Indicator /></Select.IndicatorGroup>
-      </Select.Control>
-      <Portal>
-        <Select.Positioner>
-          <Select.Content minW="56" maxH="80">
-            {items.map((item) => (
-              <Select.Item key={item.value} item={item}>
-                <Stack gap="0" minW="0">
-                  <Text>{item.label}</Text>
-                  {item.hint && <Text textStyle="xs" color="fg.muted" fontFamily={item.mono || item.hint.startsWith("/") ? "mono" : undefined} truncate>{item.hint}</Text>}
-                </Stack>
-                <Select.ItemIndicator />
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
-    </Select.Root>
-  );
-}
-
 // Crawl / baseline pickers in the header: crawl id + date, environment or distance as a hint
 function ScopeSelect({ label, value, onChange, items }: { label: string; value: string; onChange: (v: string) => void; items: Item[] }) {
   const collection = useItems(items);

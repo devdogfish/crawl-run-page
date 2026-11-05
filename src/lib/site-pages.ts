@@ -136,12 +136,13 @@ export const crawlChoices = (site: SiteId): CrawlRow[] => crawlsFor(site).filter
 export const fullLighthouse = (crawlId: number) => crawlId % 10 === 0;
 export const LH_SAMPLE = 200;
 
+export const siteSize = (site: SiteId) => (site === "rbcits" ? 19_400 : 48_300);
 const cache = new Map<SiteId, { pages: SitePage[]; ids: number[] }>();
 function universe(site: SiteId) {
   let u = cache.get(site);
   if (!u) {
     const ids = crawlsFor(site).map((c) => Number(c.id)).sort((a, b) => a - b);
-    const n = site === "rbcits" ? 19_400 : 48_300;
+    const n = siteSize(site);
     u = { pages: Array.from({ length: n }, (_, i) => makePage(i, ids)), ids };
     cache.set(site, u);
   }
@@ -168,19 +169,26 @@ function lastChange(p: SitePage, crawl: number, ids: number[]) {
 
 // Pages in crawl A, plus (when comparing) the pages that were in B but are gone from A
 export function pagesFor(site: SiteId, a: number, b: number | null): PageView[] {
-  const { pages, ids } = universe(site);
-  const sampleRate = LH_SAMPLE / pages.length;
+  const u = universe(site);
   const out: PageView[] = [];
-  for (const p of pages) {
-    const inA = exists(p, a), inB = b != null && exists(p, b);
-    if (!inA && !inB) continue;
-    const at = inA ? a : b!;
-    const lastChanged = lastChange(p, at, ids);
-    const change: Change | null = b == null ? null : !inA ? "removed" : !inB ? "new" : lastChanged != null && lastChanged > b ? "changed" : "same";
-    const audited = fullLighthouse(at) || rand(p.i, at) < sampleRate;
-    out.push({ ...p, change, lastChanged, perf: audited ? p.perfIssues : null });
-  }
+  for (const p of u.pages) { const v = view(u, p, a, b); if (v) out.push(v); }
   return out;
+}
+
+// One page, for the page detail view (null if it's in neither crawl)
+export const pageView = (site: SiteId, i: number, a: number, b: number | null) => {
+  const u = universe(site);
+  return u.pages[i] ? view(u, u.pages[i], a, b) : null;
+};
+
+function view(u: { pages: SitePage[]; ids: number[] }, p: SitePage, a: number, b: number | null): PageView | null {
+  const inA = exists(p, a), inB = b != null && exists(p, b);
+  if (!inA && !inB) return null;
+  const at = inA ? a : b!;
+  const lastChanged = lastChange(p, at, u.ids);
+  const change: Change | null = b == null ? null : !inA ? "removed" : !inB ? "new" : lastChanged != null && lastChanged > b ? "changed" : "same";
+  const audited = fullLighthouse(at) || rand(p.i, at) < LH_SAMPLE / u.pages.length;
+  return { ...p, change, lastChanged, perf: audited ? p.perfIssues : null };
 }
 
 export const issuesIn = (p: PageView, c: Category) => (c === "performance" ? p.perf : p.issues[c]);
