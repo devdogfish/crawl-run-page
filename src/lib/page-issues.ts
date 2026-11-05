@@ -270,7 +270,9 @@ function buildHtml(p: PageView, instances: Instance[]) {
   // Asset URLs as the live site would have them; the preview swaps each for a placeholder (see asset-placeholders.ts)
   const slugOf = p.path.split("/").filter(Boolean).pop() ?? "page";
   const year = p.path.match(/\/(20\d{2})\//)?.[1] ?? "2025";
-  const heroSrc = `/assets/rbccm/images/insights/${year}/${slugOf}.jpg`;
+  // PROTOTYPE: two in three pages use a real rbccm.com image so the preview shows one streaming in;
+  // the rest point at files that don't exist on the site, which the preview shows as "not available"
+  const heroSrc = p.i % 3 ? "/assets/rbccm/images/insights/2026/how-ai-infrastructure-and-ma-are-reshaping-corporate-finance-th.webp" : `/assets/rbccm/images/insights/${year}/${slugOf}.jpg`;
   const chartSrc = (j: number) => `/assets/rbccm/images/insights/${year}/${slugOf}-figure-${j + 1}.png`;
   const media = p.type === "podcast"
     ? `<audio controls src="/assets/rbccm/audio/podcasts/${slugOf}.mp3"></audio>`

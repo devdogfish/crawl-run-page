@@ -28,7 +28,7 @@ import {
 import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
 import { downloadText } from "@/components/data-toolbar";
 import { CATEGORIES, crawlChoices, pageView, siteSize } from "@/lib/site-pages";
-import { SITES, type SiteId } from "@/lib/sites";
+import { SITES, envUrl, type SiteId } from "@/lib/sites";
 
 type Seg = "all" | "new" | "fixed";
 type PageV = NonNullable<ReturnType<typeof pageView>>;
@@ -65,6 +65,8 @@ function PageDetail() {
 }
 
 function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site: SiteId }) {
+  // Assets aren't stored: the preview streams them from the environment this crawl ran against
+  const origin = envUrl(site, crawlChoices(site).find((c) => Number(c.id) === a)?.environment ?? "production");
   const { instances, html } = useMemo(() => pageIssues(p, a, b, siteSize(site)), [p, a, b, site]);
   const [tab, setTab] = useState<"issues" | "preview" | "source">("issues");
   // Shareable state lives in the URL: ?issue=18&pri=P1&cat=accessibility&q=…&seg=new
@@ -257,7 +259,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
 
               <Box minW="0" borderStartWidth={{ md: "1px" }} ps={{ md: "8" }}>
                 {current
-                  ? <IssueView it={current} siblings={siblings} html={html} page={p} fix={fixes.has(current.k)} prio={prio} link={linkTo(current)}
+                  ? <IssueView it={current} siblings={siblings} html={html} origin={origin} page={p} fix={fixes.has(current.k)} prio={prio} link={linkTo(current)}
                       onFix={() => setFixes((s) => new Set(s).add(current.k))} onSelect={setSelected}
                       onShow={() => { setTab("preview"); setHighlightRule(current.rule); }} onAsk={() => askAi("How do I fix this?", current)} />
                   : <Text textStyle="sm" color="fg.muted">No issues match.</Text>}
@@ -295,7 +297,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
               )}
             </HStack>
             <Box maxW={mode === "live" && viewport < 1280 ? `${viewport + 2}px` : "5xl"} mx="auto">
-              <PagePreview html={html} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
+              <PagePreview html={html} origin={origin} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
                 onSelect={setSelected} mode={mode} viewport={mode === "live" ? viewport : 1280} layers={layers}
                 card={current && (
                   <ElementCard it={current} siblings={siblings} fix={fixes.has(current.k)} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)}
@@ -349,8 +351,8 @@ function RuleList({ title, groups, selected, onSelect, prio, empty }: {
 }
 
 // ───────── Selected issue ─────────
-function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onAsk, prio, link }: {
-  it: Instance; siblings: Instance[]; html: string; page: PageV; fix: boolean;
+function IssueView({ it, siblings, html, origin, page, fix, onFix, onSelect, onShow, onAsk, prio, link }: {
+  it: Instance; siblings: Instance[]; html: string; origin: string; page: PageV; fix: boolean;
   onFix: () => void; onSelect: (k: number) => void; onShow: () => void; onAsk: () => void; prio: (s: string) => string; link: string;
 }) {
   const r = RULE_CATALOG[it.rule];
@@ -382,7 +384,7 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
           {it.onPage && <Button size="2xs" variant="ghost" onClick={onShow} flexShrink={0}>Show on page</Button>}
         </HStack>
         <Box borderWidth="1px" rounded="l2" overflow="hidden">
-          {it.onPage && <Box borderBottomWidth="1px"><PagePreview html={html} instances={[it]} selected={it.k} mode="screenshot" crop={it.k} height={140} /></Box>}
+          {it.onPage && <Box borderBottomWidth="1px"><PagePreview html={html} origin={origin} instances={[it]} selected={it.k} mode="screenshot" crop={it.k} height={140} /></Box>}
           <Code display="block" whiteSpace="pre-wrap" wordBreak="break-all" px="3" py="2.5" textStyle="xs" bg="bg.subtle" rounded="0">{it.snippet}</Code>
         </Box>
         <HStack gap="1.5" textStyle="xs" color="fg.muted" wrap="wrap">

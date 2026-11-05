@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
-import { withPlaceholders } from "@/lib/asset-placeholders";
+import { placeholdMissing, withBase } from "@/lib/asset-placeholders";
 
 export type Layer = "issues" | "tab" | "headings" | "landmarks" | "alt";
 type Rect = { x: number; y: number; w: number; h: number };
@@ -27,9 +27,10 @@ const nameOf = (el: Element) => {
   return /[\p{L}\p{N}]/u.test(n) ? n.slice(0, 60) : "";
 };
 
-export function PagePreview({ html, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height, card }: {
+export function PagePreview({ html, origin, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height, card }: {
   card?: React.ReactNode; // actions shown on the selected element (screen-size, not scaled with the page)
   html: string;
+  origin?: string; // environment the page was crawled from: assets stream from there
   instances: Instance[]; // the ones to draw (already filtered)
   selected: number | null;
   highlightRule?: string | null;
@@ -42,7 +43,7 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
-  const doc = useMemo(() => withPlaceholders(html), [html]); // the crawler stores no images, video or audio
+  const doc = useMemo(() => withBase(html, origin), [html, origin]); // assets aren't stored: they load from the site
   const [width, setWidth] = useState(0);
   const [docH, setDocH] = useState(1200);
   const [boxes, setBoxes] = useState<Map<number, Rect>>(new Map());
@@ -132,7 +133,7 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
     <Box ref={wrap} position="relative" overflow="hidden" h={crop != null ? `${height ?? 200}px` : `${docH * scale}px`} bg="white" rounded="l2" borderWidth="1px">
       <Box position="absolute" top="0" left="0" w={`${viewport}px`} h={`${docH}px`} transformOrigin="top left"
         style={{ transform: `translate(${tx}px, ${ty}px) scale(${s})` }}>
-        <iframe ref={frame} srcDoc={doc} sandbox="allow-same-origin" title="Crawled page" onLoad={measure}
+        <iframe ref={frame} srcDoc={doc} sandbox="allow-same-origin" title="Crawled page" onLoad={() => { measure(); const d = frame.current?.contentDocument; if (d) placeholdMissing(d, measure); }}
           style={{ width: viewport, height: docH, border: 0, display: "block", pointerEvents: "none" }} />
 
         {/* Overlay, in page pixels */}
