@@ -12,6 +12,15 @@ import { Box, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
 
 export type Layer = "issues" | "tab" | "headings" | "landmarks" | "alt";
+// PROTOTYPE: four ways to show the issues that aren't selected. Pick one, then remove the others.
+//   focus     → only the selected issue is outlined, the page dims around it; the rest are dots on a rail at the left
+//   outline   → every issue gets a thin outline
+//   marker    → a small dot on each element's corner
+//   underline → a line under each element, like a spell checker
+export type OverlayStyle = "focus" | "outline" | "marker" | "underline";
+export const OVERLAY_STYLES: { value: OverlayStyle; label: string }[] = [
+  { value: "focus", label: "Focus" }, { value: "outline", label: "Outlines" }, { value: "marker", label: "Markers" }, { value: "underline", label: "Underlines" },
+];
 type Rect = { x: number; y: number; w: number; h: number };
 type Mark = Rect & { label: string; bad?: boolean };
 
@@ -24,7 +33,8 @@ const nameOf = (el: Element) => {
   return /[\p{L}\p{N}]/u.test(n) ? n.slice(0, 60) : "";
 };
 
-export function PagePreview({ html, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height }: {
+export function PagePreview({ html, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height, overlay = "focus" }: {
+  overlay?: OverlayStyle;
   html: string;
   instances: Instance[]; // the ones to draw (already filtered)
   selected: number | null;
@@ -42,6 +52,7 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
   const [docH, setDocH] = useState(1200);
   const [boxes, setBoxes] = useState<Map<number, Rect>>(new Map());
   const [marks, setMarks] = useState<Record<Exclude<Layer, "issues">, Mark[]>>({ tab: [], headings: [], landmarks: [], alt: [] });
+  const [peekK, setPeekK] = useState<number | null>(null); // issue whose rail dot is hovered
   const [hover, setHover] = useState<(Rect & { tag: string; name: string; k?: number }) | null>(null);
 
   // Measure everything from the rendered DOM
@@ -109,6 +120,19 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
   };
 
   const drawn = instances.filter((it) => boxes.has(it.k));
+  const rail = (() => {
+    const out: { it: Instance; y: number; col: number }[] = [];
+    const rows = new Map<number, number>();
+    for (const it of [...drawn].sort((x, y) => boxes.get(x.k)!.y - boxes.get(y.k)!.y)) {
+      const b = boxes.get(it.k)!;
+      const y = b.y + Math.min(b.h, 40) / 2;
+      const row = Math.round(y / (14 / s));
+      const col = rows.get(row) ?? 0;
+      rows.set(row, col + 1);
+      out.push({ it, y, col });
+    }
+    return out;
+  })();
   return (
     <Box ref={wrap} position="relative" overflow="hidden" h={crop != null ? `${height ?? 200}px` : `${docH * scale}px`} bg="white" rounded="l2" borderWidth="1px">
       <Box position="absolute" top="0" left="0" w={`${viewport}px`} h={`${docH}px`} transformOrigin="top left"
@@ -119,21 +143,54 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
         {/* Overlay, in page pixels */}
         <Box position="absolute" inset="0" onMouseMove={onMove} onMouseLeave={() => setHover(null)}
           onClick={() => hover?.k != null && onSelect?.(hover.k)} cursor={live && hover?.k != null ? "pointer" : undefined}>
+          {/* Issues: only the selected one (and, when asked, the rest of its rule) is outlined; the others are dots on the rail */}
           {layers.includes("issues") && drawn.map((it) => {
             const r = boxes.get(it.k)!;
-            const sev = RULE_CATALOG[it.rule].severity;
             const on = it.k === selected;
-            const faded = highlightRule != null && highlightRule !== it.rule && !on;
+            const peek = it.k === peekK || (highlightRule === it.rule && !on);
+            const sev = SEV_COLOR[RULE_CATALOG[it.rule].severity];
+            const pick = (e: React.MouseEvent) => { e.stopPropagation(); onSelect?.(it.k); };
+            if (!on && !peek && crop == null && overlay !== "focus") {
+              const faded = highlightRule != null && highlightRule !== it.rule ? 0.3 : 1;
+              if (overlay === "outline") return (
+                <Box key={it.k} position="absolute" left={u(-3, r.x * s)} top={u(-3, r.y * s)} w={u(6, r.w * s)} h={u(6, r.h * s)} rounded={u(4)} cursor="pointer"
+                  opacity={faded} boxShadow={`0 0 0 ${u(1)} ${sev}8c`} _hover={{ boxShadow: `0 0 0 ${u(1.5)} ${sev}` }} onClick={pick} />
+              );
+              if (overlay === "marker") return (
+                <Box key={it.k} as="button" aria-label={RULE_CATALOG[it.rule].title} position="absolute" left={u(-5, r.x * s)} top={u(-5, r.y * s)} w={u(10)} h={u(10)}
+                  rounded="full" bg={sev} opacity={faded} boxShadow={`0 0 0 ${u(2)} white`} cursor="pointer" _hover={{ transform: "scale(1.25)" }}
+                  onMouseEnter={() => setPeekK(it.k)} onMouseLeave={() => setPeekK(null)} onClick={pick} />
+              );
+              return ( // underline
+                <Box key={it.k} position="absolute" left={`${r.x}px`} top={u(1, (r.y + r.h) * s)} w={`${r.w}px`} h={u(2)} rounded="full" bg={sev} opacity={faded * 0.8}
+                  cursor="pointer" css={{ "&::before": { content: '""', position: "absolute", inset: `-${6 / s}px 0` } }}
+                  onMouseEnter={() => setPeekK(it.k)} onMouseLeave={() => setPeekK(null)} onClick={pick} />
+              );
+            }
+            if (!on && !peek) return null;
             return (
-              <Box key={it.k} position="absolute" left={u(-3, r.x * s)} top={u(-3, r.y * s)} w={u(6, r.w * s)} h={u(6, r.h * s)}
-                rounded={u(4)} cursor="pointer" opacity={faded ? 0.25 : 1} transition="opacity 0.15s, box-shadow 0.15s"
-                boxShadow={on ? `0 0 0 ${u(2)} ${ACCENT}, 0 0 0 ${u(6)} ${ACCENT}26` : `0 0 0 ${u(1)} ${SEV_COLOR[sev]}b3`}
-                css={{ "&:hover": { boxShadow: on ? undefined : `0 0 0 ${u(1.5)} ${SEV_COLOR[sev]}` } }}
-                onClick={(e) => { e.stopPropagation(); onSelect?.(it.k); }}>
+              <Box key={it.k} position="absolute" left={u(-4, r.x * s)} top={u(-4, r.y * s)} w={u(8, r.w * s)} h={u(8, r.h * s)} rounded={u(4)} pointerEvents="none"
+                boxShadow={on
+                  ? `0 0 0 ${u(2)} ${ACCENT}${crop == null && overlay === "focus" ? `, 0 0 0 100vmax rgba(15,17,20,.10)` : ""}`
+                  : `0 0 0 ${u(1.5)} ${ACCENT}99`}>
                 {on && crop == null && (
-                  <Tag s={s} top={u(-26)} left="0"><Box as="span" display="inline-block" w={u(6)} h={u(6)} rounded="full" bg={SEV_COLOR[sev]} me={u(6)} />{RULE_CATALOG[it.rule].title}</Tag>
+                  <Tag s={s} top={u(-28)} left="0">
+                    <Box as="span" display="inline-block" w={u(6)} h={u(6)} rounded="full" bg={SEV_COLOR[RULE_CATALOG[it.rule].severity]} me={u(6)} />
+                    {RULE_CATALOG[it.rule].title}
+                  </Tag>
                 )}
               </Box>
+            );
+          })}
+          {layers.includes("issues") && crop == null && overlay === "focus" && rail.map(({ it, y, col }) => {
+            const on = it.k === selected;
+            return (
+              <Box key={`dot${it.k}`} as="button" aria-label={RULE_CATALOG[it.rule].title} position="absolute" top={u(-5, y * s)} left={u(6 + col * 12)}
+                w={u(10)} h={u(10)} rounded="full" bg={SEV_COLOR[RULE_CATALOG[it.rule].severity]} cursor="pointer"
+                boxShadow={on ? `0 0 0 ${u(2)} white, 0 0 0 ${u(3.5)} ${ACCENT}` : `0 0 0 ${u(2)} white`}
+                opacity={on || peekK === it.k ? 1 : 0.85} transition="transform 0.1s" _hover={{ transform: "scale(1.25)" }}
+                onMouseEnter={() => setPeekK(it.k)} onMouseLeave={() => setPeekK(null)}
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onSelect?.(it.k); }} />
             );
           })}
 

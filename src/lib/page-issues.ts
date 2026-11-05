@@ -232,7 +232,7 @@ export function pageIssues(p: PageView, crawl: number, baseline: number | null, 
   const changed = p.change === "changed" || p.change === "new";
   const instances: Instance[] = slots.map((s, k) => {
     const isNew = baseline != null && (p.change === "new" || (changed && s.shared == null && rand(p.i, 50 + k) < 0.2));
-    return { k, ...s, snippet: "", status: isNew ? "new" : "existing", firstSeen: isNew ? crawl : crawl - 3 - Math.floor(rand(p.i, 60 + k) * 40), onPage: !s.selector.startsWith("head") };
+    return { k, ...s, snippet: "", status: isNew ? "new" : "existing", firstSeen: isNew ? crawl : crawl - 3 - Math.floor(rand(p.i, 60 + k) * 40), onPage: !/^head(\s|>|$)/.test(s.selector) };
   });
   if (baseline != null && changed) {
     const fixed = Math.floor(rand(p.i, 70) * 4);
