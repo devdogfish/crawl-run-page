@@ -249,8 +249,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                       </HStack>
                     </Collapsible.Trigger>
                     <Collapsible.Content>
-                      <Text textStyle="xs" color="fg.subtle" mt="1" mb="2" ps="5">Header, footer and banners. Fixed once in the template.</Text>
-                      <RuleList groups={shared} selected={current} onSelect={setSelected} prio={prio} />
+                      <Box mt="2"><RuleList groups={shared} selected={current} onSelect={setSelected} prio={prio} /></Box>
                     </Collapsible.Content>
                   </Collapsible.Root>
                 )}
