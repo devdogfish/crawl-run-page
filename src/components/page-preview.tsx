@@ -26,7 +26,8 @@ const nameOf = (el: Element) => {
   return /[\p{L}\p{N}]/u.test(n) ? n.slice(0, 60) : "";
 };
 
-export function PagePreview({ html, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height }: {
+export function PagePreview({ html, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height, card }: {
+  card?: React.ReactNode; // actions shown on the selected element (screen-size, not scaled with the page)
   html: string;
   instances: Instance[]; // the ones to draw (already filtered)
   selected: number | null;
@@ -146,12 +147,17 @@ export function PagePreview({ html, instances, selected, highlightRule, onSelect
                 boxShadow={on
                   ? `0 0 0 ${u(2)} ${ACCENT}${crop == null ? `, 0 0 0 100vmax rgba(15,17,20,.10)` : ""}`
                   : `0 0 0 ${u(1.5)} ${ACCENT}99`}>
-                {on && crop == null && (
-                  <Tag s={s} top={u(-28)} left="0">
-                    <Box as="span" display="inline-block" w={u(6)} h={u(6)} rounded="full" bg={SEV_COLOR[RULE_CATALOG[it.rule].severity]} me={u(6)} />
-                    {RULE_CATALOG[it.rule].title}
-                  </Tag>
-                )}
+                {on && crop == null && card && (() => {
+                  // Below the element, or above it near the bottom; kept inside the frame horizontally
+                  const below = (r.y + r.h) * s + 220 < docH * s;
+                  const shift = Math.min(0, (width - 392 - r.x * s) / s);
+                  return (
+                    <Box position="absolute" left={`${shift - 4 / s}px`} {...(below ? { top: `calc(100% + ${8 / s}px)` } : { bottom: `calc(100% + ${8 / s}px)` })}
+                      pointerEvents="auto" zIndex="1" onClick={(e) => e.stopPropagation()} onMouseMove={(e) => { e.stopPropagation(); setHover(null); }}>
+                      <Box transform={`scale(${1 / s})`} transformOrigin={below ? "top left" : "bottom left"}>{card}</Box>
+                    </Box>
+                  );
+                })()}
               </Box>
             );
           })}

@@ -18,7 +18,7 @@ import {
 } from "@chakra-ui/react";
 import { LuChevronDown, LuChevronLeft, LuChevronRight, LuCopy, LuEllipsis, LuExternalLink, LuFileQuestion, LuLayers, LuSearch, LuSparkles } from "react-icons/lu";
 
-import { AiPanel, type AiReply } from "@/components/ai-panel";
+import { AiPanel, type AiReply, type IssueRef } from "@/components/ai-panel";
 import { PagePreview, type Layer } from "@/components/page-preview";
 import { useSite } from "@/components/site-context";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -70,7 +70,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const [highlightRule, setHighlightRule] = useState<string | null>(null);
   const [fixes, setFixes] = useState<Set<number>>(new Set());
   const [ai, setAi] = useState(false);
-  const [ask, setAsk] = useState<{ q: string; n: number } | null>(null);
+  const [ask, setAsk] = useState<{ q: string; about: IssueRef | null; n: number } | null>(null);
   const [mode, setMode] = useState<"screenshot" | "live">("screenshot");
   const [viewport, setViewport] = useState(1280);
   const [layers, setLayers] = useState<Layer[]>(["issues"]);
@@ -100,40 +100,60 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const counts = { all: now.length, new: instances.filter((it) => it.status === "new").length, fixed: instances.filter((it) => it.status === "fixed").length };
   const pagesHref = `/${site}/pages?crawl=${a}${b != null ? `&vs=${b}` : ""}`;
 
-  // ───────── Assistant: scripted answers that also drive the view ─────────
-  const askAi = (text: string) => { setAi(true); setAsk((x) => ({ q: text, n: (x?.n ?? 0) + 1 })); };
-  const onAsk = (text: string): AiReply => {
+  // ───────── Ask AI: one conversation per page; each message links to the issue it's about ─────────
+  const refOf = (it: Instance): IssueRef => {
+    const sib = instances.filter((x) => x.rule === it.rule && (x.shared == null) === (it.shared == null));
+    return { k: it.k, label: RULE_CATALOG[it.rule].title, detail: sib.length > 1 ? `${sib.indexOf(it) + 1} of ${sib.length}` : it.group, color: `${SEV[RULE_CATALOG[it.rule].severity].color}.solid` };
+  };
+  const askAi = (text: string, it: Instance) => { setAi(true); setAsk((x) => ({ q: text, about: refOf(it), n: (x?.n ?? 0) + 1 })); };
+  const onAsk = (text: string, about: IssueRef | null): AiReply => {
     const t = text.toLowerCase();
-    const sel = current;
-    if (/first|priorit|start/.test(t)) {
-      const top = byRule(now.filter((it) => it.shared == null)).slice(0, 3);
-      if (top[0]) { setSeg("all"); setQ(""); setSharedOpen(false); setSelected(top[0].items[0].k); setTab("issues"); }
+    const it = about ? instances.find((x) => x.k === about.k) : undefined;
+    const r = it ? RULE_CATALOG[it.rule] : undefined;
+    const sib = it ? instances.filter((x) => x.rule === it.rule && x.status !== "fixed" && (x.shared == null) === (it.shared == null)) : [];
+    if (it) setSelected(it.k);
+
+    if (/first|priorit|start|worst/.test(t)) {
+      const top = byRule(now.filter((x) => x.shared == null)).slice(0, 3);
       return {
         text: top.length
-          ? `Start with what's only on this page, worst first:\n${top.map((g, n) => `${n + 1}. ${RULE_CATALOG[g.rule].title} (${g.items.length})`).join("\n")}\n\nThe ${now.filter((it) => it.shared != null).length} shared issues come from the header and footer; they're fixed once in the template.`
-          : "Everything here comes from shared markup (header, footer), so there's nothing to fix on this page itself.",
-        actions: top[0] ? [`Selected ${top[0].rule}`] : [],
+          ? `I'd start with the issues that only exist on this page, worst first. These three cover ${top.reduce((n, g) => n + g.items.length, 0)} of the ${now.filter((x) => x.shared == null).length}:`
+          : "Everything here comes from the shared header and footer, so nothing needs fixing on this page itself.",
+        refs: top.map((g) => refOf(g.items[0])),
+        followUps: ["Why these first?", "What about the shared ones?"],
       };
     }
-    if (/where|show|highlight|see/.test(t) && sel) {
-      setTab("preview"); setHighlightRule(sel.rule);
-      return { text: `Every ${sel.rule} issue is highlighted on the page.`, actions: ["Opened Preview"] };
+    if (/shared|template|header|footer/.test(t)) {
+      const sh = byRule(now.filter((x) => x.shared != null));
+      return {
+        text: `${now.filter((x) => x.shared != null).length} issues come from markup that's on almost every page (header, footer, cookie banner). Fixing them in the template fixes them everywhere at once, so they're worth raising with whoever owns it rather than patching here.`,
+        refs: sh.map((g) => refOf(g.items[0])), followUps: ["What should I fix first?"],
+      };
     }
-    if (/keyboard|tab order|focus/.test(t)) {
-      setTab("preview"); setMode("live"); setLayers(["issues", "tab"]);
-      return { text: "Each number is a Tab stop, in order. Red ones have no accessible name, so a screen reader only says \"link\" or \"button\".", actions: ["Opened the live render with Tab order on"] };
+    if (/why these/.test(t)) return { text: "They're critical or serious, so they block people from using the content at all (an image with no description, a field without a label). And they only exist here, so nobody else is going to fix them.", followUps: ["How do I fix the first one?"] };
+    if (!it || !r) return { text: "Select an issue (in the list or on the preview) and ask me about it, or ask about the page as a whole.", followUps: ["What should I fix first?"] };
+
+    if (/all|every|rest|others/.test(t) && sib.length > 1) {
+      setFixes((f) => { const n = new Set(f); sib.forEach((x) => n.add(x.k)); return n; });
+      return { text: `Same change for all ${sib.length}. ${it.shared ? "They come from the shared template, so it's one edit there." : "Each has its own content, so check that the wording fits each one."} I've added the suggested fix to each:`, refs: sib.slice(0, 6).map(refOf), actions: [`Suggested a fix for ${sib.length} elements`], followUps: ["How do I test it?"] };
     }
-    if (/new|since|chang/.test(t)) {
-      if (!comparing) return { text: "Pick a baseline crawl on the Pages page first.", actions: [] };
-      setSeg("new"); setTab("issues");
-      return { text: `${counts.new} new since #${b}, ${counts.fixed} fixed.`, actions: ["Showing new issues"] };
+    if (/test|verify|check/.test(t)) {
+      return { text: r.category === "accessibility"
+        ? "Two quick checks: run axe DevTools on the page again, and try the element with a screen reader (VoiceOver: Cmd+F5) or keyboard only. The next crawl will confirm it's gone; it'll show under Fixed."
+        : "The next crawl re-checks it; it'll show under Fixed when it's gone.", followUps: [] };
     }
-    if (/fix|code|diff/.test(t) && sel) {
-      setFixes((s) => new Set(s).add(sel.k)); setTab("issues");
-      return { text: `The suggested fix is under "How to fix".${siblings.length > 1 ? ` The same change applies to all ${siblings.length} elements.` : ""}`, actions: [] };
+    if (/why|what|explain|mean|who/.test(t)) {
+      return { text: `${r.why}${r.criterion ? `\n\nThis fails WCAG ${r.criterion}.` : ""}`, followUps: ["How do I fix it?", "How do I test it?"] };
     }
-    if (sel) return { text: `${RULE_CATALOG[sel.rule].why}`, actions: [] };
-    return { text: "I can suggest what to fix first, show issues on the page, check keyboard access, or write a fix for the selected issue.", actions: [] };
+    if (/fix|how|change|code/.test(t)) {
+      setFixes((f) => new Set(f).add(it.k));
+      return {
+        text: `${r.howToFix}\n\nI've added the change for this element as a diff.${it.rule === "image-alt" ? " The alt text is a guess from the figure caption; say what the chart actually shows." : ""}`,
+        followUps: [...(sib.length > 1 ? [`Apply it to all ${sib.length}`] : []), "Why does this matter?", "How do I test it?"],
+      };
+    }
+    if (/where|show|see/.test(t)) { setTab("preview"); return { text: "Here it is on the page.", actions: ["Opened Preview"], followUps: ["How do I fix it?"] }; }
+    return { text: `About ${r.title.toLowerCase()}: ${r.howToFix}`, followUps: ["How do I fix it?", "Why does this matter?"] };
   };
 
   return (
@@ -206,7 +226,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                 {current
                   ? <IssueView it={current} siblings={siblings} html={html} page={p} fix={fixes.has(current.k)}
                       onFix={() => setFixes((s) => new Set(s).add(current.k))} onSelect={setSelected}
-                      onShow={() => { setTab("preview"); setHighlightRule(current.rule); }} onAsk={() => askAi("Fix the selected issue")} />
+                      onShow={() => { setTab("preview"); setHighlightRule(current.rule); }} onAsk={() => askAi("How do I fix this?", current)} />
                   : <Text textStyle="sm" color="fg.muted">No issues match.</Text>}
               </Box>
             </Grid>
@@ -240,17 +260,14 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                   </Menu.Root>
                 </>
               )}
-              {current && (
-                <HStack gap="2" ms="auto" textStyle="xs" color="fg.muted" minW="0">
-                  <SevDot sev={RULE_CATALOG[current.rule].severity} />
-                  <Text truncate maxW="sm">{RULE_CATALOG[current.rule].title}</Text>
-                  <Button size="xs" variant="ghost" onClick={() => setTab("issues")}>Details</Button>
-                </HStack>
-              )}
             </HStack>
             <Box maxW={mode === "live" && viewport < 1280 ? `${viewport + 2}px` : "5xl"} mx="auto">
               <PagePreview html={html} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
-                onSelect={setSelected} mode={mode} viewport={mode === "live" ? viewport : 1280} layers={layers} />
+                onSelect={setSelected} mode={mode} viewport={mode === "live" ? viewport : 1280} layers={layers}
+                card={current && (
+                  <ElementCard it={current} siblings={siblings} fix={fixes.has(current.k)} page={p} onSelect={setSelected}
+                    onFix={() => setFixes((f) => new Set(f).add(current.k))} onAsk={() => askAi("How do I fix this?", current)} onDetails={() => setTab("issues")} />
+                )} />
             </Box>
           </Tabs.Content>
 
@@ -261,9 +278,9 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
         </Tabs.Root>
       </Container>
 
-      <AiPanel open={ai} onClose={() => setAi(false)} onAsk={onAsk} ask={ask}
-        context={[p.path, ...(current ? [current.rule] : [])]}
-        suggestions={["What should I fix first?", "Fix the selected issue", "Show me where this is", "Check keyboard access"]} />
+      <AiPanel open={ai} onClose={() => setAi(false)} onAsk={onAsk} ask={ask} about={current ? refOf(current) : null}
+        onRef={(k) => { setSelected(k); setSeg((x) => (instances.find((i) => i.k === k)?.status === "fixed" ? "fixed" : x === "fixed" ? "all" : x)); }}
+        starters={["What should I fix first?", "How do I fix this?", "Why does this matter?"]} />
     </Box>
   );
 }
@@ -342,23 +359,61 @@ function IssueView({ it, siblings, html, page, fix, onFix, onSelect, onShow, onA
         <Text textStyle="sm" fontWeight="medium">How to fix</Text>
         <Text textStyle="sm">{r.howToFix}</Text>
         {fix && it.status !== "fixed" && <Diff before={it.snippet} after={r.fix(it.snippet)} />}
-        {it.status !== "fixed" && (
-          <HStack gap="2">
-            {!fix && <Button size="sm" variant="outline" onClick={onFix}>Suggest a fix</Button>}
-            <Menu.Root>
-              <Menu.Trigger asChild><IconButton size="sm" variant="ghost" aria-label="More actions"><LuEllipsis /></IconButton></Menu.Trigger>
-              <Portal><Menu.Positioner><Menu.Content>
-                <Menu.Item value="ask" onClick={onAsk}><LuSparkles />Ask AI about this issue</Menu.Item>
-                <Menu.Item value="copy" onClick={() => navigator.clipboard.writeText(issuePrompt(page, it))}><LuCopy />Copy as prompt</Menu.Item>
-              </Menu.Content></Menu.Positioner></Portal>
-            </Menu.Root>
-          </HStack>
-        )}
+        {it.status !== "fixed" && <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} size="sm" />}
       </Stack>
 
       <HStack gap="4" textStyle="xs" wrap="wrap" color="fg.muted">
         {r.refs.map((ref) => <Link key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" color="fg.muted" _hover={{ color: "fg" }}>{ref.label}<LuExternalLink /></Link>)}
       </HStack>
+    </Stack>
+  );
+}
+
+// The actions on an issue, the same in the Issues tab and on the element in Preview
+function IssueActions({ it, page, fix, onFix, onAsk, size, children }: {
+  it: Instance; page: PageV; fix: boolean; onFix: () => void; onAsk: () => void; size: "xs" | "sm"; children?: React.ReactNode;
+}) {
+  return (
+    <HStack gap="1.5">
+      {!fix && <Button size={size} variant="outline" onClick={onFix}>Suggest a fix</Button>}
+      <Button size={size} variant="ghost" onClick={onAsk}><LuSparkles />Ask AI</Button>
+      {children}
+      <Menu.Root>
+        <Menu.Trigger asChild><IconButton size={size} variant="ghost" aria-label="More actions"><LuEllipsis /></IconButton></Menu.Trigger>
+        <Portal><Menu.Positioner><Menu.Content>
+          <Menu.Item value="copy" onClick={() => navigator.clipboard.writeText(issuePrompt(page, it))}><LuCopy />Copy as prompt</Menu.Item>
+        </Menu.Content></Menu.Positioner></Portal>
+      </Menu.Root>
+    </HStack>
+  );
+}
+
+// Card attached to the selected element in Preview (like a design tool's selection toolbar)
+function ElementCard({ it, siblings, fix, page, onSelect, onFix, onAsk, onDetails }: {
+  it: Instance; siblings: Instance[]; fix: boolean; page: PageV; onSelect: (k: number) => void; onFix: () => void; onAsk: () => void; onDetails: () => void;
+}) {
+  const r = RULE_CATALOG[it.rule];
+  const idx = siblings.findIndex((x) => x.k === it.k);
+  return (
+    <Stack gap="2.5" w="380px" p="3" bg="bg" color="fg" borderWidth="1px" rounded="l2" shadow="lg" textAlign="start">
+      <HStack gap="2" align="start">
+        <Box mt="1.5"><SevDot sev={r.severity} /></Box>
+        <Stack gap="0" flex="1" minW="0">
+          <Text textStyle="sm" fontWeight="medium" lineClamp={2}>{r.title}</Text>
+          <Text textStyle="xs" color="fg.muted">{SEV[r.severity].label}{r.criterion ? ` · WCAG ${r.criterion.split(" ")[0]}` : ""}</Text>
+        </Stack>
+        {siblings.length > 1 && (
+          <HStack gap="0" flexShrink={0} textStyle="xs" color="fg.muted">
+            <IconButton size="2xs" variant="ghost" aria-label="Previous element" disabled={idx <= 0} onClick={() => onSelect(siblings[idx - 1].k)}><LuChevronLeft /></IconButton>
+            <Text fontVariantNumeric="tabular-nums">{idx + 1}/{siblings.length}</Text>
+            <IconButton size="2xs" variant="ghost" aria-label="Next element" disabled={idx >= siblings.length - 1} onClick={() => onSelect(siblings[idx + 1].k)}><LuChevronRight /></IconButton>
+          </HStack>
+        )}
+      </HStack>
+      {fix && <Diff before={it.snippet} after={r.fix(it.snippet)} />}
+      <IssueActions it={it} page={page} fix={fix} onFix={onFix} onAsk={onAsk} size="xs">
+        <Button size="xs" variant="ghost" onClick={onDetails}>Details</Button>
+      </IssueActions>
     </Stack>
   );
 }
