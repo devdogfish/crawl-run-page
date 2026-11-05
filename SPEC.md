@@ -646,14 +646,19 @@ Filters:
 
 Goal: a developer can take the issues for a page into their own tools without copying from several places.
 
-**Issue shape.** Every issue, whatever produced it (axe-core, Lighthouse, a custom check), is returned the same way:
+Architecture, storage and the MCP build guide: [`docs/backend-and-mcp.md`](docs/backend-and-mcp.md). Terms: [`CONTEXT.md`](CONTEXT.md).
+
+**Issue shape.** An issue is one rule failing on one page in one crawl; it holds the failing elements. Every issue, whatever produced it (axe-core, Lighthouse, a custom check), has the same shape:
 
 ```json
-{ "id": "9155-18", "rule": "image-alt", "title": "Image has no text alternative",
+{ "id": "811-9155-image-alt", "rule": "image-alt", "title": "Image has no text alternative",
   "priority": "P1", "severity": "critical", "category": "accessibility", "wcag": "1.1.1 Non-text Content · A",
-  "status": "existing", "owner": "content", "source": "CMS entry 9155 · Body",
-  "selector": "article figure.chart:nth-of-type(1) img", "html": "<img src=…>",
-  "how_to_fix": "…", "references": ["https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html"] }
+  "how_to_fix": "…", "references": ["https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html"],
+  "ui_url": "https://crawler.internal/rbccm/pages/9155?crawl=811&issue=…",
+  "elements": [
+    { "id": "811-9155-image-alt-1", "selector": "article figure.chart:nth-of-type(1) img", "html": "<img src=…>",
+      "status": "existing", "first_seen": 802, "shared_pages": null,
+      "owner": "content", "source": "Content record templatedata/article/story/data/2025/03/… · body", "source_url": null } ] }
 ```
 
 - **Priority** is fixed per severity and not configurable: Critical P1, Serious P2, Moderate P3, Minor P4.
@@ -668,16 +673,16 @@ Goal: a developer can take the issues for a page into their own tools without co
 | Endpoint | Returns |
 |---|---|
 | `GET /api/pages/{page_id}/issues?crawl=811&priority=P1,P2&category=accessibility&status=new&owner=code` | `{ page, issues: [Issue] }`, the same filters as the UI |
-| `GET /api/issues/{issue_id}` | one `Issue` with `elements[]` (all instances of the rule on that page) |
+| `GET /api/issues/{issue_id}` | one `Issue` with all its elements |
 
 Links: the page detail URL carries the view (`?crawl=811&issue=18&pri=P1&cat=accessibility`), so any issue or filtered list can be linked to.
 
-**Exports** (Issues tab → Export): copy as one prompt (grouped by rule, one line per element with its source), download JSON (the shape above), copy the API request, copy a link to the view.
+**Exports** (Issues tab → Export): copy as one prompt (grouped by rule, one line per element with its source), download JSON (the shape above), copy the API request, copy a link to the view. The API serves the same with `?format=prompt|json`.
 
-**MCP server** (thin wrapper over the API, so an AI coding tool can pull issues itself):
+**MCP server** (so an AI coding tool can pull issues itself; a sibling of the REST API, both calling the same core in-process, see `docs/backend-and-mcp.md` §5):
 - `list_issues(page, crawl?, priority?, category?, owner?, status?)` → `Issue[]`
 - `get_issue(issue_id)` → `Issue` with elements
-- `find_pages(url_contains?, rule?, priority?)` → pages with issue counts
+- `find_pages(site, q?, rule?, priority?, category?, change?)` → pages with issue counts by priority
 
 **Local check CLI** (check a fix before the next crawl): `npx @rbc/crawler check <url> [--rule image-alt] [--selector "…"]` runs the same rules (axe-core with the same config, the custom checks) against any URL, including `http://localhost:3000`, and prints issues in the same shape. Each issue has "Copy local check command" in its menu.
 

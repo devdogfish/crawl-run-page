@@ -1,6 +1,6 @@
 # Implementation slices
 
-Five vertical slices to move the prototype into the real app. Each ships something visible and leaves the page working. Details are in `SPEC.md`: §4 instrumentation, §5 SQLite storage, §6 API.
+Seven vertical slices to move the prototype into the real app. Each ships something visible and leaves the page working. Details are in `SPEC.md`: §4 instrumentation, §5 SQLite storage, §6 API. Slices 6 and 7 (Pages, issues, MCP) are designed in `docs/backend-and-mcp.md`.
 
 The frontend already exists in this repo, and **the crawler's behaviour doesn't change**. The work is:
 
@@ -16,6 +16,8 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 | 3 | Metrics + ETA | `progress(...)`, `rate_limited(...)` | samples, ETA, medians, history | Metrics tab, progress/ETA, sparkline | charts and ETA come from real numbers |
 | 4 | Pages table | `page(...)` per URL | pages, counts, CSV | Pages tab | redirects/errors/skips can be filtered, paged and exported |
 | 5 | Controls + Lighthouse | `checkpoint()`, `lighthouse_result(...)` | create, pause/resume, settings, retry, jobs, scores | New crawl, Pause/Resume/Settings, Retry, Scores, full-site row | crawls can be started, paused, re-tuned, resumed and retried; Lighthouse works end to end |
+| 6 | Pages + issues API | snapshots, elements (with owner/source), links, custom-rule matches | `core/` (pages, issues, rules, handoff), `/api/…/pages`, `/api/pages/{id}/issues` | Pages page and page detail on real data | a real crawl compared with its baseline shows the right new/changed/removed pages and new/fixed issues |
+| 7 | MCP server | none | `mcp/` with `find_pages`, `list_issues`, `get_issue`; stdio entry and `/mcp` mount | none | Claude Code, connected locally, lists a page's P1 issues and fixes one in the repo |
 
 ---
 
@@ -212,6 +214,46 @@ The frontend already exists in this repo, and **the crawler's behaviour doesn't 
 - [ ] Run starts the full audit as its own row, with live progress, logs and scores. The crawl stays "Succeeded".
 - [ ] Retrying a failed processing step starts from that step, keeps the crawl output, and the log shows "attempt 2".
 - [ ] A second full-audit request while one is running is refused (button disabled; API `409`).
+
+---
+
+## Slice 6: Pages and issues API
+
+**Goal:** the Pages page and the page detail run on real crawl data. Design: `docs/backend-and-mcp.md` §1 to §4.
+
+**Crawler (calls only)**
+- Per page: a snapshot (status, title, H1, content hash, page type, screenshot path).
+- Per failing element: rule, selector, trimmed HTML, HTML hash, box, owner and source (§4 of the design doc).
+- Per page: outgoing links, and custom-rule match counts.
+
+**Backend**
+- The storage additions, then `core/` with tests through its interface against a seeded `crawler.db`.
+- Thin routes over `core`: `GET /api/sites/{site}/pages`, `GET /api/pages/{id}`, `GET /api/pages/{id}/issues`, `GET /api/issues/{id}`, plus `?format=prompt|json` for exports.
+
+**Frontend**
+- Replace `src/lib/site-pages.ts` and `src/lib/page-issues.ts` with queries; keep their types, matching the API.
+
+**Acceptance**
+- [ ] Comparing two crawls gives the same counts in the tabs and in the API.
+- [ ] An element present in the baseline and gone now shows under Fixed.
+- [ ] Header and footer elements are marked Shared and owned by the template.
+- [ ] Every filter and the URL state survive a reload.
+
+---
+
+## Slice 7: MCP server
+
+**Goal:** an AI coding tool pulls issues itself. Design: `docs/backend-and-mcp.md` §5.
+
+**Backend**
+- `mcp/server.py`: three read-only tools that call `core` and nothing else.
+- `python -m crawler_api.mcp` (stdio) and the `/mcp` mount on the FastAPI app.
+
+**Acceptance**
+- [ ] The MCP Inspector lists the three tools with typed inputs.
+- [ ] `list_issues` accepts a full URL, a path or an id, and defaults to the latest crawl.
+- [ ] A missing page returns an error that names the latest crawl that has it.
+- [ ] In Claude Code, connected over stdio: "list the P1 issues on <page> and fix the first one" works end to end.
 
 ---
 
