@@ -13,6 +13,8 @@ This document records what was decided while designing the crawl run page:
 
 `SLICES.md` breaks the integration into 5 slices.
 
+> **Revised 2026-11-05:** §4–5's separate `crawl_events.py` / `crawls.db` / writer thread is replaced by a run recorder inside the existing v2 backend and `intelligence.db`. See [docs/backend-integration-plan.md](docs/backend-integration-plan.md) and [ADR 0001](docs/adr/0001-extend-v2-backend.md). The UI, log format, table shapes and payloads below still stand.
+
 > **The crawler already exists and is not changed by this work.** This spec only defines what it should *report* (logs, progress, per-page results) and where to store it. How it crawls, renders, retries or picks pages is up to the crawler.
 
 ---

@@ -2,7 +2,7 @@
 // For a developer fixing one page. Quiet by default: the list of what's wrong on this page, and the selected
 // issue with how to fix it. Shared issues (header, footer, banners) are folded away: they're fixed in the template.
 //   Issues  → list (this page first, shared folded) | selected issue: why, the element, how to fix, suggested fix
-//   Preview → the page with issue boxes: screenshot, or live render (viewport + accessibility layers)
+//   Preview → live render of the stored page with issue boxes (viewport + accessibility layers); no screenshots
 //   Source  → the rendered HTML, issue lines marked
 // The assistant (header button) can also drive the view: filter, select, open the preview with a layer on.
 //
@@ -81,7 +81,6 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const [fixes, setFixes] = useState<Set<number>>(new Set());
   const [ai, setAi] = useState(false);
   const [ask, setAsk] = useState<{ q: string; about: IssueRef | null; n: number } | null>(null);
-  const [mode, setMode] = useState<"screenshot" | "live">("screenshot");
   const [viewport, setViewport] = useState(1280);
   const [layers, setLayers] = useState<Layer[]>(["issues"]);
   const comparing = b != null;
@@ -263,35 +262,27 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
           {/* ───────── Preview ───────── */}
           <Tabs.Content value="preview" pt="4">
             <HStack gap="2" mb="3" wrap="wrap">
-              <SegmentGroup.Root size="xs" value={mode} onValueChange={(e) => { setMode(e.value as typeof mode); if (e.value === "screenshot") { setViewport(1280); setLayers(["issues"]); } }}>
+              <SegmentGroup.Root size="xs" value={String(viewport)} onValueChange={(e) => setViewport(Number(e.value))}>
                 <SegmentGroup.Indicator />
-                <SegmentGroup.Items items={[{ value: "screenshot", label: "Screenshot" }, { value: "live", label: "Live render" }]} />
+                <SegmentGroup.Items items={VIEWPORTS} />
               </SegmentGroup.Root>
-              {mode === "live" && (
-                <>
-                  <SegmentGroup.Root size="xs" value={String(viewport)} onValueChange={(e) => setViewport(Number(e.value))}>
-                    <SegmentGroup.Indicator />
-                    <SegmentGroup.Items items={VIEWPORTS} />
-                  </SegmentGroup.Root>
-                  <Menu.Root closeOnSelect={false}>
-                    <Menu.Trigger asChild>
-                      <Button size="xs" variant="outline"><LuLayers />Layers{layers.length > 1 ? ` · ${layers.length - 1}` : ""}</Button>
-                    </Menu.Trigger>
-                    <Portal><Menu.Positioner><Menu.Content minW="44">
-                      {LAYERS.map((l) => (
-                        <Menu.CheckboxItem key={l.id} value={l.id} checked={layers.includes(l.id)}
-                          onCheckedChange={(c) => setLayers((x) => (c ? [...x, l.id] : x.filter((y) => y !== l.id)))}>
-                          {l.label}<Menu.ItemIndicator />
-                        </Menu.CheckboxItem>
-                      ))}
-                    </Menu.Content></Menu.Positioner></Portal>
-                  </Menu.Root>
-                </>
-              )}
+              <Menu.Root closeOnSelect={false}>
+                <Menu.Trigger asChild>
+                  <Button size="xs" variant="outline"><LuLayers />Layers{layers.length > 1 ? ` · ${layers.length - 1}` : ""}</Button>
+                </Menu.Trigger>
+                <Portal><Menu.Positioner><Menu.Content minW="44">
+                  {LAYERS.map((l) => (
+                    <Menu.CheckboxItem key={l.id} value={l.id} checked={layers.includes(l.id)}
+                      onCheckedChange={(c) => setLayers((x) => (c ? [...x, l.id] : x.filter((y) => y !== l.id)))}>
+                      {l.label}<Menu.ItemIndicator />
+                    </Menu.CheckboxItem>
+                  ))}
+                </Menu.Content></Menu.Positioner></Portal>
+              </Menu.Root>
             </HStack>
-            <Box maxW={mode === "live" && viewport < 1280 ? `${viewport + 2}px` : "5xl"} mx="auto">
+            <Box maxW={viewport < 1280 ? `${viewport + 2}px` : "5xl"} mx="auto">
               <PagePreview html={html} origin={origin} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
-                onSelect={setSelected} mode={mode} viewport={mode === "live" ? viewport : 1280} layers={layers}
+                onSelect={setSelected} viewport={viewport} layers={layers}
                 card={current && (
                   <ElementCard it={current} siblings={siblings} fix={fixes.has(current.k)} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)}
                     onFix={() => setFixes((f) => new Set(f).add(current.k))} onAsk={() => askAi("How do I fix this?", current)} onDetails={() => setTab("issues")} />
@@ -374,7 +365,7 @@ function IssueView({ it, siblings, html, origin, page, fix, onFix, onSelect, onS
           {it.onPage && <Button size="2xs" variant="ghost" onClick={onShow} flexShrink={0}>Show on page</Button>}
         </HStack>
         <Box borderWidth="1px" rounded="l2" overflow="hidden">
-          {it.onPage && <Box borderBottomWidth="1px"><PagePreview html={html} origin={origin} instances={[it]} selected={it.k} mode="screenshot" crop={it.k} height={140} /></Box>}
+          {it.onPage && <Box borderBottomWidth="1px"><PagePreview html={html} origin={origin} instances={[it]} selected={it.k} crop={it.k} height={140} /></Box>}
           <Code display="block" whiteSpace="pre-wrap" wordBreak="break-all" px="3" py="2.5" textStyle="xs" bg="bg.subtle" rounded="0">{it.snippet}</Code>
         </Box>
         <HStack gap="1.5" textStyle="xs" color="fg.muted" wrap="wrap">

@@ -1,12 +1,11 @@
-// The crawled page with its issues drawn on top.
-//   screenshot → what the crawler saved (image + element boxes): fixed 1280px, issue boxes only.
-//   live       → the stored HTML rendered again: any viewport width, hover to inspect any element,
-//                and accessibility layers computed from the DOM (tab order, headings, landmarks, alt text).
-//   crop       → a zoomed slice around one element, used as evidence in the issue panel.
+// The crawled page with its issues drawn on top: a live render of the stored HTML and stylesheets
+// (no screenshots: docs/adr/0002-live-render-only-preview.md).
+//   full → any viewport width, hover to inspect any element, and accessibility layers computed from the DOM
+//          (tab order, headings, landmarks, alt text).
+//   crop → a zoomed slice around one element, used as evidence in the issue panel (no hover, no layers).
 // Issues are shown in "focus" style: only the selected one is outlined (the page dims around it); every other
 // issue is a dot on a rail at the left edge, at its element's height. Hover a dot to outline it, click to select.
-// PROTOTYPE: both modes render the generated HTML; in the real app "screenshot" is an image and the
-// boxes come from the crawl (no stored HTML needed). Live render is what the extra ~15% storage would buy.
+// PROTOTYPE: renders the generated HTML from src/lib/page-issues.ts.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
@@ -25,7 +24,7 @@ const nameOf = (el: Element) => {
   return /[\p{L}\p{N}]/u.test(n) ? n.slice(0, 60) : "";
 };
 
-export function PagePreview({ html, origin, instances, selected, highlightRule, onSelect, mode, viewport = 1280, layers = ["issues"], crop, height, card }: {
+export function PagePreview({ html, origin, instances, selected, highlightRule, onSelect, viewport = 1280, layers = ["issues"], crop, height, card }: {
   card?: React.ReactNode; // actions shown on the selected element (screen-size, not scaled with the page)
   html: string;
   origin?: string; // site the page was crawled from: assets stream from there
@@ -33,7 +32,6 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
   selected: number | null;
   highlightRule?: string | null;
   onSelect?: (k: number) => void;
-  mode: "screenshot" | "live";
   viewport?: number;
   layers?: Layer[];
   crop?: number; // instance to zoom in on
@@ -90,7 +88,7 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
   }, [measure]);
 
   const scale = width ? Math.min(1, width / viewport) : 0.5;
-  const live = mode === "live";
+  const live = crop == null; // the crop is static evidence: no hover, no layers
   const cropRect = crop != null ? boxes.get(crop) : undefined;
 
   // Crop: zoom in (up to 1:1) and centre the element

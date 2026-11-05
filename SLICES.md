@@ -1,5 +1,7 @@
 # Implementation slices
 
+> **Superseded for ordering (2026-11-05):** [docs/backend-integration-plan.md](docs/backend-integration-plan.md) reorders this work by what must be captured before the next crawl (Tier 0) vs what can be built after. The slices' acceptance criteria still apply.
+
 Seven vertical slices to move the prototype into the real app. Each ships something visible and leaves the page working. Details are in `SPEC.md`: §4 instrumentation, §5 SQLite storage, §6 API. Slices 6 and 7 (Pages, issues, MCP) are designed in `docs/backend-and-mcp.md`.
 
 The frontend already exists in this repo, and **the crawler's behaviour doesn't change**. The work is:
