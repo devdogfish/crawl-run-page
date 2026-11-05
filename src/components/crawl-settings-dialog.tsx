@@ -4,12 +4,11 @@
 //   create → everything editable ("New crawl" in the navbar)
 //   paused → target + discovery locked, throughput editable (Settings while a crawl is paused)
 //   view   → read-only (running or finished crawl)
-import { useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import {
-  Alert, Badge, Button, CloseButton, Dialog, Field, Grid, Group, HStack, Input, InputGroup, NativeSelect, NumberInput, Portal,
-  Stack, Switch, Text,
+  Alert, Button, CloseButton, Dialog, Field, Grid, Group, HStack, Input, InputGroup, NumberInput, Portal, Select, createListCollection, type ListCollection,
+  Separator, Stack, Switch,
 } from "@chakra-ui/react";
-import { LuLock } from "react-icons/lu";
 
 import { DISCOVERY, ENVIRONMENTS, type CrawlSettings, type Discovery, type Environment } from "@/lib/settings";
 import { SITES, envUrl } from "@/lib/sites";
@@ -36,6 +35,8 @@ export function CrawlSettingsDialog({ open, onOpenChange, mode, initial, onSubmi
   );
 }
 
+const PortalTarget = createContext<React.RefObject<HTMLDivElement | null> | null>(null);
+
 function SettingsForm({ mode, initial, onSubmit, onClose }: {
   mode: SettingsMode; initial: CrawlSettings; onSubmit?: (s: CrawlSettings, opts: { resume: boolean }) => void; onClose: () => void;
 }) {
@@ -44,16 +45,18 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
   const lockedFixed = mode !== "create"; // target + discovery
   const lockedLive = mode === "view"; // throughput
   const changed = JSON.stringify(s) !== JSON.stringify(initial);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Dialog.Content>
+    <PortalTarget.Provider value={contentRef}>
+    <Dialog.Content ref={contentRef}>
       <Dialog.Header>
         <Dialog.Title>{mode === "create" ? "New crawl" : "Crawl settings"}</Dialog.Title>
       </Dialog.Header>
       <Dialog.CloseTrigger asChild><CloseButton size="sm" /></Dialog.CloseTrigger>
 
       <Dialog.Body>
-        <Stack gap="7">
+        <Stack gap="5">
           {mode === "paused" && (
             <Alert.Root status="info" size="sm">
               <Alert.Indicator />
@@ -67,33 +70,24 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
             </Alert.Root>
           )}
 
-          <Section title="Target" locked={lockedFixed}>
+          <Stack gap="5" separator={<Separator />}>
+          <Section>
             <Field.Root disabled={lockedFixed}>
-              <Group attached w="full" aria-label={`${SITES[s.site].name}: environment and URL`}>
-                <NativeSelect.Root size="sm" w="40" flexShrink={0} disabled={lockedFixed}>
-                  <NativeSelect.Field
-                    value={s.environment}
-                    onChange={(e) => { const env = e.target.value as Environment; setS((x) => ({ ...x, environment: env, url: envUrl(x.site, env) })); }}
-                  >
-                    {(Object.keys(ENVIRONMENTS) as Environment[]).map((env) => <option key={env} value={env}>{ENVIRONMENTS[env].label}</option>)}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
-                <Input size="sm" value={s.url} onChange={(e) => set("url", e.target.value)} />
+              <Group w="full" gap="0" aria-label={`${SITES[s.site].name}: environment and URL`}>
+                <StyledSelect
+                  collection={ENV_ITEMS} value={s.environment} disabled={lockedFixed} w="40" flexShrink={0} attachedStart
+                  onChange={(v) => { const env = v as Environment; setS((x) => ({ ...x, environment: env, url: envUrl(x.site, env) })); }}
+                />
+                <Input size="sm" value={s.url} onChange={(e) => set("url", e.target.value)} roundedStart="0" ms="-1px" />
               </Group>
             </Field.Root>
           </Section>
 
-          <Section title="Discovery" locked={lockedFixed}>
+          <Section>
             <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap="4">
               <Field.Root disabled={lockedFixed}>
                 <Field.Label>Find pages from</Field.Label>
-                <NativeSelect.Root size="sm" disabled={lockedFixed}>
-                  <NativeSelect.Field value={s.discovery} onChange={(e) => set("discovery", e.target.value as Discovery)}>
-                    {(Object.keys(DISCOVERY) as Discovery[]).map((d) => <option key={d} value={d}>{DISCOVERY[d]}</option>)}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+                <StyledSelect collection={DISCOVERY_ITEMS} value={s.discovery} disabled={lockedFixed} onChange={(v) => set("discovery", v as Discovery)} />
               </Field.Root>
               <Field.Root disabled={lockedFixed}>
                 <Field.Label>Exclude paths</Field.Label>
@@ -106,7 +100,7 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
             </HStack>
           </Section>
 
-          <Section title="Throughput" note={mode === "create" ? undefined : "Editable while paused"} locked={lockedLive}>
+          <Section>
             <Grid templateColumns={{ base: "1fr 1fr", sm: "repeat(3, 1fr)" }} gap="4">
               <Num label="Request delay" unit="ms" help="Wait between requests, per worker" value={s.delayMs} min={0} max={10_000} step={50} disabled={lockedLive} onChange={(v) => set("delayMs", v)} />
               <Num label="Timeout" unit="s" help="Give up on a request after this long" value={s.timeoutS} min={1} max={120} disabled={lockedLive} onChange={(v) => set("timeoutS", v)} />
@@ -115,6 +109,7 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
               <Num label="Lighthouse sample" unit="pages" help="Pages audited after the crawl" value={s.lighthouseSample} min={10} max={2_000} step={10} disabled={lockedLive} onChange={(v) => set("lighthouseSample", v)} />
             </Grid>
           </Section>
+          </Stack>
         </Stack>
       </Dialog.Body>
 
@@ -132,21 +127,50 @@ function SettingsForm({ mode, initial, onSubmit, onClose }: {
         )}
       </Dialog.Footer>
     </Dialog.Content>
+    </PortalTarget.Provider>
   );
 }
 
-function Section({ title, note, locked, children }: { title: string; note?: string; locked: boolean; children: React.ReactNode }) {
+// Chakra's styled Select (not the browser's native one). Its menu is portalled into the dialog content
+// (Chakra's pattern for Select inside Dialog), so it isn't clipped by the scrolling body.
+type Option = { value: string; label: string };
+const ENV_ITEMS = createListCollection<Option>({ items: (Object.keys(ENVIRONMENTS) as Environment[]).map((e) => ({ value: e, label: ENVIRONMENTS[e].label })) });
+const DISCOVERY_ITEMS = createListCollection<Option>({ items: (Object.keys(DISCOVERY) as Discovery[]).map((d) => ({ value: d, label: DISCOVERY[d] })) });
+
+function StyledSelect({ collection, value, onChange, disabled, attachedStart, ...rest }: {
+  collection: ListCollection<Option>; value: string; onChange: (v: string) => void;
+  disabled: boolean; attachedStart?: boolean; w?: string; flexShrink?: number;
+}) {
+  const container = useContext(PortalTarget);
   return (
-    <Stack gap="3">
-      {/* Section headings are small muted caps, so they never compete with field labels */}
-      <HStack gap="2" minH="5">
-        <Text textStyle="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wider">{title}</Text>
-        {locked ? <Badge size="xs" variant="subtle" colorPalette="gray"><LuLock />Locked</Badge>
-          : note ? <Badge size="xs" variant="subtle" colorPalette="blue">{note}</Badge> : null}
-      </HStack>
-      {children}
-    </Stack>
+    <Select.Root collection={collection} size="sm" value={[value]} onValueChange={(e) => e.value[0] && onChange(e.value[0])}
+      disabled={disabled} positioning={{ sameWidth: true }} {...rest}>
+      <Select.HiddenSelect />
+      <Select.Control>
+        <Select.Trigger roundedEnd={attachedStart ? "0" : undefined}>
+          <Select.ValueText />
+        </Select.Trigger>
+        <Select.IndicatorGroup><Select.Indicator /></Select.IndicatorGroup>
+      </Select.Control>
+      <Portal container={container ?? undefined}>
+      <Select.Positioner>
+        <Select.Content>
+          {collection.items.map((item) => (
+            <Select.Item key={item.value} item={item}>
+              {item.label}
+              <Select.ItemIndicator />
+            </Select.Item>
+          ))}
+        </Select.Content>
+      </Select.Positioner>
+      </Portal>
+    </Select.Root>
   );
+}
+
+// A group of related fields; groups are divided by the separators on the body's Stack
+function Section({ children }: { children: React.ReactNode }) {
+  return <Stack gap="4">{children}</Stack>;
 }
 
 function Num({ label, unit, help, value, min, max, step = 1, disabled, onChange }: {
