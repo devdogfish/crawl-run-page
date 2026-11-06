@@ -15,15 +15,18 @@ import {
   Box, Button, Code, Collapsible, Container, EmptyState, Flex, Grid, HStack, Heading, Icon, IconButton, Input, InputGroup, Link, Menu, Portal,
   SegmentGroup, Span, Stack, Tabs, Text,
 } from "@chakra-ui/react";
-import { LuChevronDown, LuChevronLeft, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuExternalLink, LuFileQuestion, LuFilter, LuLayers, LuLink, LuSearch, LuSparkles, LuTerminal } from "react-icons/lu";
+import { LuCode, LuCheck, LuChevronDown, LuChevronLeft, LuChevronRight, LuCopy, LuDownload, LuEllipsis, LuExternalLink, LuFileQuestion, LuFilter, LuLayers, LuLink, LuSearch, LuSparkles, LuTerminal } from "react-icons/lu";
 
+import { useCopy } from "@/components/assistant/common";
+import { NavAction } from "@/components/nav-action";
 import { useAssistant } from "@/components/assistant";
 import { BackLink, RuleGuide, RuleMeta, RuleTitle } from "@/components/rule-ui";
+import { SourceView } from "@/components/source-view";
 import { PagePreview, type Layer } from "@/components/page-preview";
 import { useSite } from "@/components/site-context";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
-  RULE_CATALOG, SEVERITIES, apiRequest, batchPrompt, issuePrompt, issuesJson, localCheck, pageIssues, sevRank, sourceLines, type Instance,
+  RULE_CATALOG, SEVERITIES, apiRequest, batchPrompt, issuePrompt, issuesJson, localCheck, pageIssues, sevRank, type Instance,
 } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
 import { explainSeed, fixSeed, summarizeSeed } from "@/lib/refs";
@@ -82,6 +85,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const prio = (sev: string) => PRIORITY[sev as keyof typeof PRIORITY];
   const [highlightRule, setHighlightRule] = useState<string | null>(null);
   const [viewport, setViewport] = useState(1280);
+  const [previewReveal, setPreviewReveal] = useState(0);
   const [layers, setLayers] = useState<Layer[]>(["issues"]);
   const comparing = b != null;
 
@@ -146,9 +150,9 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const explainAi = (it: Instance) => send(explainSeed(site, p, it));
 
   return (
-    <Box>
+    <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value as typeof tab)} variant="line" size="sm">
       <Box borderBottomWidth="1px">
-        <Container maxW="7xl" pt="5" pb="4">
+        <Container maxW="7xl" pt="5" pb="0">
           <BackLink href={pagesHref}>Pages</BackLink>
           <Flex justify="space-between" align="start" gap="4">
             {/* The title is the link to the live page: icon on it, underline on hover, full URL in the tooltip */}
@@ -159,25 +163,23 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
               </Link>
             </Tooltip>
           </Flex>
-        </Container>
-      </Box>
-
-      <Container maxW="7xl" pt="2" pb="10">
-        <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value as typeof tab)} variant="line" size="sm">
-          <Tabs.List>
+          <Tabs.List mt="3" borderBottomWidth="0">
             <Tabs.Trigger value="issues">Issues <Span color="fg.muted" fontVariantNumeric="tabular-nums">{now.length}</Span></Tabs.Trigger>
             <Tabs.Trigger value="preview">Preview</Tabs.Trigger>
             <Tabs.Trigger value="source">Source</Tabs.Trigger>
           </Tabs.List>
+        </Container>
+      </Box>
 
+      <Container maxW="7xl" pb="10">
           {/* ───────── Issues ───────── */}
           <Tabs.Content value="issues" pt="5">
             <Grid templateColumns={{ base: "1fr", md: "300px 1fr" }} gap={{ base: "6", md: "8" }} alignItems="start">
               <Stack gap="4" position={{ md: "sticky" }} top={{ md: "calc(var(--sticky-top, 4rem) + 1rem)" }}>
                 <Stack gap="2">
                   <HStack gap="1.5">
-                    <InputGroup startElement={<LuSearch />} flex="1">
-                      <Input size="sm" placeholder="Search issues" value={q} onChange={(e) => setQ(e.target.value)} />
+                    <InputGroup startElement={<LuSearch />} flex="1" minW="0">
+                      <Input size="sm" h="9" colorPalette="gray" bg="bg" borderColor="border" rounded="l2" _focusVisible={{ borderColor: "border.emphasized", outline: "2px solid", outlineColor: "border.emphasized", outlineOffset: "1px" }} placeholder="Search issues" value={q} onChange={(e) => setQ(e.target.value)} />
                     </InputGroup>
                     <FilterMenu pri={pri} setPri={setPri} cats={cats} setCats={setCats} />
                     <ExportMenu count={visible.filter((it) => it.status !== "fixed").length}
@@ -195,6 +197,29 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                   )}
                 </Stack>
 
+                <Box display={{ base: "block", md: "none" }}>
+                  <Menu.Root positioning={{ placement: "bottom-start" }}>
+                    <Menu.Trigger asChild>
+                      <NavAction w="full" h="auto" minH="10" py="2" justifyContent="space-between" aria-label="Choose issue">
+                        <Text textStyle="sm" textAlign="start" whiteSpace="normal">{current ? RULE_CATALOG[current.rule].title : "Choose issue"}</Text><LuChevronDown />
+                      </NavAction>
+                    </Menu.Trigger>
+                    <Portal><Menu.Positioner><Menu.Content w="min(360px, calc(100vw - 32px))" maxH="60dvh" overflowY="auto" colorPalette="gray">
+                      {[{ title: "On this page", groups: local }, { title: "Shared across the site", groups: shared }].filter((group) => group.groups.length).map((group) => (
+                        <Menu.ItemGroup key={group.title}>
+                          <Menu.ItemGroupLabel textStyle="xs" color="fg.muted">{group.title}</Menu.ItemGroupLabel>
+                          {group.groups.map(({ rule, items }) => <Menu.Item key={rule} value={rule} onClick={() => setSelected(items[0].k)}>
+                            <Text textStyle="xs" flexShrink={0}>{prio(RULE_CATALOG[rule].severity)}</Text>
+                            <Text flex="1">{RULE_CATALOG[rule].title}</Text>
+                            <Text color="fg.muted" textStyle="xs">{items.length}</Text>
+                          </Menu.Item>)}
+                        </Menu.ItemGroup>
+                      ))}
+                      {!local.length && !shared.length && <Text p="2" textStyle="sm" color="fg.muted">No issues match.</Text>}
+                    </Menu.Content></Menu.Positioner></Portal>
+                  </Menu.Root>
+                </Box>
+                <Stack gap="4" display={{ base: "none", md: "flex" }}>
                 <RuleList title="On this page" groups={local} selected={current} onSelect={setSelected} prio={prio} empty="Nothing on this page." />
 
                 {shared.length > 0 && (
@@ -211,12 +236,18 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                     </Collapsible.Content>
                   </Collapsible.Root>
                 )}
+                </Stack>
               </Stack>
 
               <Box minW="0" borderStartWidth={{ md: "1px" }} ps={{ md: "8" }}>
                 {current
                   ? <IssueView it={current} siblings={siblings} html={html} origin={origin} page={p} link={linkTo(current)} onSelect={setSelected}
-                      onShow={() => { setTab("preview"); setHighlightRule(current.rule); }} onFix={() => fixAi(current)} onExplain={() => explainAi(current)} />
+                      onShow={() => {
+                        setSelected(current.k);
+                        setLayers((value) => value.includes("issues") ? value : [...value, "issues"]);
+                        setPreviewReveal((value) => value + 1);
+                        setTab("preview"); setHighlightRule(current.rule);
+                      }} onFix={() => fixAi(current)} onExplain={() => explainAi(current)} />
                   : <Text textStyle="sm" color="fg.muted">No issues match.</Text>}
               </Box>
             </Grid>
@@ -225,13 +256,9 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
           {/* ───────── Preview ───────── */}
           <Tabs.Content value="preview" pt="4">
             <HStack gap="2" mb="3" wrap="wrap">
-              <SegmentGroup.Root size="xs" value={String(viewport)} onValueChange={(e) => setViewport(Number(e.value))}>
-                <SegmentGroup.Indicator />
-                <SegmentGroup.Items items={VIEWPORTS} />
-              </SegmentGroup.Root>
               <Menu.Root closeOnSelect={false}>
                 <Menu.Trigger asChild>
-                  <Button size="xs" variant="outline"><LuLayers />Layers{layers.length > 1 ? ` · ${layers.length - 1}` : ""}</Button>
+                  <Button size="xs" variant="outline" colorPalette="gray" color="fg.muted" borderColor="border"><LuLayers />Layers{layers.length > 1 ? ` · ${layers.length - 1}` : ""}</Button>
                 </Menu.Trigger>
                 <Portal><Menu.Positioner><Menu.Content minW="44">
                   {LAYERS.map((l) => (
@@ -242,25 +269,30 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                   ))}
                 </Menu.Content></Menu.Positioner></Portal>
               </Menu.Root>
+              <SegmentGroup.Root size="xs" value={String(viewport)} onValueChange={(e) => setViewport(Number(e.value))}>
+                <SegmentGroup.Indicator />
+                <SegmentGroup.Items items={VIEWPORTS} />
+              </SegmentGroup.Root>
             </HStack>
-            <Box maxW={viewport < 1280 ? `${viewport + 2}px` : "5xl"} mx="auto">
+            <Box maxW={viewport < 1280 ? `${viewport + 2}px` : "full"} mx="auto">
               <PagePreview html={html} origin={origin} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
-                onSelect={setSelected} viewport={viewport} layers={layers}
+                onSelect={setSelected} viewport={viewport} layers={layers} revealRequest={previewReveal}
                 card={current && (
                   <ElementCard it={current} siblings={siblings} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)}
-                    onFix={() => fixAi(current)} onExplain={() => explainAi(current)} onDetails={() => setTab("issues")} />
+                    onFix={() => fixAi(current)} onExplain={() => explainAi(current)} onDetails={() => setTab("issues")}
+                    onShowCode={() => { setSelected(current.k); setTab("source"); }} />
                 )} />
             </Box>
           </Tabs.Content>
 
           {/* ───────── Source ───────── */}
           <Tabs.Content value="source" pt="4">
-            <SourceView html={html} instances={visible} selected={current?.k ?? null} onSelect={setSelected} />
+            <SourceView html={html} instances={visible} selected={current?.k ?? null} onSelect={setSelected} active={tab === "source"}
+              card={current && <ElementCard it={current} siblings={siblings} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)} showExplanation
+                onFix={() => fixAi(current)} onExplain={() => explainAi(current)} onDetails={() => setTab("issues")} />} />
           </Tabs.Content>
-        </Tabs.Root>
       </Container>
-
-    </Box>
+    </Tabs.Root>
   );
 }
 
@@ -302,40 +334,73 @@ function IssueView({ it, siblings, html, origin, page, onSelect, onShow, onFix, 
   const r = RULE_CATALOG[it.rule];
   const idx = siblings.findIndex((x) => x.k === it.k);
   return (
-    <Stack gap="6" maxW="3xl">
-      <Stack gap="1.5">
-        <RuleTitle rule={r} size="md" />
-        <RuleMeta rule={r}>
-          {it.status === "new" && <Text color="green.fg">· New in this crawl</Text>}
-          {it.status === "fixed" && <Text>· Fixed in this crawl</Text>}
-        </RuleMeta>
-      </Stack>
+    <Stack gap="5" maxW="3xl" minW="0" css={{ containerType: "inline-size", containerName: "issue-detail" }}>
+      <HStack gap="3" align="center" wrap="wrap" justify="space-between" css={{
+        "@container issue-detail (max-width: 560px)": { flexDirection: "column", alignItems: "stretch", "& > .issue-actions": { marginInlineStart: "0" } },
+      }}>
+        <Stack gap="1.5" flex="1" minW="min(100%, 18rem)">
+          <RuleTitle rule={r} size="md" />
+          <RuleMeta rule={r}>
+            {it.status === "new" && <Text color="green.fg">· New in this crawl</Text>}
+            {it.status === "fixed" && <Text>· Fixed in this crawl</Text>}
+          </RuleMeta>
+        </Stack>
+        {it.status !== "fixed" && <Box className="issue-actions" flexShrink={0} ms="auto" w="fit-content">
+          <IssueActions it={it} page={page} onFix={onFix} onExplain={onExplain} link={link} size="xs" />
+        </Box>}
+      </HStack>
 
-      {/* The element */}
+      {/* Evidence: a labelled crop of the actual element, with inspectable markup. */}
       <Stack gap="2">
-        <HStack textStyle="xs" color="fg.muted" gap="1">
-          <Text fontFamily="mono" truncate flex="1" title={it.selector}>{it.selector}</Text>
-          {siblings.length > 1 && (
-            <HStack gap="0" flexShrink={0}>
-              <IconButton size="2xs" variant="ghost" aria-label="Previous element" disabled={idx <= 0} onClick={() => onSelect(siblings[idx - 1].k)}><LuChevronLeft /></IconButton>
-              <Text fontVariantNumeric="tabular-nums" px="1">{idx + 1} of {siblings.length}</Text>
-              <IconButton size="2xs" variant="ghost" aria-label="Next element" disabled={idx >= siblings.length - 1} onClick={() => onSelect(siblings[idx + 1].k)}><LuChevronRight /></IconButton>
-            </HStack>
-          )}
-          {it.onPage && <Button size="2xs" variant="ghost" onClick={onShow} flexShrink={0}>Show on page</Button>}
-        </HStack>
         <Box borderWidth="1px" rounded="l2" overflow="hidden">
-          {it.onPage && <Box borderBottomWidth="1px"><PagePreview html={html} origin={origin} instances={[it]} selected={it.k} crop={it.k} height={140} /></Box>}
-          <Code display="block" whiteSpace="pre-wrap" wordBreak="break-all" px="3" py="2.5" textStyle="xs" bg="bg.subtle" rounded="0">{it.snippet}</Code>
+          <HStack px="3" py="2" gap="2" wrap="wrap" bg="bg.subtle" borderBottomWidth="1px" colorPalette="gray" css={{
+            "@container issue-detail (max-width: 420px)": { "& > .preview-label": { flexBasis: "100%" } },
+          }}>
+            <Stack className="preview-label" gap="0" flex="1" minW="24">
+              <Text textStyle="sm" fontWeight="medium">{it.onPage ? "Element preview" : "Element HTML"}</Text>
+            </Stack>
+            {siblings.length > 1 && (
+              <HStack gap="0" flexShrink={0} color="fg.muted">
+                <IconButton size="2xs" variant="ghost" aria-label="Previous element" disabled={idx <= 0} onClick={() => onSelect(siblings[idx - 1].k)}><LuChevronLeft /></IconButton>
+                <Text textStyle="xs" fontVariantNumeric="tabular-nums" px="1">{idx + 1} of {siblings.length}</Text>
+                <IconButton size="2xs" variant="ghost" aria-label="Next element" disabled={idx >= siblings.length - 1} onClick={() => onSelect(siblings[idx + 1].k)}><LuChevronRight /></IconButton>
+              </HStack>
+            )}
+            {it.onPage && <Button size="xs" variant="outline" color="fg.muted" onClick={onShow} flexShrink={0}>Show on page</Button>}
+          </HStack>
+          {it.onPage && <PagePreview html={html} origin={origin} instances={[it]} selected={it.k} crop={it.k} height={180} />}
+          <Collapsible.Root defaultOpen={!it.onPage}>
+            <Collapsible.Trigger asChild>
+              <HStack as="button" w="full" px="3" py="2.5" gap="2" textAlign="start" borderTopWidth={it.onPage ? "1px" : "0"} bg="bg.subtle" color="fg.muted" _hover={{ color: "fg" }}>
+                <Text textStyle="xs" fontWeight="medium" flexShrink={0}>HTML</Text>
+                <Text textStyle="xs" fontFamily="mono" truncate flex="1" title={it.selector}>{it.selector}</Text>
+                <Collapsible.Indicator _open={{ transform: "rotate(180deg)" }}><LuChevronDown size={14} /></Collapsible.Indicator>
+              </HStack>
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <CopySnippet key={it.k} text={it.snippet} />
+            </Collapsible.Content>
+          </Collapsible.Root>
         </Box>
-        <HStack gap="1.5" textStyle="xs" color="fg.muted" wrap="wrap">
-          {it.shared != null ? <Text>Same markup on {it.shared.toLocaleString("en-US")} pages: one fix covers all of them</Text> : <Text>Only on this page</Text>}
-        </HStack>
+        {it.shared != null && <Text textStyle="xs" color="fg.muted">
+          Shared across {it.shared.toLocaleString("en-US")} pages · fix in the template
+        </Text>}
       </Stack>
 
-      <RuleGuide rule={r} actions={it.status !== "fixed" && <IssueActions it={it} page={page} onFix={onFix} onExplain={onExplain} link={link} size="sm" />} />
+      <RuleGuide rule={r} />
     </Stack>
   );
+}
+
+function CopySnippet({ text }: { text: string }) {
+  const [copied, copy] = useCopy(text);
+  return <HStack asChild w="full" align="start" gap="3" px="3" py="3" borderTopWidth="1px" bg="bg" color="fg" textAlign="start" cursor="pointer"
+    _hover={{ bg: "bg.muted" }} _focusVisible={{ outline: "2px solid", outlineColor: "border.emphasized", outlineOffset: "-2px" }}>
+    <button type="button" onClick={copy} aria-label={copied ? "HTML copied" : "Copy HTML"}>
+      <Code flex="1" minW="0" whiteSpace="pre-wrap" wordBreak="break-all" textStyle="xs" bg="transparent" color="inherit" p="0">{text}</Code>
+      <Box color="fg.muted" flexShrink={0} mt="0.5">{copied ? <LuCheck size={14} /> : <LuCopy size={14} />}</Box>
+    </button>
+  </HStack>;
 }
 
 // Filter: priority and category, as checkboxes in one menu (empty = everything)
@@ -345,18 +410,21 @@ function FilterMenu({ pri, setPri, cats, setCats }: { pri: Priority[]; setPri: (
   return (
     <Menu.Root closeOnSelect={false} positioning={{ placement: "bottom-end" }}>
       <Menu.Trigger asChild>
-        <Button size="sm" variant={n ? "subtle" : "outline"} px="2.5" aria-label={`Filter${n ? `, ${n} active` : ""}`}><LuFilter />{n ? n : null}</Button>
+        <NavAction w="9" minW="9" px="0" position="relative" bg={n ? "bg.muted" : "transparent"} aria-label={`Filter${n ? `, ${n} active` : ""}`}>
+          <LuFilter />
+          {n > 0 && <Box as="span" position="absolute" top="-1" right="-1" minW="4" h="4" px="1" rounded="full" bg="fg" color="bg" fontSize="10px" lineHeight="4">{n}</Box>}
+        </NavAction>
       </Menu.Trigger>
-      <Portal><Menu.Positioner><Menu.Content minW="52">
+      <Portal><Menu.Positioner><Menu.Content minW="52" colorPalette="gray" p="1" shadow="md">
         <Menu.ItemGroup>
-          <Menu.ItemGroupLabel>Priority</Menu.ItemGroupLabel>
+          <Menu.ItemGroupLabel textStyle="xs" fontWeight="medium" color="fg.muted">Priority</Menu.ItemGroupLabel>
           {PRIORITIES.map((p) => (
             <Menu.CheckboxItem key={p} value={p} checked={pri.includes(p)} onCheckedChange={() => toggle(pri, p, setPri)}>{p}<Menu.ItemIndicator /></Menu.CheckboxItem>
           ))}
         </Menu.ItemGroup>
         <Menu.Separator />
         <Menu.ItemGroup>
-          <Menu.ItemGroupLabel>Category</Menu.ItemGroupLabel>
+          <Menu.ItemGroupLabel textStyle="xs" fontWeight="medium" color="fg.muted">Category</Menu.ItemGroupLabel>
           {CATEGORIES.map((c) => (
             <Menu.CheckboxItem key={c.id} value={c.id} checked={cats.includes(c.id)} onCheckedChange={() => toggle(cats, c.id, setCats)}>{c.label}<Menu.ItemIndicator /></Menu.CheckboxItem>
           ))}
@@ -371,15 +439,15 @@ function FilterMenu({ pri, setPri, cats, setCats }: { pri: Priority[]; setPri: (
 function ExportMenu({ count, onAsk, onPrompt, onJson, onApi, onLink }: { count: number; onAsk: () => void; onPrompt: () => void; onJson: () => void; onApi: () => void; onLink: () => void }) {
   return (
     <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild><IconButton size="sm" variant="outline" aria-label="Export these issues"><LuDownload /></IconButton></Menu.Trigger>
-      <Portal><Menu.Positioner><Menu.Content minW="60">
+      <Menu.Trigger asChild><NavAction w="9" minW="9" px="0" aria-label="Export these issues"><LuDownload /></NavAction></Menu.Trigger>
+      <Portal><Menu.Positioner><Menu.Content minW="52" colorPalette="gray" p="1" shadow="md">
         <Menu.ItemGroup>
-          <Menu.ItemGroupLabel>{count} issue{count === 1 ? "" : "s"} in this list</Menu.ItemGroupLabel>
+          <Menu.ItemGroupLabel textStyle="xs" fontWeight="medium" color="fg.muted">{count} issue{count === 1 ? "" : "s"}</Menu.ItemGroupLabel>
           <Menu.Item value="ask" onClick={onAsk} disabled={!count}><LuSparkles />Summarize with AI</Menu.Item>
-          <Menu.Item value="prompt" onClick={onPrompt}><LuCopy />Copy as one prompt</Menu.Item>
+          <Menu.Item value="prompt" onClick={onPrompt}><LuCopy />Copy prompt</Menu.Item>
           <Menu.Item value="json" onClick={onJson}><LuDownload />Download JSON</Menu.Item>
           <Menu.Item value="api" onClick={onApi}><LuTerminal />Copy API request</Menu.Item>
-          <Menu.Item value="link" onClick={onLink}><LuLink />Copy link to this view</Menu.Item>
+          <Menu.Item value="link" onClick={onLink}><LuLink />Copy view link</Menu.Item>
         </Menu.ItemGroup>
       </Menu.Content></Menu.Positioner></Portal>
     </Menu.Root>
@@ -387,20 +455,21 @@ function ExportMenu({ count, onAsk, onPrompt, onJson, onApi, onLink }: { count: 
 }
 
 // The actions on an issue, the same in the Issues tab and on the element in Preview
-function IssueActions({ it, page, onFix, onExplain, link, size, children }: {
-  it: Instance; page: PageV; onFix: () => void; onExplain: () => void; link: string; size: "xs" | "sm"; children?: React.ReactNode;
+function IssueActions({ it, page, onFix, onExplain, onShowCode, link, size, children }: {
+  it: Instance; page: PageV; onFix: () => void; onExplain: () => void; onShowCode?: () => void; link: string; size: "xs" | "sm"; children?: React.ReactNode;
 }) {
   return (
-    <HStack gap="1.5">
-      <Button size={size} variant="outline" onClick={onFix}><LuSparkles />Fix with AI</Button>
-      <Button size={size} variant="ghost" onClick={onExplain}>Explain with AI</Button>
+    <HStack gap="1" wrap="wrap" colorPalette="gray">
+      <Button size={size} variant="subtle" color="fg" onClick={onFix}>Fix with AI</Button>
+      <Button size={size} variant="ghost" color="fg.muted" aria-label="Explain with AI" onClick={onExplain}>Explain</Button>
       {children}
-      <Menu.Root>
-        <Menu.Trigger asChild><IconButton size={size} variant="ghost" aria-label="More actions"><LuEllipsis /></IconButton></Menu.Trigger>
-        <Portal><Menu.Positioner><Menu.Content>
-          <Menu.Item value="link" onClick={() => navigator.clipboard.writeText(link)}><LuLink />Copy link to this issue</Menu.Item>
-          <Menu.Item value="copy" onClick={() => navigator.clipboard.writeText(issuePrompt(page, it))}><LuCopy />Copy as prompt</Menu.Item>
-          <Menu.Item value="check" onClick={() => navigator.clipboard.writeText(localCheck(page, it))}><LuTerminal />Copy local check command</Menu.Item>
+      <Menu.Root positioning={{ placement: "bottom-end", gutter: 4 }}>
+        <Menu.Trigger asChild><IconButton size={size} variant="ghost" color="fg.muted" ms="auto" aria-label="More actions"><LuEllipsis /></IconButton></Menu.Trigger>
+        <Portal><Menu.Positioner><Menu.Content minW="48" p="1" colorPalette="gray" textStyle="xs" shadow="md">
+          {onShowCode && <><Menu.Item value="source" onClick={onShowCode}><LuCode />Show in code</Menu.Item><Menu.Separator /></>}
+          <Menu.Item value="link" onClick={() => navigator.clipboard.writeText(link)}><LuLink />Copy issue link</Menu.Item>
+          <Menu.Item value="copy" onClick={() => navigator.clipboard.writeText(issuePrompt(page, it))}><LuCopy />Copy prompt</Menu.Item>
+          <Menu.Item value="check" onClick={() => navigator.clipboard.writeText(localCheck(page, it))}><LuTerminal />Copy check command</Menu.Item>
         </Menu.Content></Menu.Positioner></Portal>
       </Menu.Root>
     </HStack>
@@ -408,20 +477,20 @@ function IssueActions({ it, page, onFix, onExplain, link, size, children }: {
 }
 
 // Card attached to the selected element in Preview (like a design tool's selection toolbar)
-function ElementCard({ it, siblings, page, onSelect, onFix, onExplain, onDetails, prio, link }: {
-  it: Instance; siblings: Instance[]; page: PageV; onSelect: (k: number) => void; onFix: () => void; onExplain: () => void; onDetails: () => void;
-  prio: (s: string) => string; link: string;
+function ElementCard({ it, siblings, page, onSelect, onFix, onExplain, onDetails, onShowCode, prio, link, showExplanation = false }: {
+  it: Instance; siblings: Instance[]; page: PageV; onSelect: (k: number) => void; onFix: () => void; onExplain: () => void; onDetails: () => void; onShowCode?: () => void;
+  prio: (s: string) => string; link: string; showExplanation?: boolean;
 }) {
   const r = RULE_CATALOG[it.rule];
   const idx = siblings.findIndex((x) => x.k === it.k);
   return (
-    <Stack gap="2.5" w="380px" p="3" bg="bg" color="fg" borderWidth="1px" rounded="l2" shadow="lg" textAlign="start">
-      <HStack gap="2" align="start">
-        <Box mt="1.5"><SevDot sev={r.severity} /></Box>
-        <Stack gap="0" flex="1" minW="0">
-          <Text textStyle="sm" fontWeight="medium" lineClamp={2}>{r.title}</Text>
-          <Text textStyle="xs" color="fg.muted">{prio(r.severity)} · {SEV[r.severity].label}</Text>
-        </Stack>
+    <Stack gap="0" w="380px" maxW="calc(100vw - 24px)" maxH="calc(100dvh - 24px)" overflowY="auto" bg="bg" color="fg" colorPalette="gray" borderWidth="1px" rounded="l2" shadow="md" textAlign="start">
+      <HStack gap="2" align="center" px="3" py="2.5">
+        <HStack gap="1.5" flexShrink={0} title={`${prio(r.severity)} · ${SEV[r.severity].label}`}>
+          <Box boxSize="2" rounded="full" bg={`${SEV[r.severity].color}.solid`} />
+          <Text textStyle="xs" fontWeight="semibold" color={`${SEV[r.severity].color}.fg`}>{prio(r.severity)}</Text>
+        </HStack>
+        <Text textStyle="sm" fontWeight="medium" lineClamp={2} flex="1" minW="0">{r.title}</Text>
         {siblings.length > 1 && (
           <HStack gap="0" flexShrink={0} textStyle="xs" color="fg.muted">
             <IconButton size="2xs" variant="ghost" aria-label="Previous element" disabled={idx <= 0} onClick={() => onSelect(siblings[idx - 1].k)}><LuChevronLeft /></IconButton>
@@ -430,39 +499,12 @@ function ElementCard({ it, siblings, page, onSelect, onFix, onExplain, onDetails
           </HStack>
         )}
       </HStack>
-      <IssueActions it={it} page={page} onFix={onFix} onExplain={onExplain} link={link} size="xs">
-        <Button size="xs" variant="ghost" onClick={onDetails}>Details</Button>
-      </IssueActions>
+      {showExplanation && <Text px="3" pb="3" textStyle="sm" color="fg.muted">{r.why}</Text>}
+      <Box px="2" py="1.5" borderTopWidth="1px">
+        <IssueActions it={it} page={page} onFix={onFix} onExplain={onExplain} onShowCode={onShowCode} link={link} size="xs">
+          <Button size="xs" variant="ghost" color="fg.muted" onClick={onDetails}>Details</Button>
+        </IssueActions>
+      </Box>
     </Stack>
   );
 }
-
-function SourceView({ html, instances, selected, onSelect }: { html: string; instances: Instance[]; selected: number | null; onSelect: (k: number) => void }) {
-  const { lines, lineOf } = useMemo(() => sourceLines(html), [html]);
-  const marks = new Map<number, Instance[]>();
-  for (const it of instances) { const l = lineOf.get(it.k); if (l != null) marks.set(l, [...(marks.get(l) ?? []), it]); }
-  const selLine = selected != null ? lineOf.get(selected) : undefined;
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { ref.current?.scrollIntoView({ block: "center" }); }, [selLine]);
-  return (
-    <Box borderWidth="1px" rounded="l2" overflow="auto" maxH="calc(100vh - 14rem)" fontFamily="mono" textStyle="xs">
-      {lines.map((l, n) => {
-        const m = marks.get(n);
-        const on = n === selLine;
-        return (
-          <Flex key={n} ref={on ? ref : undefined} bg={on ? "bg.emphasized" : undefined} minW="max-content">
-            <Text w="10" flexShrink={0} textAlign="right" pe="3" color="fg.subtle" userSelect="none">{n + 1}</Text>
-            <Box w="4" flexShrink={0}>
-              {m && <Tooltip content={m.map((it) => RULE_CATALOG[it.rule].title).join(", ")}>
-                <Box as="button" w="1.5" h="1.5" mt="1.5" rounded="full" bg={`${SEV[RULE_CATALOG[m[0].rule].severity].color}.solid`} onClick={() => onSelect(m[0].k)} aria-label="Select issue" />
-              </Tooltip>}
-            </Box>
-            <Text whiteSpace="pre" pe="4" color={m || on ? "fg" : "fg.muted"}>{l}</Text>
-          </Flex>
-        );
-      })}
-    </Box>
-  );
-}
-
-const SevDot = ({ sev }: { sev: string }) => <Box w="2" h="2" rounded="full" flexShrink={0} bg={`${SEV[sev].color}.solid`} />;

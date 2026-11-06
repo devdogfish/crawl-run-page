@@ -1,13 +1,12 @@
 // Navigation building blocks shared by both layouts (top tabs and sidebar):
 // site switcher with the official logo, the New crawl button, and the list of sections.
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Badge, Box, Button, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
 import { LuChartColumn, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuRegex, LuSettings } from "react-icons/lu";
 
+import { useBrowserState, isBoolean } from "@/lib/browser-state";
 import { NavAction } from "@/components/nav-action";
-import { RuleDialog } from "@/components/rule-dialog";
-import { loadRules, saveRules } from "@/lib/custom-rules";
+import { openRuleEditor } from "@/components/rule-dialog-host";
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { useSite } from "@/components/site-context";
 import { crawlsFor } from "@/lib/crawls-list";
@@ -58,14 +57,18 @@ export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; f
 }
 
 export function NewCrawlButton(props: ButtonProps) {
+  const site = useSite();
+  return <NewCrawlForSite key={site} {...props} />;
+}
+function NewCrawlForSite(props: ButtonProps) {
   const navigate = useNavigate();
   const site = useSite();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useBrowserState(`crawler.ui.new-crawl.${site}`, false, isBoolean);
   return (
     <>
       <NavAction onClick={() => setOpen(true)} {...props}><LuPlus />New crawl</NavAction>
       <CrawlSettingsDialog
-        open={open} onOpenChange={setOpen} mode="create" initial={defaultSettings(site)}
+        storageKey={`crawler.ui.new-crawl.${site}.draft`} open={open} onOpenChange={setOpen} mode="create" initial={defaultSettings(site)}
         onSubmit={(s) => navigate(`/${site}/crawls/${Number(crawlsFor(site)[0].id) + 1}?settings=${encodeURIComponent(JSON.stringify(s))}`)}
       />
     </>
@@ -75,12 +78,7 @@ export function NewCrawlButton(props: ButtonProps) {
 // Available from every layout, without leaving the current page.
 export function NewRuleButton(props: ButtonProps) {
   const site = useSite();
-  const [open, setOpen] = useState(false);
-  return <>
-    <NavAction onClick={() => setOpen(true)} {...props}><LuRegex />New rule</NavAction>
-    <RuleDialog key={site} open={open} onOpenChange={setOpen}
-      onCreate={(rule) => saveRules(site, [...loadRules(site), rule])} />
-  </>;
+  return <NavAction onClick={() => openRuleEditor(site)} {...props}><LuRegex />New rule</NavAction>;
 }
 
 // QA copies share the production logo, so SiteLogo pins this badge to the shield's bottom-right corner

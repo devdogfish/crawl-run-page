@@ -95,7 +95,7 @@ export function LogViewer({ lines, running, fileName, h = "560px" }: { lines: Lo
         )}
         {!atBottom && (
           <Button
-            size="xs" position="absolute" bottom="3" left="50%" transform="translateX(-50%)" rounded="full" shadow="md"
+            size="2xs" position="absolute" bottom="3" left="50%" transform="translateX(-50%)" rounded="full" variant="outline" bg="bg" color="fg.muted" shadow="xs" fontFamily="body"
             onClick={() => ref.current?.scrollToIndex({ index: rows.length - 1, behavior: "auto" })}
           >
             <LuArrowDown />{running && unseen > 0 ? `${unseen.toLocaleString("en-US")} new lines` : "Jump to latest"}

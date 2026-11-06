@@ -3,11 +3,11 @@
 //   full → any viewport width, hover to inspect any element, and accessibility layers computed from the DOM
 //          (tab order, headings, landmarks, alt text).
 //   crop → a zoomed slice around one element, used as evidence in the issue panel (no hover, no layers).
-// Issues are shown in "focus" style: only the selected one is outlined (the page dims around it); every other
+// Issues are shown in "focus" style: only the selected one is outlined; every other
 // issue is a dot on a rail at the left edge, at its element's height. Hover a dot to outline it, click to select.
 // PROTOTYPE: renders the generated HTML from src/lib/page-issues.ts.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Box, type BoxProps } from "@chakra-ui/react";
+import { Box, Portal, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
 import { PRIORITY, PRIORITY_DOT } from "@/lib/priority";
 import { placeholdMissing, withBase } from "@/lib/asset-placeholders";
@@ -24,7 +24,8 @@ const nameOf = (el: Element) => {
   return /[\p{L}\p{N}]/u.test(n) ? n.slice(0, 60) : "";
 };
 
-export function PagePreview({ html, origin, instances, selected, highlightRule, onSelect, viewport = 1280, layers = ["issues"], crop, height, card }: {
+export function PagePreview({ html, origin, instances, selected, highlightRule, onSelect, viewport = 1280, layers = ["issues"], crop, height, card, revealRequest = 0 }: {
+  revealRequest?: number; // Explicit navigation can reopen/reveal an already selected issue.
   card?: React.ReactNode; // actions shown on the selected element (screen-size, not scaled with the page)
   html: string;
   origin?: string; // site the page was crawled from: assets stream from there
@@ -44,6 +45,9 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
   const [docH, setDocH] = useState(1200);
   const [boxes, setBoxes] = useState<Map<number, Rect>>(new Map());
   const [marks, setMarks] = useState<Record<Exclude<Layer, "issues">, Mark[]>>({ tab: [], headings: [], landmarks: [], alt: [] });
+  const [dismissed, setDismissed] = useState<{ selected: number | null; request: number } | null>(null);
+  const select = (k: number) => { setDismissed(null); onSelect?.(k); };
+  const revealed = useRef<{ selected: number; html: string; viewport: number; request: number } | null>(null);
   const [peekK, setPeekK] = useState<number | null>(null); // issue whose rail dot is hovered
   const [hover, setHover] = useState<(Rect & { tag: string; name: string; k?: number }) | null>(null);
 
@@ -87,17 +91,42 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
     return () => ro.disconnect();
   }, [measure]);
 
-  const scale = width ? Math.min(1, width / viewport) : 0.5;
+  const scale = width ? width / viewport : 0.5;
   const live = crop == null; // the crop is static evidence: no hover, no layers
   const cropRect = crop != null ? boxes.get(crop) : undefined;
+  useEffect(() => {
+    if (!live || selected == null) return;
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && !target.closest('[data-preview-card], [data-scope="menu"]')) setDismissed({ selected, request: revealRequest });
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [live, selected, revealRequest]);
 
   // Crop: zoom in (up to 1:1) and centre the element
   // Crop: zoom in, but never so far that the element (plus some context) doesn't fit
   const cropScale = Math.min(1, (width / viewport) * 1.8, cropRect && height ? (height - 32) / Math.max(1, cropRect.h) : 1, cropRect ? (width - 48) / Math.max(1, cropRect.w) : 1);
-  const cx = cropRect ? width / 2 - (cropRect.x + cropRect.w / 2) * cropScale : 0; // centre the element
-  const tx = viewport * cropScale > width ? Math.min(0, Math.max(width - viewport * cropScale, cx)) : cx;
-  const ty = cropRect && height ? Math.min(0, Math.max(height - docH * cropScale, height / 2 - (cropRect.y + cropRect.h / 2) * cropScale)) : 0;
+  const cropHeight = cropRect ? Math.min(height ?? 200, Math.max(96, cropRect.h * cropScale + 48)) : height ?? 200;
+  // The crop is an element inspector: center the target even at a document edge.
+  const tx = cropRect ? width / 2 - (cropRect.x + cropRect.w / 2) * cropScale : 0;
+  const ty = cropRect ? cropHeight / 2 - (cropRect.y + cropRect.h / 2) * cropScale : 0;
   const s = crop != null ? cropScale : scale;
+  useEffect(() => {
+    const container = wrap.current;
+    const rect = selected != null ? boxes.get(selected) : undefined;
+    if (!live || selected == null || !rect || !container?.clientHeight) return;
+    const previous = revealed.current;
+    if (previous?.selected === selected && previous.html === html && previous.viewport === viewport && previous.request === revealRequest) return;
+    revealed.current = { selected, html, viewport, request: revealRequest };
+    const top = rect.y * s;
+    const bottom = (rect.y + rect.h) * s;
+    if (top < container.scrollTop + 16 || bottom > container.scrollTop + container.clientHeight - 16) {
+      container.scrollTo({ top: Math.max(0, top - container.clientHeight * 0.3),
+        behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    }
+  }, [selected, boxes, html, viewport, live, s, revealRequest]);
+
   // Overlay sizes are given in screen pixels and converted to page pixels, so they look the same at any zoom
   const u = (screenPx: number, pagePxTimesScale = 0) => `${(screenPx + pagePxTimesScale) / s}px`;
 
@@ -126,7 +155,10 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
     return out;
   })();
   return (
-    <Box ref={wrap} position="relative" overflow="hidden" h={crop != null ? `${height ?? 200}px` : `${docH * scale}px`} bg="white" rounded="l2" borderWidth="1px">
+    <Box ref={wrap} data-page-preview position="relative" overflowX="hidden" overflowY={live ? "auto" : "hidden"}
+      maxH={live ? "min(720px, 65dvh)" : undefined} overscrollBehavior="contain"
+      h={crop != null ? `${cropHeight}px` : `${docH * scale}px`} bg="white" rounded={live ? "l2" : "0"} borderWidth={live ? "1px" : "0"}>
+      <Box position="relative" overflow="hidden" h={crop != null ? `${cropHeight}px` : `${docH * scale}px`}>
       <Box position="absolute" top="0" left="0" w={`${viewport}px`} h={`${docH}px`} transformOrigin="top left"
         style={{ transform: `translate(${tx}px, ${ty}px) scale(${s})` }}>
         <iframe ref={frame} srcDoc={doc} sandbox="allow-same-origin" title="Crawled page" onLoad={() => { measure(); const d = frame.current?.contentDocument; if (d) placeholdMissing(d, measure); }}
@@ -134,7 +166,7 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
 
         {/* Overlay, in page pixels */}
         <Box position="absolute" inset="0" onMouseMove={onMove} onMouseLeave={() => setHover(null)}
-          onClick={() => hover?.k != null && onSelect?.(hover.k)} cursor={live && hover?.k != null ? "pointer" : undefined}>
+          onClick={() => { if (hover?.k != null) select(hover.k); else setDismissed({ selected, request: revealRequest }); }} cursor={live && hover?.k != null ? "pointer" : undefined}>
           {/* Issues: only the selected one (and, when asked, the rest of its rule) is outlined; the others are dots on the rail */}
           {layers.includes("issues") && drawn.map((it) => {
             const r = boxes.get(it.k)!;
@@ -144,19 +176,9 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
             return (
               <Box key={it.k} position="absolute" left={u(-4, r.x * s)} top={u(-4, r.y * s)} w={u(8, r.w * s)} h={u(8, r.h * s)} rounded={u(4)} pointerEvents="none"
                 boxShadow={on
-                  ? `0 0 0 ${u(2)} ${ACCENT}${crop == null ? `, 0 0 0 100vmax rgba(15,17,20,.10)` : ""}`
+                  ? `0 0 0 ${u(2)} ${ACCENT}`
                   : `0 0 0 ${u(1.5)} ${ACCENT}99`}>
-                {on && crop == null && card && (() => {
-                  // Below the element, or above it near the bottom; kept inside the frame horizontally
-                  const below = (r.y + r.h) * s + 220 < docH * s;
-                  const shift = Math.min(0, (width - 392 - r.x * s) / s);
-                  return (
-                    <Box position="absolute" left={`${shift - 4 / s}px`} {...(below ? { top: `calc(100% + ${8 / s}px)` } : { bottom: `calc(100% + ${8 / s}px)` })}
-                      pointerEvents="auto" zIndex="1" onClick={(e) => e.stopPropagation()} onMouseMove={(e) => { e.stopPropagation(); setHover(null); }}>
-                      <Box transform={`scale(${1 / s})`} transformOrigin={below ? "top left" : "bottom left"}>{card}</Box>
-                    </Box>
-                  );
-                })()}
+
               </Box>
             );
           })}
@@ -168,7 +190,7 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
                 boxShadow={on ? `0 0 0 ${u(2)} white, 0 0 0 ${u(3.5)} ${ACCENT}` : `0 0 0 ${u(2)} white`}
                 opacity={on || peekK === it.k ? 1 : 0.85} transition="transform 0.1s" _hover={{ transform: "scale(1.25)" }}
                 onMouseEnter={() => setPeekK(it.k)} onMouseLeave={() => setPeekK(null)}
-                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onSelect?.(it.k); }} />
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); select(it.k); }} />
             );
           })}
 
@@ -201,8 +223,40 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
           )}
         </Box>
       </Box>
+      </Box>
+      {live && card && layers.includes("issues") && selected != null && (dismissed?.selected !== selected || dismissed.request !== revealRequest) && boxes.has(selected) && (
+        <PreviewCard anchor={wrap} rect={boxes.get(selected)!} scale={s}>{card}</PreviewCard>
+      )}
     </Box>
   );
+}
+
+// Outside the clipped/scaled document so mobile previews cannot cut off actions.
+function PreviewCard({ anchor, rect, scale, children }: { anchor: React.RefObject<HTMLDivElement | null>; rect: Rect; scale: number; children: React.ReactNode }) {
+  const card = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ left: 0, top: 0, visible: false });
+  useLayoutEffect(() => {
+    const update = () => {
+      const frame = anchor.current?.getBoundingClientRect();
+      if (!frame) return;
+      const width = card.current?.offsetWidth || 380;
+      const height = card.current?.offsetHeight || 120;
+      const scrollTop = anchor.current?.scrollTop ?? 0;
+      const bottom = frame.top + (rect.y + rect.h) * scale - scrollTop;
+      const top = frame.top + rect.y * scale - scrollTop;
+      setPosition({ left: Math.max(12, Math.min(window.innerWidth - width - 12, frame.left + (rect.x + rect.w / 2) * scale - width / 2)),
+        top: Math.max(12, bottom + height + 8 < window.innerHeight ? bottom + 8 : top - height - 8),
+        visible: !!anchor.current?.clientWidth && bottom > Math.max(0, frame.top) && top < Math.min(window.innerHeight, frame.top + (anchor.current?.clientHeight ?? 0)) });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    if (anchor.current) observer.observe(anchor.current);
+    if (card.current) observer.observe(card.current);
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => { observer.disconnect(); window.removeEventListener("scroll", update, true); window.removeEventListener("resize", update); };
+  }, [anchor, rect, scale]);
+  return <Portal><Box ref={card} data-preview-card position="fixed" style={{ left: position.left, top: position.top, visibility: position.visible ? "visible" : "hidden" }} zIndex="popover">{children}</Box></Portal>;
 }
 
 // Small dark label on the overlay (sizes in screen pixels, divided by the scale)

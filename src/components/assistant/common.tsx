@@ -10,8 +10,8 @@ export function useCopy(text: string) {
   const [done, setDone] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  const copy = () => {
-    navigator.clipboard.writeText(text).catch(() => { /* clipboard unavailable */ });
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); } catch { return; }
     setDone(true);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setDone(false), 1500);

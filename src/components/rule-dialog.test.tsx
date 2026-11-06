@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { RuleDialogHost } from "@/components/rule-dialog-host";
 import { useState } from "react";
 import { ChakraProvider } from "@chakra-ui/react";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
@@ -16,7 +17,7 @@ beforeEach(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   HTMLElement.prototype.scrollIntoView = () => {};
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
 
 test("rule options toggle independently and persist on creation", async () => {
   const onCreate = vi.fn();
@@ -84,7 +85,7 @@ test("custom rule chip opens edit mode and updates the existing rule", async () 
   const { withRefs } = await import("./assistant/chips");
   const { saveRules, loadRules } = await import("@/lib/custom-rules");
   saveRules("rbccm", [{ id: "custom-edit", name: "Original rule", pattern: "brand", regex: true, matchCase: true, scope: "source", when: "missing", howToFix: "Description", type: "all", priority: "P2", category: "seo" }]);
-  const ui = render(<ChakraProvider value={system}><MemoryRouter initialEntries={["/rbccm/issues"]}>{withRefs("@rule:custom-edit")}</MemoryRouter></ChakraProvider>);
+  const ui = render(<ChakraProvider value={system}><MemoryRouter initialEntries={["/rbccm/issues"]}>{withRefs("@rule:custom-edit")}<RuleDialogHost /></MemoryRouter></ChakraProvider>);
   fireEvent.click(ui.getByRole("button", { name: "Original rule" }));
   await ui.findByText("Edit rule");
   expect((ui.getByLabelText("Text or pattern") as HTMLInputElement).value).toBe("brand");
@@ -122,4 +123,42 @@ test("floating assistant can move, resize, close, and reopen", async () => {
   await waitFor(() => expect(ui.queryByLabelText("Rule prompt")).toBeNull());
   fireEvent.click(ui.getByRole("button", { name: "AI rule assistant" }));
   await ui.findByLabelText("Rule prompt");
+});
+
+
+test("new rule draft survives a remount and explicit cancel discards it", async () => {
+  const { openRuleEditor } = await import("./rule-dialog-host");
+  const Host = () => <ChakraProvider value={system}><button onClick={() => openRuleEditor("rbccm")}>New</button><RuleDialogHost /></ChakraProvider>;
+  let ui = render(<Host />);
+  fireEvent.click(ui.getByText("New"));
+  fireEvent.change(await ui.findByLabelText("Text or pattern"), { target: { value: "unfinished pattern" } });
+  fireEvent.click(ui.getByText("Missing", { exact: true }));
+  await waitFor(() => expect((ui.getByRole("radio", { name: "Missing" }) as HTMLInputElement).checked).toBe(true));
+  ui.unmount();
+  sessionStorage.clear();
+  ui = render(<Host />);
+  expect((await ui.findByLabelText("Text or pattern") as HTMLInputElement).value).toBe("unfinished pattern");
+  expect((ui.getByRole("radio", { name: "Missing" }) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(ui.getByRole("button", { name: "Cancel" }));
+  ui.unmount();
+  ui = render(<Host />);
+  expect(ui.queryByLabelText("Text or pattern")).toBeNull();
+  fireEvent.click(ui.getByText("New"));
+  expect((await ui.findByLabelText("Text or pattern") as HTMLInputElement).value).toBe("");
+});
+
+test("edit draft restores without chat and saves to the same rule", async () => {
+  const { saveRules, loadRules } = await import("@/lib/custom-rules");
+  saveRules("rbccm", [{ id: "custom-restore", name: "Existing", pattern: "old", regex: false, matchCase: false, scope: "content", when: "found", howToFix: "", type: "all", priority: "P3", category: "seo" }]);
+  localStorage.setItem("crawler.ui.rule-dialog", JSON.stringify({ site: "rbccm", id: "custom-restore" }));
+  const Host = () => <ChakraProvider value={system}><RuleDialogHost /></ChakraProvider>;
+  let ui = render(<Host />);
+  fireEvent.change(await ui.findByLabelText("Text or pattern"), { target: { value: "changed" } });
+  ui.unmount();
+  ui = render(<Host />);
+  expect((await ui.findByLabelText("Text or pattern") as HTMLInputElement).value).toBe("changed");
+  fireEvent.click(ui.getByRole("button", { name: "Save changes" }));
+  expect(loadRules("rbccm")).toHaveLength(1);
+  expect(loadRules("rbccm")[0].pattern).toBe("changed");
+  expect(localStorage.getItem("crawler.ui.rule.rbccm.custom-restore")).toBeNull();
 });

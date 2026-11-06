@@ -1,3 +1,4 @@
+import { useBrowserState, isBoolean, writeBrowserState } from "@/lib/browser-state";
 import { NavAction } from "@/components/nav-action";
 // Ask AI: one assistant for the whole app, docked on the right, opened from the navbar.
 //
@@ -11,7 +12,7 @@ import { NavAction } from "@/components/nav-action";
 //   ```ui {"type": "…", …}```                          → a component block: one JSON shape, `type` picks the component (assistant/cards.tsx)
 // When the model asks to open a screen, the app goes there (if the URL checks out) and says so in the message.
 // Everything a chip or component shows comes from the id (src/lib/refs.ts), not from the model.
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type RefObject } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { Box, Button, IconButton, Stack } from "@chakra-ui/react";
@@ -35,11 +36,11 @@ const Ctx = createContext<Assistant>({ placement: "right", open: false, setOpen:
 export const useAssistant = () => useContext(Ctx);
 export const PANEL_W = "400px";
 
-// The conversation survives a reload (this tab only)
+// Conversation and window state survive reloads and tab closure in this browser.
 const KEY = "crawler.ask-ai";
 function load(): Msg[] {
   try {
-    const v = JSON.parse(sessionStorage.getItem(KEY) ?? "[]");
+    const v = JSON.parse(localStorage.getItem(KEY) ?? sessionStorage.getItem(KEY) ?? "[]");
     if (!Array.isArray(v)) return [];
     // a reload mid-answer leaves lookups "running" forever
     return v.map((m: Msg) => m.role === "assistant" && m.tools ? { ...m, tools: m.tools.map((t) => t.status === "running" ? { ...t, status: "error" as const, summary: "Interrupted" } : t) } : m);
@@ -47,18 +48,22 @@ function load(): Msg[] {
 }
 
 export function AssistantProvider({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState<Placement>("right");
+  const [open, setOpen] = useBrowserState("crawler.ui.assistant.open", false, isBoolean);
+  const [placement, setPlacement] = useBrowserState<Placement>("crawler.ui.assistant.placement", "right", (v): v is Placement => v === "left" || v === "right" || v === "floating");
   const [msgs, setMsgs] = useState<Msg[]>(load);
   const [busy, setBusy] = useState(false);
   const abort = useRef<AbortController | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dismissIfFullscreen = () => {
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (rect && rect.width >= window.innerWidth - 24 && rect.height >= window.innerHeight - 24) setOpen(false);
+  };
   const loc = useLocation();
   const navigate = useNavigate();
   const where = loc.pathname + loc.search;
 
   useEffect(() => {
-    if (busy) return;
-    try { sessionStorage.setItem(KEY, JSON.stringify(msgs)); } catch { /* storage unavailable */ }
+    writeBrowserState(KEY, msgs);
   }, [msgs, busy]);
 
   // Runs the model on a conversation that ends with a user message
@@ -85,6 +90,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
         } else if (ev.type === "create_rule") {
           try {
             const rule = saveChatRule(ev.rule);
+            dismissIfFullscreen();
             update((m) => ({ ...m, text: `${m.text}\n\nCreated @rule:${rule.id}. Click to edit.\n\n` }));
           } catch (e) {
             update((m) => ({ ...m, error: e instanceof Error ? e.message : "Could not save the rule." }));
@@ -92,7 +98,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
         } else if (ev.type === "navigate") {
           // Only to places url-map.json knows; the panel stays open
           const v = validateUrl(ev.url);
-          if (v.ok) { navigate(v.url); update((m) => ({ ...m, opened: [...(m.opened ?? []), { url: v.url, label: ev.label }] })); }
+          if (v.ok) { dismissIfFullscreen(); navigate(v.url); update((m) => ({ ...m, opened: [...(m.opened ?? []), { url: v.url, label: ev.label }] })); }
         } else update((m) => ({ ...m, error: ev.message }));
       }
     } catch (e) {
@@ -121,7 +127,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{ open, placement, setOpen, send }}>
       {children}
-      {open && <Panel placement={placement} onPlacementChange={setPlacement} msgs={msgs} busy={busy} where={where} onSend={send} onStop={stop} onRegenerate={regenerate} onReset={reset} onClose={() => setOpen(false)} />}
+      <Panel open={open} panelRef={panelRef} onBackgroundAction={dismissIfFullscreen} placement={placement} onPlacementChange={setPlacement} msgs={msgs} busy={busy} where={where} onSend={send} onStop={stop} onRegenerate={regenerate} onReset={reset} onClose={() => setOpen(false)} />
     </Ctx.Provider>
   );
 }
@@ -132,8 +138,8 @@ export function AskAiButton() {
   return <NavAction aria-expanded={open} onClick={() => setOpen(!open)}><LuSparkles />Ask AI</NavAction>;
 }
 
-function Panel({ placement, onPlacementChange, msgs, busy, where, onSend, onStop, onRegenerate, onReset, onClose }: {
-  placement: Placement; onPlacementChange: (placement: Placement) => void; msgs: Msg[]; busy: boolean; where: string; onSend: (q: string) => void; onStop: () => void; onRegenerate: () => void; onReset: () => void; onClose: () => void;
+function Panel({ open, panelRef, onBackgroundAction, placement, onPlacementChange, msgs, busy, where, onSend, onStop, onRegenerate, onReset, onClose }: {
+  open: boolean; panelRef: RefObject<HTMLDivElement | null>; onBackgroundAction: () => void; placement: Placement; onPlacementChange: (placement: Placement) => void; msgs: Msg[]; busy: boolean; where: string; onSend: (q: string) => void; onStop: () => void; onRegenerate: () => void; onReset: () => void; onClose: () => void;
 }) {
   // follows the answer while it streams; lets go when the user scrolls up
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: "smooth", initial: "instant" });
@@ -141,7 +147,7 @@ function Panel({ placement, onPlacementChange, msgs, busy, where, onSend, onStop
   useEffect(() => { if (msgs.length) scrollToBottom(); }, [msgs.length, scrollToBottom]);
 
   return (
-    <AssistantFrame placement={placement} onPlacementChange={onPlacementChange} onClose={onClose} actions={msgs.length > 0 && (
+    <AssistantFrame open={open} panelRef={panelRef} onBackgroundAction={onBackgroundAction} placement={placement} onPlacementChange={onPlacementChange} onClose={onClose} actions={msgs.length > 0 && (
       <Tooltip content="New conversation"><IconButton size="xs" variant="ghost" aria-label="New conversation" onClick={onReset}><LuSquarePen /></IconButton></Tooltip>
     )}>
       <Box position="relative" flex="1" minH="0">
@@ -164,7 +170,7 @@ function Panel({ placement, onPlacementChange, msgs, busy, where, onSend, onStop
         )}
       </Box>
 
-      <Composer where={where} busy={busy} onSend={onSend} onStop={onStop} />
+      <Composer storageKey="crawler.ui.assistant.composer" where={where} busy={busy} onSend={onSend} onStop={onStop} />
     </AssistantFrame>
   );
 }

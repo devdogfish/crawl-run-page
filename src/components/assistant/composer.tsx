@@ -1,26 +1,30 @@
 // The input: one calm card. The text with @references as chips right where they were typed (the editor and the
 // mention popover are src/components/token-input; here only @issue/@rule/@page/@crawl, since this is prose).
 // Send sits beside short messages and wraps below longer text. References are sent as @tokens.
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { LuArrowUp, LuSquare } from "react-icons/lu";
 
+import { readBrowserState, writeBrowserState, isString } from "@/lib/browser-state";
 import { TokenEditor, type TokenEditorHandle } from "@/components/token-input";
 import { DEFAULT_SITE } from "@/lib/sites";
 import { siteIn } from "./route";
 
-export function Composer({ where, busy, onSend, onStop, placeholder, ariaLabel }: { placeholder?: string; ariaLabel?: string; where: string; busy: boolean; onSend: (q: string) => void; onStop: () => void }) {
+export function Composer({ where, busy, onSend, onStop, placeholder, ariaLabel, storageKey }: { storageKey?: string; placeholder?: string; ariaLabel?: string; where: string; busy: boolean; onSend: (q: string) => void; onStop: () => void }) {
   const listId = useId();
   const editor = useRef<TokenEditorHandle>(null);
   const { pathname } = useLocation();
   const ctx = useMemo(() => ({ site: siteIn(pathname) || DEFAULT_SITE, url: where }), [pathname, where]);
   const [empty, setEmpty] = useState(true);
   const [hasNewline, setHasNewline] = useState(false);
+  useEffect(() => {
+    if (storageKey) editor.current?.setContent(readBrowserState(storageKey, "", isString));
+  }, [storageKey]);
   const ready = !empty && !busy;
   const submit = () => {
     const text = editor.current?.getText() ?? "";
-    if (!busy && text.trim()) { onSend(text); editor.current?.clear(); }
+    if (!busy && text.trim()) { onSend(text); editor.current?.clear(); if (storageKey) writeBrowserState(storageKey, ""); }
   };
 
   return (
@@ -34,7 +38,7 @@ export function Composer({ where, busy, onSend, onStop, placeholder, ariaLabel }
         <TokenEditor
           ref={editor} mode="chat" ctx={ctx} autoFocus mentionUi="popover" listId={listId}
           placeholder={placeholder ?? "Ask anything, or type @ to mention an issue, rule, page or crawl"} ariaLabel={ariaLabel ?? "Message to Ask AI"}
-          onChange={(v) => { setEmpty(v.text.trim() === ""); setHasNewline(v.text.includes("\n")); }}
+          onChange={(v) => { if (storageKey) writeBrowserState(storageKey, v.text); setEmpty(v.text.trim() === ""); setHasNewline(v.text.includes("\n")); }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } }}
         />
         </Box>

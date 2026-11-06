@@ -4,12 +4,13 @@
 // Adding a component is one entry in COMPONENTS plus one line in the system prompt (src/lib/refs.ts). A renderer returns
 // null when the data doesn't fit, and the block shows as code. Everything shown comes from the id, not from the model.
 import { Link as RouterLink } from "react-router";
-import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 
 import { resolveIssue } from "@/lib/refs";
 import { PRIORITY_COLOR } from "@/lib/priority";
 import { CodeBlock } from "./code-block";
-import { CopyTextButton } from "./common";
+import { LuCheck, LuCopy } from "react-icons/lu";
+import { CopyTextButton, useCopy } from "./common";
 import { Dot, sevColor } from "./chips";
 
 type UiData = { type?: unknown; [k: string]: unknown };
@@ -53,7 +54,6 @@ function IssueHeader({ r }: { r: Resolved }) {
 }
 
 const card = { borderWidth: "1px", rounded: "l3", p: "3", gap: "2.5", bg: "bg" } as const;
-const quiet = { size: "2xs", variant: "ghost", color: "fg.muted", _hover: { color: "fg" } } as const;
 
 // A value to paste into a form field of the CMS (Teamsite): which issue, which field, the value, Copy
 function PasteCard({ r, label, value }: { r: Resolved | null; label: string; value: string }) {
@@ -74,34 +74,54 @@ function PasteCard({ r, label, value }: { r: Resolved | null; label: string; val
 // The fix: which issue, where it is, the diff, and the other views of the same element
 function FixCard({ r, after }: { r: Resolved; after: string }) {
   return (
-    <Stack {...card}>
-      <Stack gap="0.5">
-        <IssueHeader r={r} />
-        <Text textStyle="xs" color="fg.muted" fontFamily="mono" truncate title={`${r.it.selector} · ${r.page.path}`}>{r.it.selector} · {r.page.path}</Text>
-        {r.it.shared != null && <Text textStyle="xs" color="orange.fg">Same markup on {r.it.shared.toLocaleString("en-US")} pages: change it in the template, not on this page.</Text>}
-      </Stack>
-      <Diff before={r.it.snippet} after={after} />
-      <HStack gap="0.5" ms="-1.5">
-        {r.it.onPage && <Button asChild {...quiet}><RouterLink to={r.href("preview")}>Preview</RouterLink></Button>}
-        <Button asChild {...quiet}><RouterLink to={r.href("source")}>Source</RouterLink></Button>
-        <CopyTextButton text={after} />
+    <Stack borderWidth="1px" rounded="l2" overflow="hidden" gap="0" bg="bg">
+      <HStack px="3" py="2" gap="3" justify="space-between">
+        <Text textStyle="xs" fontWeight="medium" truncate title={`${r.it.selector} · ${r.page.path}`}>{r.rule.title}</Text>
+        <HStack gap="3" flexShrink={0} textStyle="xs" color="fg.muted">
+          {r.it.onPage && <Box asChild _hover={{ color: "fg", textDecoration: "underline" }}>
+            <RouterLink to={r.href("preview")}>Preview</RouterLink>
+          </Box>}
+          <Box asChild _hover={{ color: "fg", textDecoration: "underline" }}>
+            <RouterLink to={r.href("source")}>Source</RouterLink>
+          </Box>
+        </HStack>
       </HStack>
+      <Diff before={r.it.snippet} after={after} />
     </Stack>
   );
 }
 
-// Line diff of one element
+// Each section copies the complete original/replacement, never the decorative diff signs.
 export function Diff({ before, after }: { before: string; after: string }) {
-  const a = before.split("\n"), b = after.split("\n");
-  const rows = [...a.map((l) => ({ t: b.includes(l) ? " " : "-", l })), ...b.filter((l) => !a.includes(l)).map((l) => ({ t: "+", l }))];
   return (
-    <Box borderWidth="1px" rounded="l2" overflow="hidden" fontFamily="mono" textStyle="xs" bg="bg.subtle">
-      {rows.map((r, n) => (
-        <HStack key={n} align="start" gap="0" bg={r.t === "-" ? "red.subtle" : r.t === "+" ? "green.subtle" : undefined}>
-          <Text w="6" flexShrink={0} textAlign="center" color="fg.muted" py="1">{r.t}</Text>
-          <Text whiteSpace="pre-wrap" wordBreak="break-all" py="1" pe="3">{r.l}</Text>
+    <Stack gap="0" overflow="hidden">
+      <DiffSection text={before} kind="before" />
+      <DiffSection text={after} kind="after" />
+    </Stack>
+  );
+}
+
+function DiffSection({ text, kind }: { text: string; kind: "before" | "after" }) {
+  const [done, copy] = useCopy(text);
+  const original = kind === "before";
+  const label = original ? "original code" : "replacement code";
+  return (
+    <Box asChild position="relative" className="group" w="full" textAlign="left" cursor="pointer"
+      bg={original ? "red.subtle/60" : "green.subtle/60"} color="fg" px="3" py="1.5"
+      borderTopWidth={original ? "0" : "1px"} borderColor="border.muted"
+      _hover={{ bg: original ? "red.subtle" : "green.subtle" }}
+      _focusVisible={{ outline: "2px solid", outlineColor: "border.emphasized", outlineOffset: "-2px" }}>
+      <button type="button" onClick={copy} aria-label={done ? `Copied ${label}` : `Copy ${label}`}>
+        <HStack as="span" align="start" gap="2" pe="7" fontFamily="mono" textStyle="xs">
+          <Text as="span" color={original ? "red.fg" : "green.fg"} flexShrink={0} aria-hidden>{original ? "−" : "+"}</Text>
+          <Text as="span" whiteSpace="pre-wrap" overflowWrap="anywhere" minW="0">{text}</Text>
         </HStack>
-      ))}
+        <Box as="span" position="absolute" top="1" right="2" p="1" rounded="l1" color={done ? "green.fg" : "fg.muted"}
+          opacity={done ? 1 : 0} _groupHover={{ opacity: 1 }} _groupFocusVisible={{ opacity: 1 }}
+          css={{ "@media (hover: none)": { opacity: 1 } }} aria-hidden>
+          {done ? <LuCheck size={14} /> : <LuCopy size={14} />}
+        </Box>
+      </button>
     </Box>
   );
 }

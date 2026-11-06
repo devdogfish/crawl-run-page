@@ -7,6 +7,7 @@ import { system } from "@/components/ui/system";
 import { AssistantFrame, dockingEdge, type Placement } from "./frame";
 
 beforeEach(() => {
+  localStorage.clear();
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   vi.stubGlobal("PointerEvent", MouseEvent);
   HTMLElement.prototype.setPointerCapture = () => {};

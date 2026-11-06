@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { useBrowserState, isBoolean, isPoint, isSize } from "@/lib/browser-state";
 import { Box, Button, CloseButton, FloatingPanel, IconButton, Portal, Stack, Text } from "@chakra-ui/react";
 import { LuGrip, LuSparkles, LuSquarePen } from "react-icons/lu";
 import { Composer } from "./assistant/composer";
@@ -27,11 +28,21 @@ function parseReply(value: unknown): Reply {
   return { fields: patch, message };
 }
 
-export function RuleAiWindow({ current, onApply, portalRef }: { portalRef: RefObject<HTMLDivElement | null>; current: RuleDraft; onApply: (fields: Partial<RuleDraft>, original: RuleDraft) => void }) {
-  const [open, setOpen] = useState(false);
-  const [display, setDisplay] = useState<Msg[]>([]);
+export function RuleAiWindow({ current, onApply, portalRef, storageKey }: { storageKey?: string; portalRef: RefObject<HTMLDivElement | null>; current: RuleDraft; onApply: (fields: Partial<RuleDraft>, original: RuleDraft) => void }) {
+  const key = (part: string) => storageKey ? `${storageKey}.${part}` : undefined;
+  const [open, setOpen] = useBrowserState(key("open"), false, isBoolean);
+  const [messages, setMessages] = useBrowserState<Message[]>(key("messages"), [], (v): v is Message[] => Array.isArray(v) && v.every((m) => m && ["user", "assistant"].includes(m.role) && typeof m.content === "string"));
+  const [display, setDisplay] = useState<Msg[]>(() => messages.map((m) => ({ role: m.role, text: m.content })));
+  const [position, setPosition] = useBrowserState(key("position"), { x: Math.max(12, window.innerWidth - 452), y: 32 }, isPoint);
+  const [size, setSize] = useBrowserState(key("size"), { width: 420, height: 560 }, isSize);
+  const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
+  useEffect(() => {
+    const resize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+  const fitSize = { width: Math.min(size.width, viewport.width - 24), height: Math.min(size.height, viewport.height - 24) };
   const bottom = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
 
   const controller = useRef<AbortController | null>(null);
@@ -48,6 +59,7 @@ export function RuleAiWindow({ current, onApply, portalRef }: { portalRef: RefOb
     controller.current = abort;
     const original = { ...current };
     const conversation: Message[] = [...history, { role: "user", content: prompt.trim() }];
+    setMessages(conversation);
     setBusy(true);
     setDisplay([...conversation.map((m) => ({ role: m.role, text: m.content })), { role: "assistant", text: "" }]);
     try {
@@ -83,9 +95,10 @@ export function RuleAiWindow({ current, onApply, portalRef }: { portalRef: RefOb
 
   return (
     <FloatingPanel.Root open={open} onOpenChange={(e) => setOpen(e.open)} persistRect allowOverflow={false}
-      defaultSize={{ width: Math.min(420, window.innerWidth - 24), height: Math.min(560, window.innerHeight - 32) }}
+      size={fitSize} onSizeChange={({ size }) => setSize(size)}
       minSize={{ width: Math.min(320, window.innerWidth - 24), height: Math.min(320, window.innerHeight - 32) }}
-      defaultPosition={{ x: Math.max(12, window.innerWidth - 452), y: 32 }}>
+      position={{ x: Math.max(0, Math.min(position.x, viewport.width - fitSize.width)), y: Math.max(0, Math.min(position.y, viewport.height - fitSize.height)) }}
+      onPositionChange={({ position }) => setPosition(position)}>
       <FloatingPanel.Trigger asChild>
         <Button size="xs" variant="ghost" color="fg.muted" aria-label="AI rule assistant" gap="1.5"><LuSparkles />Ask AI</Button>
       </FloatingPanel.Trigger>
@@ -111,7 +124,7 @@ export function RuleAiWindow({ current, onApply, portalRef }: { portalRef: RefOb
                 </Stack>}
               <div ref={bottom} />
             </Box>
-            <Composer where={window.location.pathname} placeholder="Describe the rule you want…" ariaLabel="Rule prompt" busy={busy} onSend={(q) => void send(q)} onStop={stop} />
+            <Composer storageKey={key("composer")} where={window.location.pathname} placeholder="Describe the rule you want…" ariaLabel="Rule prompt" busy={busy} onSend={(q) => void send(q)} onStop={stop} />
           </FloatingPanel.Body>
           <FloatingPanel.ResizeTriggers />
         </FloatingPanel.Content>

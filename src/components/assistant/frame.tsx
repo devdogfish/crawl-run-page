@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject, type PointerEvent as ReactPointerEvent } from "react";
+import { useBrowserState, isPoint, isSize } from "@/lib/browser-state";
 import { Box, CloseButton, FloatingPanel, IconButton, Text } from "@chakra-ui/react";
 import { LuExternalLink, LuGrip, LuPanelLeft, LuPanelRight } from "react-icons/lu";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -15,12 +16,13 @@ export function dockingEdge(position: Point, size: Size, viewportWidth: number, 
 }
 
 // One mounted panel: changing placement keeps the editor, scroll position and active reply intact.
-export function AssistantFrame({ placement, onPlacementChange, onClose, actions, children }: {
+export function AssistantFrame({ placement, onPlacementChange, onClose, actions, children, open = true, panelRef, onBackgroundAction }: {
+  open?: boolean; panelRef?: RefObject<HTMLDivElement | null>; onBackgroundAction?: () => void;
   placement: Placement; onPlacementChange: (placement: Placement) => void; onClose: () => void; actions?: ReactNode; children: ReactNode;
 }) {
   const [viewport, setViewport] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
-  const [position, setPosition] = useState<Point>(() => ({ x: Math.max(12, window.innerWidth - 468), y: 88 }));
-  const [size, setSize] = useState<Size>({ width: 420, height: 600 });
+  const [position, setPosition] = useBrowserState<Point>("crawler.ui.assistant.position", { x: Math.max(12, window.innerWidth - 468), y: 88 }, isPoint);
+  const [size, setSize] = useBrowserState<Size>("crawler.ui.assistant.size", { width: 420, height: 600 }, isSize);
   const [preview, setPreview] = useState<"left" | "right" | null>(null);
   const candidate = useRef<"left" | "right" | null>(null);
   const dragging = useRef(false);
@@ -101,7 +103,7 @@ export function AssistantFrame({ placement, onPlacementChange, onClose, actions,
       display="flex" justifyContent="center" alignItems="center" aria-hidden>
       <Text bg="bg.panel" px="3" py="2" rounded="l2" textStyle="sm" shadow="sm">Release to dock {preview}</Text>
     </Box>}
-    <FloatingPanel.Root open onOpenChange={(e) => { if (!e.open) onClose(); }} initialFocusEl={() => false}
+    <FloatingPanel.Root open={open} unmountOnExit={false} onOpenChange={(e) => { if (!e.open) onClose(); }} initialFocusEl={() => false}
       draggable={floating} resizable={floating} allowOverflow={false}
       position={floating ? floatingPosition : { x: placement === "left" ? 0 : viewport.width - dockWidth, y: 0 }}
       size={floating ? floatingSize : { width: dockWidth, height: viewport.height }}
@@ -120,7 +122,13 @@ export function AssistantFrame({ placement, onPlacementChange, onClose, actions,
       }}
       onSizeChange={({ size: next }) => { if (floating) setSize(next); }}>
       <FloatingPanel.Positioner style={{ zIndex: "var(--chakra-z-index-overlay)" }}>
-        <FloatingPanel.Content data-placement={placement} bg="bg" rounded={floating ? "l3" : "0"} borderWidth="1px" borderTopWidth={floating ? "1px" : "0"} shadow={floating ? "2xl" : "none"}
+        <FloatingPanel.Content ref={panelRef} onClick={(event) => {
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          const action = (event.target as Element).closest("a[href], [data-assistant-background-action]");
+          if (!action || action.getAttribute("target") === "_blank") return;
+          const href = action.getAttribute("href");
+          if (action.hasAttribute("data-assistant-background-action") || (href?.startsWith("/") && !href.startsWith("//"))) onBackgroundAction?.();
+        }} data-placement={placement} bg="bg" rounded={floating ? "l3" : "0"} borderWidth="1px" borderTopWidth={floating ? "1px" : "0"} shadow={floating ? "2xl" : "none"}
           animation="none" display="flex" flexDirection="column">
           <FloatingPanel.Header px="3" py="0" h={floating ? "12" : "var(--app-header-height, 57px)"} bg="bg">
             <FloatingPanel.DragTrigger style={{ cursor: "grab" }} onPointerDownCapture={startHeaderDrag}

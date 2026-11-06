@@ -1,36 +1,47 @@
 // "New rule": a custom check the crawler runs on every page's stored HTML.
 // Fields: name, where to look, what to look for (found or missing, text or regex), description.
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button, Checkbox, CloseButton, Dialog, Field, Input, InputGroup, Portal, RadioCard, SegmentGroup, Stack, Text, Textarea,
 } from "@chakra-ui/react";
 
+import { readBrowserState, writeBrowserState } from "@/lib/browser-state";
 import { RuleAiWindow, type RuleDraft } from "./rule-ai-window";
 import { SCOPES, patternError, type CustomRule, type Scope } from "@/lib/custom-rules";
 
-export function RuleDialog({ open, onOpenChange, onCreate, rule }: { rule?: CustomRule; open: boolean; onOpenChange: (o: boolean) => void; onCreate: (r: CustomRule) => void }) {
+export function RuleDialog({ open, onOpenChange, onCreate, rule, storageKey }: { storageKey?: string; rule?: CustomRule; open: boolean; onOpenChange: (o: boolean) => void; onCreate: (r: CustomRule) => void }) {
   return (
     <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)} size="lg" placement="center" scrollBehavior="inside">
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          {open && <RuleForm rule={rule} onCreate={(r) => { onCreate(r); onOpenChange(false); }} onClose={() => onOpenChange(false)} />}
+          {open && <RuleForm storageKey={storageKey} rule={rule} onCreate={(r) => { onCreate(r); onOpenChange(false); }} onClose={() => onOpenChange(false)} />}
         </Dialog.Positioner>
       </Portal>
     </Dialog.Root>
   );
 }
 
-function RuleForm({ onCreate, onClose, rule }: { rule?: CustomRule; onCreate: (r: CustomRule) => void; onClose: () => void }) {
+function RuleForm({ onCreate, onClose, rule, storageKey }: { storageKey?: string; rule?: CustomRule; onCreate: (r: CustomRule) => void; onClose: () => void }) {
+  const [saved] = useState(() => storageKey ? readBrowserState<Partial<RuleDraft>>(storageKey, {}, (v): v is RuleDraft => {
+    if (!v || typeof v !== "object") return false;
+    const r = v as RuleDraft;
+    return typeof r.name === "string" && typeof r.pattern === "string" && typeof r.description === "string" &&
+      ["content", "attributes", "source"].includes(r.scope) && ["found", "missing"].includes(r.when) && typeof r.regex === "boolean" && typeof r.matchCase === "boolean";
+  }) : {});
   const panelHost = useRef<HTMLDivElement>(null);
-  const [name, setName] = useState(rule?.name ?? "");
-  const [scope, setScope] = useState<Scope>(rule?.scope ?? "content");
-  const [when, setWhen] = useState<CustomRule["when"]>(rule?.when ?? "found");
-  const [pattern, setPattern] = useState(rule?.pattern ?? "");
-  const [regex, setRegex] = useState(rule?.regex ?? false);
-  const [matchCase, setMatchCase] = useState(rule?.matchCase ?? false);
-  const [description, setDescription] = useState(rule?.howToFix ?? "");
+  const [name, setName] = useState(saved.name ?? rule?.name ?? "");
+  const [scope, setScope] = useState<Scope>(saved.scope ?? rule?.scope ?? "content");
+  const [when, setWhen] = useState<CustomRule["when"]>(saved.when ?? rule?.when ?? "found");
+  const [pattern, setPattern] = useState(saved.pattern ?? rule?.pattern ?? "");
+  const [regex, setRegex] = useState(saved.regex ?? rule?.regex ?? false);
+  const [matchCase, setMatchCase] = useState(saved.matchCase ?? rule?.matchCase ?? false);
+  const [description, setDescription] = useState(saved.description ?? rule?.howToFix ?? "");
   const [tried, setTried] = useState(false);
+
+  useEffect(() => {
+    if (storageKey) writeBrowserState(storageKey, { name, scope, when, pattern, regex, matchCase, description });
+  }, [storageKey, name, scope, when, pattern, regex, matchCase, description]);
 
   const err = patternError(pattern, regex);
   const nameErr = name.trim() ? null : "Give the rule a name.";
@@ -56,7 +67,7 @@ function RuleForm({ onCreate, onClose, rule }: { rule?: CustomRule; onCreate: (r
             <Stack gap="2">
               <Field.Root invalid={tried && !!err}>
                 <InputGroup endElement={
-                <RuleAiWindow portalRef={panelHost} current={{ name, pattern, scope, when, regex, matchCase, description }} onApply={(fields, original) => {
+                <RuleAiWindow storageKey={storageKey ? `${storageKey}.ai` : undefined} portalRef={panelHost} current={{ name, pattern, scope, when, regex, matchCase, description }} onApply={(fields, original) => {
                   // Preserve edits made while the AI request was in flight.
                   const apply = <K extends keyof RuleDraft>(key: K, setter: React.Dispatch<React.SetStateAction<RuleDraft[K]>>) => {
                     const value = fields[key];

@@ -8,6 +8,7 @@ import { Link as RouterLink } from "react-router";
 import { useLocation } from "react-router";
 import { Box, ChakraProvider, Container, Flex, Grid, HStack, Icon, Menu, Portal, Stack, Text, useMediaQuery } from "@chakra-ui/react";
 
+import { RuleDialogHost } from "./rule-dialog-host";
 import { LuMenu } from "react-icons/lu";
 import { system, dockedSystem } from "./ui/system";
 import { CompactNavActions, NavAction } from "./nav-action";
@@ -55,6 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {layout === "center" && <CenterLayout>{children}</CenterLayout>}
           {layout === "side" && <SideLayout>{children}</SideLayout>}
         </Content>
+        <RuleDialogHost />
       </PaletteProvider></AssistantProvider>
       </Box>
     </LayoutContext.Provider>
@@ -92,16 +94,19 @@ function useActiveSection() {
 function CompactLayout({ children }: { children: React.ReactNode }) {
   const site = useSite();
   const active = useActiveSection();
-  const width = useContext(AvailableWidth);
-  const compactActions = width < 1100;
-  const collapseSections = width < 700;
   return (
     <Box css={{ "--sticky-top": "3.5rem" }}>
       <Box as="header" position="sticky" top="0" zIndex="sticky" bg="bg/90" backdropFilter="blur(8px)" borderBottomWidth="1px">
-        <Container maxW="7xl">
-          <Flex h="14" align="center" gap={compactActions ? "2" : "6"} minW="0">
-            <SiteSwitcher logoH={compactActions ? "6" : "9"} />
-            {collapseSections ? <SectionMenu /> : <HStack gap="1" as="nav" aria-label="Sections">
+        <Container maxW="7xl" css={{ containerType: "inline-size", containerName: "navbar" }}>
+          <Flex h="14" align="center" gap="6" minW="0" css={{
+            "--nav-logo-height": "2.25rem",
+            "& .section-menu": { display: "none" },
+            "@container navbar (max-width: 1035px)": { gap: "2", "--nav-logo-height": "1.5rem", "& .nav-actions": { gap: "1" } },
+            "@container navbar (max-width: 667px)": { "& .section-menu": { display: "block" }, "& .section-links": { display: "none" } },
+          }}>
+            <SiteSwitcher logoH="var(--nav-logo-height)" />
+            <Box className="section-menu"><SectionMenu /></Box>
+            <HStack className="section-links" gap="1" as="nav" aria-label="Sections" flexShrink={0}>
               {SECTIONS.map((s) => {
                 const on = s.id === active;
                 return (
@@ -112,8 +117,8 @@ function CompactLayout({ children }: { children: React.ReactNode }) {
                   </Box>
                 );
               })}
-            </HStack>}
-            <CompactNavActions.Provider value={compactActions}><HStack ms="auto" gap={compactActions ? "1" : "2"} flexShrink={0}><SearchButton /><AskAiButton /><NewRuleButton /><NewCrawlButton /></HStack></CompactNavActions.Provider>
+            </HStack>
+            <CompactNavActions.Provider value="container"><HStack className="nav-actions" ms="auto" gap="2" flexShrink={0}><SearchButton /><AskAiButton /><NewRuleButton /><NewCrawlButton /></HStack></CompactNavActions.Provider>
           </Flex>
         </Container>
       </Box>

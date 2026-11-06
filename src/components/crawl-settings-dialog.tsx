@@ -2,7 +2,8 @@
 //   create → everything editable ("New crawl" in the navbar)
 //   paused → target + discovery locked, throughput editable (Settings while a crawl is paused)
 //   view   → read-only (running or finished crawl)
-import { createContext, useContext, useRef, useState } from "react";
+import { readBrowserState, writeBrowserState, removeBrowserState } from "@/lib/browser-state";
+import { createContext, useEffect, useContext, useRef, useState } from "react";
 import {
   Alert, Button, CloseButton, Dialog, Field, Grid, HStack, Input, InputGroup, NumberInput, Portal, Select, createListCollection, type ListCollection,
   Separator, Stack, Switch,
@@ -13,20 +14,22 @@ import { SITES } from "@/lib/sites";
 
 export type SettingsMode = "create" | "paused" | "view";
 
-export function CrawlSettingsDialog({ open, onOpenChange, mode, initial, onSubmit }: {
+export function CrawlSettingsDialog({ open, onOpenChange, mode, initial, onSubmit, storageKey }: {
+  storageKey?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: SettingsMode;
   initial: CrawlSettings;
   onSubmit?: (s: CrawlSettings, opts: { resume: boolean }) => void;
 }) {
+  const close = () => { if (storageKey) removeBrowserState(storageKey); onOpenChange(false); };
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)} size="lg" placement="center" scrollBehavior="inside">
+    <Dialog.Root open={open} onOpenChange={(e) => { if (!e.open) close(); }} size="lg" placement="center" scrollBehavior="inside">
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
           {/* Remount the form each time it opens, so it starts from the current settings */}
-          {open && <SettingsForm mode={mode} initial={initial} onSubmit={onSubmit} onClose={() => onOpenChange(false)} />}
+          {open && <SettingsForm storageKey={storageKey} mode={mode} initial={initial} onSubmit={onSubmit} onClose={close} />}
         </Dialog.Positioner>
       </Portal>
     </Dialog.Root>
@@ -35,10 +38,16 @@ export function CrawlSettingsDialog({ open, onOpenChange, mode, initial, onSubmi
 
 const PortalTarget = createContext<React.RefObject<HTMLDivElement | null> | null>(null);
 
-function SettingsForm({ mode, initial, onSubmit, onClose }: {
+function SettingsForm({ mode, initial, onSubmit, onClose, storageKey }: {
+  storageKey?: string;
   mode: SettingsMode; initial: CrawlSettings; onSubmit?: (s: CrawlSettings, opts: { resume: boolean }) => void; onClose: () => void;
 }) {
-  const [s, setS] = useState<CrawlSettings>(initial);
+  const [s, setS] = useState<CrawlSettings>(() => storageKey ? readBrowserState(storageKey, initial, (v): v is CrawlSettings => {
+    if (!v || typeof v !== "object") return false;
+    const candidate = v as Record<string, unknown>;
+    return candidate.site === initial.site && Object.entries(initial).every(([key, value]) => typeof candidate[key] === typeof value);
+  }) : initial);
+  useEffect(() => { if (storageKey) writeBrowserState(storageKey, s); }, [storageKey, s]);
   const set = <K extends keyof CrawlSettings>(k: K, v: CrawlSettings[K]) => setS((x) => ({ ...x, [k]: v }));
   const lockedFixed = mode !== "create"; // target + discovery
   const lockedLive = mode === "view"; // throughput
