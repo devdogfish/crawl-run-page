@@ -166,6 +166,10 @@ class RuleHits(BaseModel):
 
 
 class IssueDetail(Issue):
-    """get_issue: the issue the element belongs to, that element first."""
+    """get_issue: the issue the element belongs to, that element first, with what the rule is for. Everything a
+    "Fix @issue:ID" or "Explain @issue:ID" message needs, in one call."""
 
     site: str
+    page_url: str
+    source: str  # axe-core, Lighthouse or Custom check
+    why: str

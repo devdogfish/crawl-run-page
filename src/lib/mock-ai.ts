@@ -1,12 +1,16 @@
 // PROTOTYPE: scripted answers, used when there's no /api/chat (a static build) or with VITE_AI=scripted.
 // In `pnpm dev`, /api/chat is a real model through a local Codex session (vite.config.ts).
 //
-// It takes the same messages the real call will send (system prompt + conversation, with each button's context)
+// It takes the same messages the real call will send (system prompt + conversation; the buttons' messages carry
+// @issue / @page references, which it resolves itself instead of calling tools)
 // and streams back plain text in the format the system prompt asks for: @issue / @rule references and ```ui
-// component blocks (fix, paste). The answers are built from the issue data, not generated. Replacing this with the corporate AI gateway
+// component blocks (fix, paste, issue, issues, page, pages, choice). The answers are built from the issue data, not generated. Replacing this with the corporate AI gateway
 // is the backend's job; src/lib/ai.ts already calls /api/chat.
 import { PRIORITY } from "@/lib/priority";
-import { resolveIssue, type ResolvedIssue } from "@/lib/refs";
+import { issueId, resolveIssue, type ResolvedIssue } from "@/lib/refs";
+import { pageIssues } from "@/lib/page-issues";
+import { baselinesFor, defaultCrawl, pageView, pagesFor, siteSize, type PageView } from "@/lib/site-pages";
+import { DEFAULT_SITE, SITE_IDS, type SiteId } from "@/lib/sites";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -98,6 +102,23 @@ function explain(r: ResolvedIssue) {
   ].join("\n\n");
 }
 
+const block = (data: object) => "```ui\n" + JSON.stringify(data) + "\n```";
+
+// The pages of the site with the most open issues (accessibility, SEO and security), in the latest crawl
+function worstPages(site: SiteId) {
+  const a = Number(defaultCrawl(site).id), b = Number(baselinesFor(site, String(a))[0]?.id);
+  // rank a shortlist by the open issue elements the cards count
+  const open = (p: PageView) => pageIssues(pageView(site, p.i, a, b)!, a, b, siteSize(site)).instances.filter((it) => it.status !== "fixed").length;
+  const top = pagesFor(site, a, null).sort((x, y) => total(y) - total(x)).slice(0, 40)
+    .map((p) => [p, open(p)] as const).sort((x, y) => y[1] - x[1]).slice(0, 10).map(([p]) => p);
+  return [
+    `These are the ${top.length} pages of the site with the most issues in the latest crawl. Most of them come from shared markup, so the template fixes in the first rows fix the rest too.`,
+    block({ type: "pages", title: "Most issues", pages: top.map((p) => String(p.i)) }),
+    block({ type: "choice", options: [`Summarize @page:${top[0].i}`] }),
+  ].join("\n\n");
+}
+const total = (p: PageView) => Object.values(p.issues).reduce((n, k) => n + k, 0);
+
 function summarize(ids: string[]) {
   const all = ids.map(resolveIssue).filter((r): r is ResolvedIssue => !!r);
   if (!all.length) return "There's nothing open in this list.";
@@ -107,29 +128,45 @@ function summarize(ids: string[]) {
   const groups = [...byRule.values()].sort((a, b) => a[0].priority.localeCompare(b[0].priority) || b.length - a.length);
   const local = groups.filter((g) => g[0].it.shared == null), common = groups.filter((g) => g[0].it.shared != null);
   return [
-    `${all.length} issues on @page:${all[0].page.i}, in ${groups.length} groups. ${local.length} are only on this page; ${common.length} come from shared markup.`,
-    local.length ? "**Fix first, on this page** (worst first):" : "",
-    local.slice(0, 3).map((g) => `- @issue:${g[0].id}${g.length > 1 ? ` and ${g.length - 1} more like it` : ""}`).join("\n"),
+    block({ type: "page", page: String(all[0].page.i) }),
+    `${all.length} issues, in ${groups.length} groups. ${local.length} are only on this page; ${common.length} come from shared markup.`,
+    local.length ? "**Fix first, on this page** (worst first, one per group):" : "",
+    local.length ? block({ type: "issues", title: "Fix first", issues: local.slice(0, 5).map((g) => g[0].id) }) : "",
     common.length ? `**Shared markup:** ${common.map((g) => `@rule:${g[0].rule.id}`).join(", ")}. These are in the header, footer or banners, so raise them with whoever owns the template rather than fixing them here.` : "",
-    local[0] ? `Want a fix for @issue:${local[0][0].id}? Use **Fix with AI** on it, or ask me.` : "",
+    local[0] ? block({ type: "choice", options: [`Fix @issue:${local[0][0].id}`, `Explain @issue:${local[0][0].id}`] }) : "",
   ].filter(Boolean).join("\n\n");
+}
+
+// The site the user is in, which is the one the cards resolve @page ids against
+const currentSite = (): SiteId =>
+  SITE_IDS.find((id) => typeof location !== "undefined" && location.pathname.split("/")[1] === id) ?? DEFAULT_SITE;
+
+// "Summarize the issues on @page:N …" (the page's Summarize button, or a suggested reply). Scripted: filters are ignored.
+function summarizePage(i: number) {
+  const site = currentSite(), a = Number(defaultCrawl(site).id), b = Number(baselinesFor(site, String(a))[0]?.id);
+  const page = pageView(site, i, a, b);
+  if (!page) return "I can't find that page.";
+  return summarize(pageIssues(page, a, b, siteSize(site)).instances.filter((it) => it.status !== "fixed").map((it) => issueId(site, i, it.k)));
 }
 
 function answer(messages: ChatMessage[]) {
   const last = messages[messages.length - 1]?.content ?? "";
-  const q = last.split("\n\nContext:\n")[0].toLowerCase();
+  const q = last.toLowerCase();
   const idsIn = (s: string) => [...s.matchAll(/@issue:(\d+)/g)].map((m) => m[1]);
   const here = idsIn(last);
   // A follow-up question is about the last issue mentioned anywhere in the conversation
   const recent = here[0] ?? messages.flatMap((m) => idsIn(m.content)).pop();
   const r = recent ? resolveIssue(recent) : null;
 
+  const page = /^summari[sz]e\b.*@page:(\d+)/.exec(q)?.[1];
+  if (page) return summarizePage(Number(page));
   if (/^summari[sz]e/.test(q)) return summarize(here);
+  if (/\bpages\b/.test(q)) return worstPages(currentSite());
   if (/^explain/.test(q) && r) return explain(r);
   if (/\bfix|change|code|correct/.test(q) && r) return fix(r);
   if (/test|verify|check/.test(q) && r) return howToTest(r);
   if (/why|what|who|explain|mean/.test(q) && r) return explain(r);
-  if (r) return `About @issue:${r.id}: ${r.rule.howToFix}\n\nAsk me to fix it and I'll write the change.`;
+  if (r) return [block({ type: "issue", issue: r.id }), r.rule.howToFix, block({ type: "choice", options: [`Fix @issue:${r.id}`] })].join("\n\n");
   return [
     "In this prototype my answers are scripted, so I can only answer about issues.",
     "Open a page, then use **Fix with AI** or **Explain with AI** on an issue, or **Summarize with AI** in the page's export menu (the download icon). The button writes the prompt here, with the issue's details under it.",

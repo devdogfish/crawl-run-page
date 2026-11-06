@@ -5,13 +5,13 @@ import { LuCheck, LuChevronDown, LuCopy } from "react-icons/lu";
 
 import { Tooltip } from "@/components/ui/tooltip";
 
-// Copies text; `done` is true for a moment afterwards
-export function useCopy(text: string) {
+// Copies text (or what a function returns, computed only on click); `done` is true for a moment afterwards
+export function useCopy(text: string | (() => string)) {
   const [done, setDone] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
   const copy = async () => {
-    try { await navigator.clipboard.writeText(text); } catch { return; }
+    try { await navigator.clipboard.writeText(typeof text === "function" ? text() : text); } catch { return; }
     setDone(true);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setDone(false), 1500);

@@ -229,15 +229,17 @@ export function get_issue(a: Args) {
   const id = String(a.element_id ?? "").trim();
   const n = Number(id);
   const site = SITE_IDS[Math.floor(n / 1e9)];
-  if (!Number.isInteger(n) || n < 0 || !site) return fail(`"${id}" isn't an element id. Ids come from find_issues or find_issues_by_rule results.`);
+  if (!Number.isInteger(n) || n < 0 || !site) return fail(`"${id}" isn't an element id. Ids come from @issue references or find_issues / find_issues_by_rule results.`);
   const pageId = Math.floor((n % 1e9) / 1e4), k = n % 1e4;
   const { crawl, baseline } = scope(site, {});
   const p = pageView(site, pageId, crawl, baseline);
   const instances = p ? pageIssues(p, crawl, baseline, siteSize(site)).instances : [];
   const it = instances.find((x) => x.k === k);
-  if (!p || !it) return fail(`No element with id ${id} in the latest crawl of ${site}. Ids come from find_issues or find_issues_by_rule results.`);
+  if (!p || !it) return fail(`No element with id ${id} in the latest crawl of ${site}. Ids come from @issue references or find_issues / find_issues_by_rule results.`);
   const issue = issuesOf(site, p, crawl, baseline, instances.filter((x) => x.rule === it.rule), k)[0];
-  return { site, ...issue };
+  // everything the app knows about the element: what a "Fix @issue" or "Explain @issue" message needs in one call
+  const r = RULE_CATALOG[it.rule];
+  return { site, page_url: p.url, source: r.source, why: r.why, ...issue };
 }
 
 export function list_rules(a: Args) {

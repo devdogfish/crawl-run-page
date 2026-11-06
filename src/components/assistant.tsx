@@ -2,9 +2,9 @@ import { useBrowserState, isBoolean, writeBrowserState } from "@/lib/browser-sta
 import { NavAction } from "@/components/nav-action";
 // Ask AI: one assistant for the whole app, docked on the right, opened from the navbar.
 //
-// Nothing is hidden: buttons around the app ("Fix with AI", "Explain with AI", …) put a prompt into the
-// conversation, a short instruction plus the context it's about, and the user sees both. So does the place
-// the user is looking at (the line in the input), which goes along with every message. While the model works,
+// Nothing is hidden: buttons around the app ("Fix with AI", "Explain with AI", …) put a short message into the
+// conversation with the thing as a reference ("Fix @issue:ID"), which the model looks up with its tools (get_issue,
+// find_issues). The place the user is looking at (the line in the input) goes along with every message. While the model works,
 // the lookups it makes show as small rows above its answer (Looking up issues ✓). The model answers in light
 // Markdown; the app turns these things in that text into components (assistant/markdown.tsx):
 //   @issue:ID / @rule:RULE_ID / @page:ID / @crawl:ID → inline chips linking to the thing (assistant/chips.tsx)
@@ -12,7 +12,7 @@ import { NavAction } from "@/components/nav-action";
 //   ```ui {"type": "…", …}```                          → a component block: one JSON shape, `type` picks the component (assistant/cards.tsx)
 // When the model asks to open a screen, the app goes there (if the URL checks out) and says so in the message.
 // Everything a chip or component shows comes from the id (src/lib/refs.ts), not from the model.
-import { createContext, useContext, useEffect, useRef, useState, type RefObject } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { Box, Button, IconButton, Stack } from "@chakra-ui/react";
@@ -22,16 +22,16 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { saveChatRule } from "@/lib/custom-rules";
 import { DEFAULT_SITE } from "@/lib/sites";
 import { streamChat, type ChatMessage } from "@/lib/ai";
-import { type Seed } from "@/lib/refs";
 import { validateUrl } from "@/lib/nav/url-map";
 import { Composer } from "./assistant/composer";
 import { EmptyState } from "./assistant/empty";
 import { AssistantMessage, UserMessage } from "./assistant/messages";
+import { UiActions } from "./assistant/cards";
 import { siteIn } from "./assistant/route";
 import { AssistantFrame, type Placement } from "./assistant/frame";
 import type { AssistantMsg, Msg } from "./assistant/types";
 
-type Assistant = { placement: Placement; open: boolean; setOpen: (v: boolean) => void; send: (q: string | Seed) => void };
+type Assistant = { placement: Placement; open: boolean; setOpen: (v: boolean) => void; send: (q: string) => void };
 const Ctx = createContext<Assistant>({ placement: "right", open: false, setOpen: () => {}, send: () => {} });
 export const useAssistant = () => useContext(Ctx);
 export const PANEL_W = "400px";
@@ -75,9 +75,9 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
     abort.current = ctl;
     const update = (f: (m: AssistantMsg) => AssistantMsg) => setMsgs((m) => [...m.slice(0, -1), f(m[m.length - 1] as AssistantMsg)]);
     try {
-      // What the real call sends: the conversation with each button's context, and where the user is. The server adds the system prompt.
+      // What the real call sends: the conversation, and where the user is. The server adds the system prompt.
       const messages: ChatMessage[] = history
-        .map((m): ChatMessage => ({ role: m.role, content: m.role === "user" && m.context ? `${m.text}\n\nContext:\n${m.context}` : m.text }))
+        .map((m): ChatMessage => ({ role: m.role, content: m.text }))
         .filter((m) => m.content.trim());
       // POST /api/chat (src/lib/ai.ts): the agent loop in the backend, or the scripted answers with no backend
       for await (const ev of streamChat(messages, { site: siteIn(loc.pathname) || DEFAULT_SITE, url: where }, ctl.signal)) {
@@ -111,9 +111,9 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const send = (q: string | Seed) => {
+  const send = (q: string) => {
     if (busy) return;
-    const user: Msg = typeof q === "string" ? { role: "user", text: q } : { role: "user", text: q.instruction, context: q.context };
+    const user: Msg = { role: "user", text: q };
     if (user.text.trim()) run([...msgs, user]);
   };
   const regenerate = () => {
@@ -141,6 +141,12 @@ export function AskAiButton() {
 function Panel({ open, panelRef, onBackgroundAction, placement, onPlacementChange, msgs, busy, where, onSend, onStop, onRegenerate, onReset, onClose }: {
   open: boolean; panelRef: RefObject<HTMLDivElement | null>; onBackgroundAction: () => void; placement: Placement; onPlacementChange: (placement: Placement) => void; msgs: Msg[]; busy: boolean; where: string; onSend: (q: string) => void; onStop: () => void; onRegenerate: () => void; onReset: () => void; onClose: () => void;
 }) {
+  // What the cards can do, stable while an answer streams: `send` keeps one identity, so the cards only re-render when
+  // `busy` flips, not on every delta
+  const sendRef = useRef(onSend);
+  useEffect(() => { sendRef.current = onSend; });
+  const send = useCallback((q: string) => sendRef.current(q), []);
+  const actions = useMemo(() => ({ send, busy }), [send, busy]);
   // follows the answer while it streams; lets go when the user scrolls up
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: "smooth", initial: "instant" });
   // a new turn (the user's message and the empty answer under it) always scrolls into view
@@ -155,15 +161,17 @@ function Panel({ open, panelRef, onBackgroundAction, placement, onPlacementChang
           {msgs.length === 0 ? (
             <Box px="4" py="4"><EmptyState where={where} onSend={onSend} /></Box>
           ) : (
-            <Stack ref={contentRef} px="4" py="4" gap="6" role="log" aria-live="polite" aria-label="Conversation" aria-busy={busy}>
-              {msgs.map((m, n) => m.role === "user"
-                ? <UserMessage key={n} m={m} />
-                : <AssistantMessage key={n} m={m} last={n === msgs.length - 1} live={busy && n === msgs.length - 1} onRegenerate={onRegenerate} />)}
-            </Stack>
+            <UiActions.Provider value={actions}>
+              <Stack ref={contentRef} px="4" py="4" gap="6" role="log" aria-live="polite" aria-label="Conversation" aria-busy={busy}>
+                {msgs.map((m, n) => m.role === "user"
+                  ? <UserMessage key={n} m={m} />
+                  : <AssistantMessage key={n} m={m} last={n === msgs.length - 1} live={busy && n === msgs.length - 1} onRegenerate={onRegenerate} />)}
+              </Stack>
+            </UiActions.Provider>
           )}
         </Box>
         {!isAtBottom && msgs.length > 0 && (
-          <Button position="absolute" bottom="3" left="50%" transform="translateX(-50%)" size="2xs" rounded="full" variant="outline" bg="bg" color="fg.muted" shadow="xs"
+          <Button position="absolute" bottom="3" left="50%" transform="translateX(-50%)" size="2xs" rounded="full" variant="outline" colorPalette="gray" bg="bg" color="fg.muted" shadow="xs"
             onClick={() => scrollToBottom()}>
             <LuArrowDown />Jump to latest
           </Button>

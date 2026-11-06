@@ -29,7 +29,7 @@ import {
   RULE_CATALOG, SEVERITIES, apiRequest, batchPrompt, issuePrompt, issuesJson, localCheck, pageIssues, sevRank, type Instance,
 } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
-import { explainSeed, fixSeed, summarizeSeed } from "@/lib/refs";
+import { explainMessage, fixMessage, issueId, summarizeMessage } from "@/lib/refs";
 import { downloadText } from "@/components/data-toolbar";
 import { CATEGORIES, defaultCrawl, pageView, siteSize } from "@/lib/site-pages";
 import { SITES, type SiteId } from "@/lib/sites";
@@ -144,10 +144,10 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   }, [current?.k, tab, q, seg, pri, cats, a, b]); // eslint-disable-line react-hooks/exhaustive-deps
   const linkTo = (it: Instance) => typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}?crawl=${a}${b != null ? `&vs=${b}` : ""}&issue=${it.k + 1}`;
 
-  // Ask AI: the buttons write the prompt into the global assistant, where the user sees all of it
+  // Ask AI: the buttons write a short message with the issue or page as a reference; the model looks it up
   const { send } = useAssistant();
-  const fixAi = (it: Instance) => send(fixSeed(site, p, it));
-  const explainAi = (it: Instance) => send(explainSeed(site, p, it));
+  const fixAi = (it: Instance) => send(fixMessage(issueId(site, p.i, it.k)));
+  const explainAi = (it: Instance) => send(explainMessage(issueId(site, p.i, it.k)));
 
   return (
     <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value as typeof tab)} variant="line" size="sm">
@@ -183,7 +183,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                     </InputGroup>
                     <FilterMenu pri={pri} setPri={setPri} cats={cats} setCats={setCats} />
                     <ExportMenu count={visible.filter((it) => it.status !== "fixed").length}
-                      onAsk={() => send(summarizeSeed(site, p, visible.filter((it) => it.status !== "fixed")))}
+                      onAsk={() => send(summarizeMessage(p.i, { status: seg, priorities: pri, categories: cats, query: q }))}
                       onPrompt={() => navigator.clipboard.writeText(batchPrompt(p, visible.filter((it) => it.status !== "fixed"), prio))}
                       onJson={() => downloadText(issuesJson(p, a, visible, prio), `issues-${p.i}-${a}.json`, "application/json")}
                       onApi={() => navigator.clipboard.writeText(apiRequest(p.i, a, { priority: pri, category: cats, ...(seg !== "all" ? { status: [seg] } : {}) }))}

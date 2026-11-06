@@ -54,7 +54,7 @@ const plugins = [remarkGfm];
 
 const Block = memo(function Block({ text, last, live }: { text: string; last: boolean; live: boolean }) {
   const fence = fenceOf(text);
-  if (live && fence?.open && fence.lang === "ui") return <UiPending />;
+  if (live && fence?.open && fence.lang === "ui") return <UiPending body={text} />;
   return (
     <Stack gap="3">
       <ReactMarkdown remarkPlugins={plugins} components={components}>{last ? remend(text) : text}</ReactMarkdown>

@@ -98,8 +98,8 @@ def build_mcp(core: Core) -> MCPServer:
         return await _ok(core.find_issues_by_rule(site, rule, _crawl(crawl), limit, cursor))
 
     @tool("Get issue")
-    async def get_issue(element_id: Annotated[str, Field(description="An element id from find_issues or find_issues_by_rule")]) -> IssueDetail:
-        """The issue one element belongs to, that element first: failing HTML, selector, how to fix. Ids come only from other tool results."""
+    async def get_issue(element_id: Annotated[str, Field(description="An element id: from an @issue:ID reference in the conversation, or from find_issues / find_issues_by_rule")]) -> IssueDetail:
+        """The issue one element belongs to, that element first: the page, the failing HTML and selector, why it matters and how to fix it. Call it for every @issue:ID the user asks about. Never guess ids."""
         return await _ok(core.get_issue(element_id))
 
     @tool("List rules")
