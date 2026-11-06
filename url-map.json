@@ -1,0 +1,75 @@
+{
+  "$comment": "Every route the app has, its URL parameters and their allowed values. Read by the frontend (src/lib/nav) and the backend (crawler_ai/url_map.py). Navigation may only write what is listed here. Param types: enum (one of values), list (comma-separated enum values), text, int, crawl (a crawl id of the site, or 'none' where allowed), page (a page id), rule (a rule id). A param left at its default is omitted from the URL.",
+  "version": 1,
+  "sites": ["rbccm", "rbccm-qa", "rbcits", "rbcits-qa"],
+  "routes": [
+    { "id": "home", "path": "/", "label": "Home", "params": {} },
+    { "id": "overview", "path": "/:site/overview", "label": "Overview", "params": {} },
+    { "id": "crawls", "path": "/:site/crawls", "label": "Crawls", "params": {} },
+    { "id": "crawl", "path": "/:site/crawls/:crawlId", "label": "Crawl", "path_params": { "crawlId": { "type": "crawl" } }, "params": {} },
+    {
+      "id": "pages", "path": "/:site/pages", "label": "Pages",
+      "params": {
+        "crawl": { "type": "crawl", "label": "Crawl" },
+        "vs": { "type": "crawl", "label": "Compared with", "extra": ["none"] },
+        "q": { "type": "text", "label": "Search", "default": "" },
+        "type": { "type": "enum", "label": "Type", "default": "all", "values": ["all", "article", "research", "news", "podcast", "video", "event", "people", "other"],
+          "labels": { "article": "Articles", "research": "Research", "news": "News releases", "podcast": "Podcasts", "video": "Videos", "event": "Events", "people": "People", "other": "Other pages" } },
+        "year": { "type": "enum", "label": "Year", "default": "all", "values": ["all", "2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "none"], "labels": { "none": "No year in URL" } },
+        "rule": { "type": "enum", "label": "Content rule", "default": "none", "values": ["none", "copyright", "legacy-domain", "placeholder", "phone", "old-brand"],
+          "labels": { "copyright": "Outdated copyright year", "legacy-domain": "Links to legacy .page URLs", "placeholder": "Placeholder text", "phone": "Hard-coded phone numbers", "old-brand": "Old brand name" } },
+        "links": { "type": "text", "label": "Links to", "default": "" },
+        "sort": { "type": "enum", "label": "Sort", "default": "worst", "values": ["worst", "cat:accessibility", "cat:performance", "cat:seo", "cat:security", "changed", "path", "matches"],
+          "labels": { "worst": "Most issues", "cat:accessibility": "Most accessibility issues", "cat:performance": "Most performance issues", "cat:seo": "Most SEO issues", "cat:security": "Most security issues", "changed": "Recently changed", "path": "Path A–Z", "matches": "Most rule matches" } },
+        "change": { "type": "enum", "label": "Change", "default": "all", "values": ["all", "new", "changed", "removed"] }
+      }
+    },
+    {
+      "id": "page", "path": "/:site/pages/:pageId", "label": "Page", "path_params": { "pageId": { "type": "page" } },
+      "params": {
+        "crawl": { "type": "crawl", "label": "Crawl" },
+        "vs": { "type": "crawl", "label": "Compared with" },
+        "issue": { "type": "int", "label": "Selected issue" },
+        "tab": { "type": "enum", "label": "Tab", "default": "issues", "values": ["issues", "preview", "source"] },
+        "q": { "type": "text", "label": "Search", "default": "" },
+        "seg": { "type": "enum", "label": "Status", "default": "all", "values": ["all", "new", "fixed"] },
+        "pri": { "type": "list", "label": "Priority", "values": ["P1", "P2", "P3", "P4"] },
+        "cat": { "type": "list", "label": "Category", "values": ["accessibility", "performance", "seo", "security"] }
+      }
+    },
+    {
+      "id": "issues", "path": "/:site/issues", "label": "Issues",
+      "params": {
+        "crawl": { "type": "crawl", "label": "Crawl" },
+        "vs": { "type": "crawl", "label": "Compared with", "extra": ["none"] },
+        "q": { "type": "text", "label": "Search", "default": "" },
+        "cat": { "type": "enum", "label": "Category", "default": "all", "values": ["all", "accessibility", "performance", "seo", "security"],
+          "labels": { "accessibility": "Accessibility", "performance": "Performance", "seo": "SEO & canonicals", "security": "Security & compliance" } },
+        "pri": { "type": "enum", "label": "Priority", "default": "all", "values": ["all", "P1", "P2", "P3", "P4"] },
+        "markup": { "type": "enum", "label": "Markup", "default": "all", "values": ["all", "shared", "page"], "labels": { "shared": "Shared markup", "page": "Page-specific markup" } },
+        "type": { "type": "enum", "label": "Page type", "default": "all", "values": ["all", "article", "research", "news", "podcast", "video", "event", "people", "other"] },
+        "sort": { "type": "enum", "label": "Sort", "default": "priority", "values": ["priority", "pages", "elements", "new"] },
+        "seg": { "type": "enum", "label": "Status", "default": "all", "values": ["all", "new", "fixed"] }
+      }
+    },
+    {
+      "id": "rule", "path": "/:site/issues/:ruleId", "label": "Rule", "path_params": { "ruleId": { "type": "rule" } },
+      "params": {
+        "crawl": { "type": "crawl", "label": "Crawl" },
+        "vs": { "type": "crawl", "label": "Compared with", "extra": ["none"] },
+        "q": { "type": "text", "label": "Search", "default": "" },
+        "el": { "type": "text", "label": "Element", "default": "all" },
+        "type": { "type": "enum", "label": "Page type", "default": "all", "values": ["all", "article", "research", "news", "podcast", "video", "event", "people", "other"] },
+        "seg": { "type": "enum", "label": "Status", "default": "all", "values": ["all", "new", "fixed"] }
+      }
+    },
+    {
+      "id": "analytics", "path": "/:site/analytics", "label": "Analytics",
+      "params": {
+        "v": { "type": "enum", "label": "View", "default": "dashboard", "values": ["dashboard", "report", "board", "explorer"] },
+        "range": { "type": "enum", "label": "Range", "default": "30", "values": ["7", "30", "all"], "labels": { "7": "7 days", "30": "30 days", "all": "All" } }
+      }
+    },
+    { "id": "settings", "path": "/:site/settings", "label": "Settings", "params": {} }
+  ]
+}

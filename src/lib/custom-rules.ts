@@ -22,7 +22,7 @@ export function loadRules(site: string): CustomRule[] {
   try { return JSON.parse(localStorage.getItem(key(site)) ?? "[]"); } catch { return []; }
 }
 export function saveRules(site: string, rules: CustomRule[]) {
-  try { localStorage.setItem(key(site), JSON.stringify(rules)); } catch { /* ignore */ }
+  try { localStorage.setItem(key(site), JSON.stringify(rules)); window.dispatchEvent(new Event("crawler:rules-changed")); } catch { /* ignore */ }
 }
 
 // null when the pattern is usable, else why not

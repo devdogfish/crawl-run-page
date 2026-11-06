@@ -6,22 +6,41 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "dev:api": "uv run --directory backend uvicorn crawler_ai.app:app --reload --port 8000",
+    "dev:codex": "uv run --directory backend python -m dev.codex_openai --port 8787",
+    "test:api": "uv run --directory backend pytest -q"
   },
   "dependencies": {
     "@chakra-ui/charts": "3.38.0",
     "@chakra-ui/react": "3.38.0",
     "@emotion/react": "^11.14.0",
+    "@tiptap/core": "3.33.0",
+    "@tiptap/extension-document": "3.33.0",
+    "@tiptap/extension-mention": "3.33.0",
+    "@tiptap/extension-paragraph": "3.33.0",
+    "@tiptap/extension-text": "3.33.0",
+    "@tiptap/extensions": "3.33.0",
+    "@tiptap/pm": "3.33.0",
+    "@tiptap/react": "3.33.0",
+    "@tiptap/suggestion": "3.33.0",
     "next-themes": "^0.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-icons": "^5.7.0",
+    "react-markdown": "10.1.0",
     "react-router": "^8.5.1",
     "react-virtuoso": "4.12.3",
-    "recharts": "3.8.0"
+    "recharts": "3.8.0",
+    "remark-gfm": "4.0.1",
+    "remend": "1.4.0",
+    "use-stick-to-bottom": "1.1.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "16.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -29,9 +48,11 @@
     "eslint": "^9",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
+    "jsdom": "31.0.0",
     "typescript": "^5",
     "typescript-eslint": "^8.72.1",
-    "vite": "^8.3.6"
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
   },
   "type": "module"
 }

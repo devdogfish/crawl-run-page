@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,5 +40,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# local tooling
-.claude/
+# local tooling (the dev servers in .claude/launch.json are shared)
+.claude/*
+!.claude/launch.json
+
+# backend (Python)
+/backend/.venv/
+__pycache__/
+.pytest_cache/

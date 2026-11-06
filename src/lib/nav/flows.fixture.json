@@ -1,0 +1,728 @@
+[
+  {
+    "query": "https://www.rbccm.com/en/insights/2021/data-centres-outlook",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21",
+    "why": "Crawled site URL resolves to its page id",
+    "priority": "must"
+  },
+  {
+    "query": "www.rbccm.com/en/insights/2021/data-centres-outlook",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21",
+    "why": "No scheme still a crawled URL",
+    "priority": "must"
+  },
+  {
+    "query": "rbccm.com/en/insights/2021/data-centres-outlook/",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21",
+    "why": "Bare host plus trailing slash",
+    "priority": "must"
+  },
+  {
+    "query": "https://www.rbccm.com/en/insights/2021/data-centres-outlook?utm_source=newsletter&utm_medium=email",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21",
+    "why": "Query string and tracking params are ignored",
+    "priority": "must"
+  },
+  {
+    "query": "https://www.rbccm.com/en/insights/2021/data-centres-outlook#key-takeaways",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21",
+    "why": "Fragment is ignored",
+    "priority": "should"
+  },
+  {
+    "query": "https://www.rbcis.com/en/about-us",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits/pages/0",
+    "why": "Other site's URL switches site and opens page",
+    "priority": "must"
+  },
+  {
+    "query": "https://www.rbcis.com/en/careers",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/issues"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits/pages/1",
+    "why": "Other site's URL from rbccm context",
+    "priority": "should"
+  },
+  {
+    "query": "https://www.sterbccm.com/en/about-us",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm-qa/pages/0",
+    "why": "QA host maps to the QA site",
+    "priority": "must"
+  },
+  {
+    "query": "https://www.sterbcits.com/en/about-us",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits-qa/pages/0",
+    "why": "QA IS host maps to the QA IS site",
+    "priority": "should"
+  },
+  {
+    "query": "https://www.rbccm.com",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/analytics",
+    "why": "Site root URL opens that site's overview (overview, dashboard and analytics are one page)",
+    "priority": "should"
+  },
+  {
+    "query": "http://localhost:5173/rbccm/issues/color-contrast",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/color-contrast",
+    "why": "App URL (dev host) is passed through",
+    "priority": "must"
+  },
+  {
+    "query": "https://crawler.example.com/rbccm/pages/21?crawl=811",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21?crawl=811",
+    "why": "App URL on any host; default crawl param dropped (app URLs pass through as-is, crawl param kept)",
+    "priority": "should"
+  },
+  {
+    "query": "/rbcits/crawls/431",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits/crawls/431",
+    "why": "In-app path pasted directly",
+    "priority": "must"
+  },
+  {
+    "query": "http://localhost:5173/rbccm/issues?pri=P1&cat=accessibility&seg=new",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues?cat=accessibility&pri=P1&seg=new",
+    "why": "App URL with filters is kept and canonicalised",
+    "priority": "must"
+  },
+  {
+    "query": "/en/insights/2021/data-centres-outlook",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21",
+    "why": "Bare path resolves in the current site",
+    "priority": "must"
+  },
+  {
+    "query": "en/insights/2021/data-centres-outlook/",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21",
+    "why": "Path without leading slash and with trailing slash",
+    "priority": "should"
+  },
+  {
+    "query": "/en/podcasts/2024/",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages?type=podcast&year=2024",
+    "why": "A path prefix of type and year becomes a pages filter",
+    "priority": "should"
+  },
+  {
+    "query": "210000",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages/21?crawl=811&issue=1",
+    "why": "Numeric issue id (site 0, page 21, element 0) resolves to page with issue selected",
+    "priority": "must"
+  },
+  {
+    "query": "color-contrast",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/color-contrast",
+    "why": "Exact rule id",
+    "priority": "must"
+  },
+  {
+    "query": "image-alt",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/image-alt",
+    "why": "Exact rule id",
+    "priority": "must"
+  },
+  {
+    "query": "render-blocking-resources",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/render-blocking-resources",
+    "why": "Exact performance rule id",
+    "priority": "should"
+  },
+  {
+    "query": "Image has no text alternative",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/image-alt",
+    "why": "Exact rule title",
+    "priority": "must"
+  },
+  {
+    "query": "contrast",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/color-contrast",
+    "why": "Unique substring of one rule id/title",
+    "priority": "must"
+  },
+  {
+    "query": "alt text",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/image-alt",
+    "why": "Fuzzy name via 'text alternative' title words",
+    "priority": "should"
+  },
+  {
+    "query": "noopener",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/noopener",
+    "why": "Distinct token matches one rule",
+    "priority": "should"
+  },
+  {
+    "query": "buttons without names",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/issues/button-name",
+    "why": "Paraphrase of 'Button has no accessible name'",
+    "priority": "should"
+  },
+  {
+    "query": "all the 404s",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/issues/broken-link-external",
+    "why": "NEEDS RULE broken-link-external (not in prototype); expected rule page",
+    "priority": "must"
+  },
+  {
+    "query": "external broken links",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/issues/broken-link-external",
+    "why": "NEEDS RULE broken-link-external; expected rule page",
+    "priority": "must"
+  },
+  {
+    "query": "broken-link-external",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues/broken-link-external",
+    "why": "NEEDS RULE broken-link-external; exact id once it exists",
+    "priority": "should"
+  },
+  {
+    "query": "crawl 806",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/crawls/806",
+    "why": "Crawl number with word",
+    "priority": "must"
+  },
+  {
+    "query": "#806",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/crawls/806",
+    "why": "Hash crawl number",
+    "priority": "must"
+  },
+  {
+    "query": "806",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/crawls/806",
+    "why": "Bare number in crawl range of current site",
+    "priority": "must"
+  },
+  {
+    "query": "crawl 431",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits/crawls/431",
+    "why": "Number only valid in rbcits history, switches site",
+    "priority": "should"
+  },
+  {
+    "query": "issues in crawl 806",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues?crawl=806",
+    "why": "Section plus crawl, deterministic parse",
+    "priority": "should"
+  },
+  {
+    "query": "issues",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues",
+    "why": "Section name",
+    "priority": "must"
+  },
+  {
+    "query": "settings",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/settings",
+    "why": "Section name",
+    "priority": "must"
+  },
+  {
+    "query": "crawls",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/crawls",
+    "why": "Section name",
+    "priority": "should"
+  },
+  {
+    "query": "analytics",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/analytics",
+    "why": "Section name",
+    "priority": "should"
+  },
+  {
+    "query": "settings",
+    "context": {
+      "site": "rbcits",
+      "url": "/rbcits/pages"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits/settings",
+    "why": "Section keeps the current site",
+    "priority": "should"
+  },
+  {
+    "query": "rbc is",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits/analytics",
+    "why": "Short site name switches site, keeps overview (overview, dashboard and analytics are one page)",
+    "priority": "must"
+  },
+  {
+    "query": "capital markets qa",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm-qa/analytics",
+    "why": "Site name with QA (overview, dashboard and analytics are one page)",
+    "priority": "must"
+  },
+  {
+    "query": "rbc is qa",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits-qa/analytics",
+    "why": "Short name plus qa (overview, dashboard and analytics are one page)",
+    "priority": "should"
+  },
+  {
+    "query": "issues rbc is",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbcits/issues",
+    "why": "Section plus site in either order",
+    "priority": "should"
+  },
+  {
+    "query": "new P1 accessibility issues",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/issues?cat=accessibility&pri=P1&seg=new",
+    "why": "Priority, category and status chips",
+    "priority": "must"
+  },
+  {
+    "query": "podcasts from 2024 with the worst performance",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/pages?type=podcast&year=2024&sort=cat:performance",
+    "why": "Type, year and sort",
+    "priority": "must"
+  },
+  {
+    "query": "podcasts 2024",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages?type=podcast&year=2024",
+    "why": "Type and year tokens",
+    "priority": "should"
+  },
+  {
+    "query": "shared markup issues",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues?markup=shared",
+    "why": "Markup filter phrase",
+    "priority": "must"
+  },
+  {
+    "query": "pages changed since last crawl",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/pages?change=changed",
+    "why": "Change filter against default baseline",
+    "priority": "must"
+  },
+  {
+    "query": "new pages",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages?change=new",
+    "why": "Change filter",
+    "priority": "should"
+  },
+  {
+    "query": "pages linking to https://www.rbccm.com/en/careers",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/pages?links=https%3A%2F%2Fwww.rbccm.com%2Fen%2Fcareers",
+    "why": "links param, text value",
+    "priority": "must"
+  },
+  {
+    "query": "outdated copyright",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages?rule=copyright",
+    "why": "Content rule label",
+    "priority": "must"
+  },
+  {
+    "query": "legacy .page links",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages?rule=legacy-domain",
+    "why": "Content rule",
+    "priority": "should"
+  },
+  {
+    "query": "seo issues in articles",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/issues?cat=seo&type=article",
+    "why": "Category and page type",
+    "priority": "should"
+  },
+  {
+    "query": "board 7 days",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/analytics?v=board&range=7",
+    "why": "View plus range",
+    "priority": "should"
+  },
+  {
+    "query": "color contrast on podcasts",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "ai",
+    "expect": "/rbccm/issues/color-contrast?type=podcast",
+    "why": "Rule plus page type param",
+    "priority": "should"
+  },
+  {
+    "query": "asdkjh qwlkj",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "none",
+    "expect": null,
+    "why": "Nonsense",
+    "priority": "should"
+  },
+  {
+    "query": "",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "none",
+    "expect": null,
+    "why": "Empty query shows suggestions only",
+    "priority": "must"
+  },
+  {
+    "query": "how do I fix color contrast",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "none",
+    "expect": null,
+    "why": "A question belongs to Ask AI chat, not navigation",
+    "priority": "must"
+  },
+  {
+    "query": "explain the P1 issues to me",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "none",
+    "expect": null,
+    "why": "Explanation request, not navigation",
+    "priority": "should"
+  },
+  {
+    "query": "delete crawl 806",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "none",
+    "expect": null,
+    "why": "Action request; palette only navigates",
+    "priority": "must"
+  },
+  {
+    "query": "show me pages that changed last crawl with seo problems",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/pages?sort=cat:seo&change=changed",
+    "why": "QA regression: several section words; pages is the one that can use every filter",
+    "priority": "must"
+  },
+  {
+    "query": "issues on podcasts with new p2 problems",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/overview"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/issues?pri=P2&type=podcast&seg=new",
+    "why": "two section words that agree on issues",
+    "priority": "should"
+  },
+  {
+    "query": "crawl",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/analytics"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/crawls",
+    "why": "bare 'crawl': the Crawls page first, recent crawls under it",
+    "priority": "must"
+  },
+  {
+    "query": "dashboard",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/crawls"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/analytics",
+    "why": "dashboard = analytics",
+    "priority": "must"
+  },
+  {
+    "query": "overview",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/crawls"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/analytics",
+    "why": "overview = analytics",
+    "priority": "must"
+  },
+  {
+    "query": "analytics",
+    "context": {
+      "site": "rbccm",
+      "url": "/rbccm/crawls"
+    },
+    "kind": "deterministic",
+    "expect": "/rbccm/analytics",
+    "why": "analytics",
+    "priority": "must"
+  }
+]

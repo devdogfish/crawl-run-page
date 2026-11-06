@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Badge, Box, Button, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
-import { LuChartColumn, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
+import { LuChartColumn, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuRegex, LuSettings } from "react-icons/lu";
 
+import { NavAction } from "@/components/nav-action";
+import { RuleDialog } from "@/components/rule-dialog";
+import { loadRules, saveRules } from "@/lib/custom-rules";
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { useSite } from "@/components/site-context";
 import { crawlsFor } from "@/lib/crawls-list";
@@ -59,13 +62,24 @@ export function NewCrawlButton(props: ButtonProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)} {...props}><LuPlus />New crawl</Button>
+      <NavAction onClick={() => setOpen(true)} {...props}><LuPlus />New crawl</NavAction>
       <CrawlSettingsDialog
         open={open} onOpenChange={setOpen} mode="create" initial={defaultSettings(site)}
         onSubmit={(s) => navigate(`/${site}/crawls/${Number(crawlsFor(site)[0].id) + 1}?settings=${encodeURIComponent(JSON.stringify(s))}`)}
       />
     </>
   );
+}
+
+// Available from every layout, without leaving the current page.
+export function NewRuleButton(props: ButtonProps) {
+  const site = useSite();
+  const [open, setOpen] = useState(false);
+  return <>
+    <NavAction onClick={() => setOpen(true)} {...props}><LuRegex />New rule</NavAction>
+    <RuleDialog key={site} open={open} onOpenChange={setOpen}
+      onCreate={(rule) => saveRules(site, [...loadRules(site), rule])} />
+  </>;
 }
 
 // QA copies share the production logo, so SiteLogo pins this badge to the shield's bottom-right corner

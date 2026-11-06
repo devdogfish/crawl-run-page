@@ -7,7 +7,7 @@ The one plan for moving the prototype into the real app. It lists only what isn'
 Designs it points to:
 - [SPEC.md](SPEC.md): the crawl run page (UI, log format, tables, endpoints).
 - [docs/pages-and-issues.md](docs/pages-and-issues.md): the read side behind Pages, page detail and Issues (core, storage, element ids).
-- [docs/ai.md](docs/ai.md): the three AI systems (navigation, the MCP server, Ask AI).
+- [docs/ai.md](docs/ai.md): the AI (Cmd+K search, Ask AI, the MCP server): design, how to run it, how to move it over.
 - Decisions: [docs/adr/](docs/adr/). Terms: [CONTEXT.md](CONTEXT.md).
 
 ---
@@ -31,7 +31,7 @@ Designs it points to:
 
 **Open: align the real `/crawls` pages with the prototype** (§2). The real app's crawls list and run page have drifted from what we designed, mostly in the UI. They have to run on real data **and** have exactly the prototype's layout. This comes before Tier 2.
 
-**Next: Tier 2** (§4): Pages, page detail and Issues on real data, then Ask AI on the gateway. **Then Tier 3** (§5): the MCP server and navigation.
+**Next: Tier 2** (§4): Pages, page detail and Issues on real data, then the AI (built in this repo's `backend/`) on the gateway.
 
 The rule that ordered Tiers 0 and 1 still applies to anything new that's captured: **if it isn't recorded during the crawl, it's gone; everything derived from stored data can be built later and re-run** (`POST /crawls/{id}/analyze`).
 
@@ -175,7 +175,7 @@ All of this reads stored data. Build it against the finished crawl and re-run `a
 | **T2.6** | **Preview endpoint.** Serve a snapshot's rendered HTML with stylesheet links rewritten to `/api/v3/assets/{hash}` (the stylesheets stored during the crawl) and a `<base>` for images; Source view serves the raw HTML. Frontend: remove the Screenshot mode from `page-detail.tsx` / `page-preview.tsx`; the issue-panel crop uses the live render. | M |
 | **T2.7** | **Custom rules on the server.** Move them from `localStorage` to the existing `RuleStore`/`RuleMatcher`. Add what the dialog has and the backend may not: scope (content / attributes / source), found vs missing, page type filter, priority, category. Match counts per page from `rule_match_cache`. | M |
 | **T2.8** | **Lighthouse scores** `GET …/lighthouse?scope=sample` from `LighthouseStore`, and per-page performance on Pages. | S |
-| **T2.9** | **Ask AI on the corporate gateway** ([ai.md](docs/ai.md) §5, §6, [ADR 0003](docs/adr/0003-three-ai-systems.md)). Includes `assistant/gateway.py` with its fake, which navigation reuses. `GET /api/v3/assistant/seed` (visible prompts from `core/handoff.py`), `POST /api/v3/chat` (adds the system prompt, accepts only user and assistant messages, streams server-sent events), `GET /api/v3/assistant/system`. `gateway.py` is the only code that knows the gateway, with `fake_gateway.py` for tests. Frontend: seeds from the seed route; `streamAnswer` in `mock-ai.ts` becomes the chat call; delete the scripted answers. Needs T2.4; answers to the gateway questions in ai.md §6 first. | M |
+| **T2.9** | **AI on the real backend** ([ai.md](docs/ai.md) §4, all of it built in this repo's `backend/`): copy `crawler_ai/` and `url-map.json`, write `RealCore` over T2.4, wire the routes, the `/mcp/` mount and the gateway env, copy the frontend files, delete the dev-only parts. Needs T2.4. | M |
 
 **Done when** (Tier 2):
 - [ ] Comparing two crawls gives the same counts in the tabs and in the API.
@@ -183,23 +183,13 @@ All of this reads stored data. Build it against the finished crawl and re-run `a
 - [ ] Header and footer elements are marked Shared and point to the template.
 - [ ] A link to an element made before a new crawl still opens that element, or shows it as fixed.
 - [ ] Every filter and the URL state survive a reload.
-- [ ] Ask AI (T2.9): Fix, Explain and Summarize send exactly the prompt the panel shows; answers stream in; chips and fix cards resolve from ids on any page; a gateway error shows as a short message.
+- [ ] AI (T2.9): Ask AI answers "which pages have the most P1 issues?" from real data with tool rows and page chips; Fix writes a fix card or a paste card for an issue; "take me to new P1 accessibility issues" opens that view; Cmd+K passes `pnpm test` and its AI row appears for fuzzy queries; the MCP Inspector lists the 10 tools against `/mcp/`; a gateway error shows as a short message.
 
 ---
 
-## 5. Tier 3: the MCP server, navigation and later work
+## 5. Later work
 
-AI systems ([docs/ai.md](docs/ai.md)). Both need T2.4; neither needs the other or T2.9:
-
-| # | Ticket | Size |
-|---|---|---|
-| **T3.1** | **MCP server** (ai.md §4): read tools for sites, crawls, logs, pages, issues, rules and Lighthouse over the core; the `fix_issue` prompt from `core/handoff.py`; stdio entry and the `/mcp` mount. Write tools only later, behind auth. | M |
-| **T3.2** | **URL map** (ai.md §2): `url-map.json` with every route, parameter and allowed value; the pages read their parameters from it; the backend builds `ui_url` from it. Needed by T3.3, and by T3.1's `ui_url`. | S |
-| **T3.3** | **Navigation, Cmd/Ctrl+K** (ai.md §3): the palette with instant matches; `POST /api/v3/navigate` via `gateway.complete_json`, validated against the URL map on the server and in the browser; filter chips before going. Reuses T2.9's gateway client, or builds it first if T2.9 isn't done. | M |
-
-**Done when** (AI):
-- [ ] MCP: the Inspector lists the tools with typed inputs; `find_issues` accepts a full URL, a path or an id and defaults to the latest crawl; a missing page returns an error naming the latest crawl that has it; in Claude Code, "list the P1 issues on <page> and fix the first one" works end to end.
-- [ ] Navigation: the five examples in ai.md §3.1 land on the right URL; an answer with an unknown parameter or value never reaches the address bar; with the gateway down, instant matches still work.
+The AI (Cmd+K navigation, Ask AI and the MCP server) is built in this repo and moves over with T2.9. Later, for AI: MCP write tools (start a crawl, add a custom rule) behind auth and marked destructive.
 
 Other later work:
 - **Full-site Lighthouse job** and **retry from step** (SPEC §6.5). Done when: Run starts the full audit as its own row with live progress, logs and scores, and the crawl stays "Succeeded"; a second request while one runs is refused (`409`); retrying a failed step starts from that step, keeps the crawl output, and the log shows "attempt 2".
@@ -213,6 +203,6 @@ Other later work:
 ## 6. Decisions (agreed 2026-11-05)
 
 1. **No screenshots; Live render is the only preview mode** ([ADR 0002](docs/adr/0002-live-render-only-preview.md)). The crawler captures no screenshots or element boxes. The page preview renders the stored HTML with the stored stylesheets, and the crop in the issue panel comes from the live render too. The frontend drops the Screenshot / Live render toggle.
-2. **Concurrency is locked for now.** The dialog shows the engine's current value read-only, and the API rejects any other value with a `422`. A real worker pool is in Tier 3.
+2. **Concurrency is locked for now.** The dialog shows the engine's current value read-only, and the API rejects any other value with a `422`. A real worker pool is in Later work (§5).
 3. **The old `intelligence.db` is kept and migrated in place.** Its crawls are the baselines for new/fixed and the history for ETAs.
-4. **Three AI systems, each limited to one kind of output** ([ADR 0003](docs/adr/0003-three-ai-systems.md)).
+4. **AI: one data layer, three front doors** ([docs/ai.md](docs/ai.md) §1). Cmd+K search, Ask AI and the MCP server share the same read-only tools and `url-map.json`; Ask AI navigates only when asked.

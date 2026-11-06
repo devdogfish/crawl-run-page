@@ -8,8 +8,9 @@ import { Link as RouterLink } from "react-router";
 import { useLocation } from "react-router";
 import { Box, Container, Flex, Grid, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 
-import { NewCrawlButton, SECTIONS, SiteSwitcher } from "@/components/app-navbar";
+import { NewCrawlButton, NewRuleButton, SECTIONS, SiteSwitcher } from "@/components/app-navbar";
 import { AskAiButton, AssistantProvider, PANEL_W, useAssistant } from "@/components/assistant";
+import { PaletteProvider, SearchButton } from "@/components/command-palette";
 import { useSite } from "@/components/site-context";
 
 export type Layout = "compact" | "center" | "side";
@@ -44,11 +45,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <LayoutContext.Provider value={{ layout, setLayout: choose }}>
-      <AssistantProvider>
+      <AssistantProvider><PaletteProvider>
         {layout === "compact" && <CompactLayout><Content>{children}</Content></CompactLayout>}
         {layout === "center" && <CenterLayout><Content>{children}</Content></CenterLayout>}
         {layout === "side" && <SideLayout><Content>{children}</Content></SideLayout>}
-      </AssistantProvider>
+      </PaletteProvider></AssistantProvider>
     </LayoutContext.Provider>
   );
 }
@@ -85,7 +86,7 @@ function CompactLayout({ children }: { children: React.ReactNode }) {
                 );
               })}
             </HStack>
-            <HStack ms="auto" gap="2"><AskAiButton /><NewCrawlButton /></HStack>
+            <HStack ms="auto" gap="2"><SearchButton /><AskAiButton /><NewRuleButton /><NewCrawlButton /></HStack>
           </Flex>
         </Container>
       </Box>
@@ -116,7 +117,7 @@ function CenterLayout({ children }: { children: React.ReactNode }) {
                 );
               })}
             </HStack>
-            <Flex justify="flex-end" gap="2"><AskAiButton /><NewCrawlButton variant="outline" /></Flex>
+            <Flex justify="flex-end" gap="2"><SearchButton /><AskAiButton /><NewRuleButton /><NewCrawlButton variant="outline" /></Flex>
           </Grid>
         </Container>
       </Box>
@@ -134,8 +135,9 @@ function SideLayout({ children }: { children: React.ReactNode }) {
       <Flex as="nav" aria-label="Sections" direction="column" w="60" flexShrink={0} position="sticky" top="0" h="100vh"
         borderEndWidth="1px" bg="bg.subtle" px="4" py="3">
         <SiteSwitcher full />
-        <NewCrawlButton w="full" mt="4" />
-        <Box mt="2"><AskAiButton /></Box>
+        <NewRuleButton /><NewCrawlButton w="full" mt="4" />
+        <Box mt="2"><SearchButton full /></Box>
+        <Box mt="1"><AskAiButton /></Box>
         <Stack gap="0.5" mt="6">
           {SECTIONS.map((s) => {
             const on = s.id === active;

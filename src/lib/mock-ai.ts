@@ -1,9 +1,10 @@
-// PROTOTYPE: a scripted stand-in for the model, so the assistant shows how it will behave.
+// PROTOTYPE: scripted answers, used when there's no /api/chat (a static build) or with VITE_AI=scripted.
+// In `pnpm dev`, /api/chat is a real model through a local Codex session (vite.config.ts).
 //
 // It takes the same messages the real call will send (system prompt + conversation, with each button's context)
 // and streams back plain text in the format the system prompt asks for: @issue / @rule references and ```ui
-// component blocks. The answers are built from the issue data, not generated. Replacing this with the corporate AI gateway
-// means swapping `streamAnswer` for a streamed chat call; nothing else in the assistant changes.
+// component blocks (fix, paste). The answers are built from the issue data, not generated. Replacing this with the corporate AI gateway
+// is the backend's job; src/lib/ai.ts already calls /api/chat.
 import { PRIORITY } from "@/lib/priority";
 import { resolveIssue, type ResolvedIssue } from "@/lib/refs";
 
@@ -65,11 +66,19 @@ const shared = (r: ResolvedIssue) => r.it.shared != null
   ? `This markup is on ${r.it.shared.toLocaleString("en-US")} pages, so the fix belongs in the template: one change there fixes all of them.`
   : "";
 
+// Rules whose fix is a value an editor pastes into a Teamsite field, not markup: [field label, the value inside the fix]
+const PASTE: Record<string, [string, (after: string) => string | undefined]> = {
+  "meta-description": ["Meta description", (a) => a.match(/content="([^"]+)"/)?.[1]],
+  "image-alt": ["Image alt text", (a) => a.match(/alt="([^"]+)"/)?.[1]],
+};
+
 function fix(r: ResolvedIssue) {
   const after = (FIXES[r.rule.id] ?? ((s: string) => s))(r.it.snippet);
+  const paste = PASTE[r.rule.id], value = paste?.[1](after);
   return [
     `${r.rule.why}`,
     "```ui", JSON.stringify({ type: "fix", issue: r.id, html: after }), "```",
+    value ? `If you edit this in Teamsite, paste this into the field:\n\n\`\`\`ui\n${JSON.stringify({ type: "paste", issue: r.id, label: paste[0], value })}\n\`\`\`` : "",
     `**What I changed:** ${CHANGED[r.rule.id] ?? "Applied the rule's guidance."}`,
     shared(r),
     `**Check:** ${CHECK[r.rule.id] ? `${CHECK[r.rule.id]} ` : ""}${howToTest(r)}`,
@@ -78,7 +87,7 @@ function fix(r: ResolvedIssue) {
 
 function explain(r: ResolvedIssue) {
   return [
-    `@issue:${r.id} fails @rule:${r.rule.id}${r.rule.criterion ? ` (WCAG ${r.rule.criterion.split(" ")[0]})` : ""}.`,
+    `@issue:${r.id} on @page:${r.page.i} fails @rule:${r.rule.id}${r.rule.criterion ? ` (WCAG ${r.rule.criterion.split(" ")[0]})` : ""}.`,
     r.rule.why,
     r.rule.category === "accessibility"
       ? "**Who it affects:** people using screen readers or the keyboard, and anyone who can't see colour differences well."
@@ -98,7 +107,7 @@ function summarize(ids: string[]) {
   const groups = [...byRule.values()].sort((a, b) => a[0].priority.localeCompare(b[0].priority) || b.length - a.length);
   const local = groups.filter((g) => g[0].it.shared == null), common = groups.filter((g) => g[0].it.shared != null);
   return [
-    `${all.length} issues in ${groups.length} groups. ${local.length} are only on this page; ${common.length} come from shared markup.`,
+    `${all.length} issues on @page:${all[0].page.i}, in ${groups.length} groups. ${local.length} are only on this page; ${common.length} come from shared markup.`,
     local.length ? "**Fix first, on this page** (worst first):" : "",
     local.slice(0, 3).map((g) => `- @issue:${g[0].id}${g.length > 1 ? ` and ${g.length - 1} more like it` : ""}`).join("\n"),
     common.length ? `**Shared markup:** ${common.map((g) => `@rule:${g[0].rule.id}`).join(", ")}. These are in the header, footer or banners, so raise them with whoever owns the template rather than fixing them here.` : "",

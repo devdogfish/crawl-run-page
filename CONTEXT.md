@@ -89,12 +89,12 @@ The tool doesn't say who owns an element or which CMS field it came from: TeamSi
 ### AI
 
 **Navigation**:
-The Cmd/Ctrl+K palette that turns what you type into a place in the app: a route and its URL parameters. It never fetches data.
+The Cmd/Ctrl+K palette that turns what you type into a place in the app: a route and its URL parameters. Instant matches first; when nothing matches, one model-made destination that looks like any other result. It never answers questions.
 _Avoid_: AI search, command bar
 
 **Ask AI**:
-The assistant docked on the right. It explains and fixes from the prompts it's given, and has no tools.
-_Avoid_: chatbot, copilot, agent
+The assistant docked on the right. It explains issues and writes the fixes to paste into Teamsite, looking data up with the same tools as the MCP server, and opens a place in the app only when asked.
+_Avoid_: chatbot, copilot
 
 **Visible prompt**:
 What a button such as Fix with AI puts into Ask AI: a short instruction plus the context it's about, all of which the user can see.
@@ -105,7 +105,7 @@ A ` ```ui ` block of JSON in an Ask AI answer whose `type` picks the component t
 _Avoid_: widget, card (in code)
 
 **MCP server**:
-The crawler's data for AI tools outside the app, such as Claude Code. Unopinionated and not tied to any screen.
+The crawler's data as read-only tools for AI, not tied to any screen. AI tools outside the app (such as Claude Code) use it over MCP; Ask AI calls the same tools in-process.
 _Avoid_: AI API, plugin
 
 **URL map**:

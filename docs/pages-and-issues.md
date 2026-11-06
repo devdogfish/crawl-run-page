@@ -1,6 +1,6 @@
 # Pages and issues: the read side
 
-How to build the part of the backend behind the Pages page, the page detail and the Issues page: the read-model core, its storage, element ids and the REST routes. The three AI systems (navigation, the MCP server and Ask AI) sit on top of this core and are described in [ai.md](ai.md).
+How to build the part of the backend behind the Pages page, the page detail and the Issues page: the read-model core, its storage, element ids and the REST routes. The AI (Cmd+K search, Ask AI and the MCP server) sits on top of this core through the tools described in [ai.md](ai.md).
 The crawl run page backend (logs, metrics, steps) is in [SPEC.md](../SPEC.md) §4 to §6; this document adds what comes after it.
 Words like **issue**, **element**, **shared markup** and **baseline** are defined in [CONTEXT.md](../CONTEXT.md).
 

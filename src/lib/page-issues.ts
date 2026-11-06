@@ -119,6 +119,12 @@ export const RULE_CATALOG: Record<string, Rule> = {
     howToFix: "Add rel=\"noopener noreferrer\" to links with target=\"_blank\".",
     refs: [{ label: "MDN: rel=noopener", url: "https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/noopener" }],
   },
+  "broken-link-external": {
+    id: "broken-link-external", title: "External link is broken (4xx/5xx)", category: "seo", severity: "serious", source: "Custom check",
+    why: "Visitors land on an error page, and search engines read dead outbound links as a sign the page isn't maintained.",
+    howToFix: "Replace the link with the page's new address, link to an archived copy, or remove it. If the target only blocks crawlers, ask for the URL to be allow-listed.",
+    refs: [{ label: "Google: Link best practices", url: "https://developers.google.com/search/docs/crawling-indexing/links-crawlable" }],
+  },
   "mixed-content": {
     id: "mixed-content", title: "Image loaded over http on an https page", category: "security", severity: "serious", source: "Custom check",
     why: "Browsers warn about or block insecure content, and it can be tampered with in transit.",
@@ -202,7 +208,12 @@ export function issueSlots(p: PageView, crawl: number, baseline: number | null, 
 
   // SEO, security, performance
   const seo = ["canonical", "meta-description", "hreflang"].slice(0, p.issues.seo);
-  for (const r of seo) slots.push({ rule: r, group: r === "canonical" ? "head link[rel=canonical]" : "head", selector: r === "canonical" ? "head > link[rel=canonical]" : "head", shared: null });
+  // A broken outbound link takes the place of the last SEO issue on a few pages (the page's SEO count stays the same)
+  if (seo.length && rand(p.i, 80) < 0.25) seo[seo.length - 1] = "broken-link-external";
+  for (const r of seo) {
+    if (r === "broken-link-external") slots.push({ rule: r, group: "article a.external", selector: "article p.source a.external", shared: null });
+    else slots.push({ rule: r, group: r === "canonical" ? "head link[rel=canonical]" : "head", selector: r === "canonical" ? "head > link[rel=canonical]" : "head", shared: null });
+  }
   if (p.issues.security > 0) add(1, "noopener", "article a[target=_blank]", () => 'article a[target="_blank"]', null);
   if (p.issues.security > 1) add(1, "mixed-content", "article figure img[src^=http:]", () => 'article img[src^="http:"]', null);
   if (p.perf) {
@@ -269,7 +280,7 @@ function buildHtml(p: PageView, instances: Instance[]) {
   const icons = by("link-name"), region = by("region"), footer = by("color-contrast", "footer .legal a");
   const charts = by("image-alt"), label = by("label"), button = by("button-name");
   const callout = by("color-contrast", "article .callout p"), headings = by("heading-order"), inline = by("link-in-text-block"), table = by("color-contrast", "article table.data td.muted");
-  const noopener = by("noopener"), mixed = by("mixed-content"), hero = by("modern-image-formats");
+  const broken = by("broken-link-external"), noopener = by("noopener"), mixed = by("mixed-content"), hero = by("modern-image-formats");
   const canonical = by("canonical"), meta = by("meta-description"), hreflang = by("hreflang");
   const blocking = by("render-blocking-resources"), unused = by("unused-javascript");
 
@@ -324,7 +335,7 @@ function buildHtml(p: PageView, instances: Instance[]) {
           <tr><th>Metric</th><th>Q2</th><th>Q3</th></tr>
           ${Array.from({ length: Math.max(3, table.length) }, (_, j) => `<tr><td>${["Volume ($bn)", "Spread (bp)", "Default rate", "Deals", "Avg size ($m)", "Leverage", "Coverage", "Recovery", "Tenor (yrs)", "Sponsors", "Sectors", "Lenders"][j]}</td><td>${(10 + j * 7) % 90}</td>${table[j] ? record(table, j, `<td class="muted"${attr(table, j)} style="color: #b8c2cc">${(14 + j * 9) % 95}</td>`) : `<td>${(14 + j * 9) % 95}</td>`}</tr>`).join("\n          ")}
         </table>
-        <p>Source: ${noopener.length ? record(noopener, 0, `<a${attr(noopener, 0)} href="https://www.bis.org/statistics" target="_blank">BIS statistics</a>`) : `<a href="https://www.bis.org/statistics" target="_blank" rel="noopener">BIS statistics</a>`}.
+        <p class="source">Source: ${broken.length ? `${record(broken, 0, `<a${attr(broken, 0)} class="external" href="https://www.partner-research.example/reports/${year}-outlook.pdf" rel="noopener">Partner outlook</a>`)}, ` : ""}${noopener.length ? record(noopener, 0, `<a${attr(noopener, 0)} href="https://www.bis.org/statistics" target="_blank">BIS statistics</a>`) : `<a href="https://www.bis.org/statistics" target="_blank" rel="noopener">BIS statistics</a>`}.
         ${mixed.length ? record(mixed, 0, `<img${attr(mixed, 0)} class="badge" src="http://cdn.partner-ratings.com/badge.svg" alt="Ratings partner" width="90" height="24">`) : ""}</p>
         <form class="newsletter">
           <strong>Get Credit Strategy in your inbox</strong>

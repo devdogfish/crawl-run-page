@@ -9,11 +9,9 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Link as RouterLink } from "react-router";
 import { Box, Button, CloseButton, Container, Flex, Grid, HStack, Heading, Stack, Text } from "@chakra-ui/react";
-import { LuPlus } from "react-icons/lu";
 
 import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { FilterSelect } from "@/components/filter-select";
-import { RuleDialog } from "@/components/rule-dialog";
 import { CrawlScope } from "@/components/scope-select";
 import { useSite } from "@/components/site-context";
 import { SCOPES, loadRules, saveRules, type CustomRule } from "@/lib/custom-rules";
@@ -33,9 +31,13 @@ export default function IssuesPage() {
 
 function Issues() {
   const site = useSite();
-  const [ruleOpen, setRuleOpen] = useState(false);
   const [custom, setCustom] = useState<CustomRule[]>([]);
-  useEffect(() => setCustom(loadRules(site)), [site]);
+  useEffect(() => {
+    const refresh = () => setCustom(loadRules(site));
+    refresh();
+    window.addEventListener("crawler:rules-changed", refresh);
+    return () => window.removeEventListener("crawler:rules-changed", refresh);
+  }, [site]);
   const updateCustom = (next: CustomRule[]) => { setCustom(next); saveRules(site, next); };
   const sp = useSearchParams()[0];
 
@@ -104,13 +106,11 @@ function Issues() {
             <Heading size="xl" fontWeight="semibold">Issues</Heading>
             <HStack gap="3">
               <CrawlScope crawl={s.crawl} vs={s.vs} onChange={(crawl, vs) => set({ crawl, vs, ...(vs === "none" ? { seg: "all" as Seg } : {}) })} />
-              <Button size="sm" variant="outline" onClick={() => setRuleOpen(true)}><LuPlus />New rule</Button>
             </HStack>
           </Flex>
         </Container>
       </Box>
 
-      <RuleDialog open={ruleOpen} onOpenChange={setRuleOpen} onCreate={(r) => updateCustom([...custom, r])} />
       <Container maxW="7xl" py="6">
         {custom.length > 0 && (
           <Stack gap="0" mb="4" borderWidth="1px" rounded="l2" textStyle="sm">

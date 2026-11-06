@@ -1,6 +1,6 @@
 # Crawl run page
 
-A Chakra UI v3 prototype of the crawler UI (crawls, run page, pages, issues, settings, Ask AI): a React + Vite single-page app with React Router, frontend only, ready to drop into the app. All data is simulated in the browser, and Ask AI's answers are scripted; nothing here talks to a server.
+A Chakra UI v3 prototype of the crawler UI (crawls, run page, pages, issues, settings, Cmd+K search, Ask AI): a React + Vite single-page app with React Router, ready to drop into the app. All data is simulated in the browser. The AI (Cmd+K's fallback, Ask AI's agent and the MCP server) runs in a small Python backend in `backend/`, built to be copied into the real FastAPI app.
 
 Docs, in the order to read them:
 
@@ -10,7 +10,7 @@ Docs, in the order to read them:
 | [PLAN.md](PLAN.md) | **The plan**: every ticket in order, and when each tier is done |
 | [SPEC.md](SPEC.md) | The crawl run page: decisions, UI, log format, storage, endpoints |
 | [docs/pages-and-issues.md](docs/pages-and-issues.md) | The read side behind Pages, page detail and Issues: core, storage, element ids |
-| [docs/ai.md](docs/ai.md) | The three AI systems: navigation (Cmd/Ctrl+K), the MCP server, Ask AI |
+| [docs/ai.md](docs/ai.md) | The AI: Cmd+K search, Ask AI, the MCP server. Design, running it, moving it into the real app |
 | [docs/adr/](docs/adr/) | Decisions and why |
 | [docs/research-enterprise-pipeline-ui.md](docs/research-enterprise-pipeline-ui.md), [research/](research/) | Background research |
 
@@ -22,6 +22,15 @@ pnpm dev
 ```
 
 Open http://localhost:5173 (`pnpm dev`; `pnpm build` writes a static `dist/`). It redirects to `/rbccm/crawls` (or the site you used last). Switch sites with the logo menu in the top-left. Crawl 812 is a live simulation; older crawls open finished; **New crawl** starts a new simulated crawl with your settings.
+
+**The AI** needs two more processes (Python via `uv`, and the Codex CLI signed in, which stands in for the corporate gateway):
+
+```bash
+pnpm dev:api      # backend on :8000 (Vite proxies /api to it)
+pnpm dev:codex    # OpenAI-compatible stand-in gateway on :8787
+```
+
+Without them the app still works: Cmd+K shows instant matches only and Ask AI uses scripted answers. Press Cmd+K (Ctrl+K) anywhere to search. See [docs/ai.md](docs/ai.md) §3. Tests: `pnpm test`, `pnpm test:api`.
 
 The grey **Prototype** bar at the top only exists in this prototype:
 - **Healthy run / Rate limited / Fails after crawl** switch the scenario;
@@ -45,9 +54,12 @@ A simulated run takes about a minute; the full-site Lighthouse job takes about 1
 | `public/sites/*.svg` | Official logos (colour + white for dark mode) | Yes |
 | `src/routes/site-layout.tsx` | Reads the site from the first URL segment (not found if unknown), renders the navbar and the `<Outlet />` | Yes |
 | `src/routes/pages.tsx`, `page-detail.tsx` | Pages across the site (compared with a baseline crawl) and one page's issues, preview and source | Yes (swap the data source) |
-| `src/components/assistant.tsx` | Ask AI: the panel, visible prompts, chips and ` ```ui ` component blocks (docs/ai.md §5) | Yes |
-| `src/lib/refs.ts` | Issue ids → issue data and links; the prompts the buttons write; the system prompt | Yes (resolve ids and get prompts via the API) |
-| `src/lib/mock-ai.ts` | **Scripted answers** standing in for the model | No, replaced by `POST /api/v3/chat` |
+| `src/components/assistant.tsx`, `src/components/assistant/`, `src/lib/ai.ts` | Ask AI: panel shell and chat UI (markdown, tool rows, composer, chips, ` ```ui ` cards); the chat client (docs/ai.md §7). Needs `react-markdown`, `remark-gfm`, `remend`, `use-stick-to-bottom` | Yes |
+| `src/components/command-palette.tsx`, `src/lib/nav/` | Cmd+K search: instant matches, the AI result, URL validation (docs/ai.md §6) | Yes (page and rule lookups via the API) |
+| `url-map.json` | Every route, URL parameter and allowed value; read by the frontend and the backend | Yes |
+| `backend/` | The AI backend: gateway, MCP server, Ask AI agent, navigation (docs/ai.md §4) | Yes, `crawler_ai/` (write `RealCore`); not `dev/` |
+| `src/lib/refs.ts` | Issue ids → issue data and links; the prompts the buttons write; the offline system prompt | Yes (resolve ids via the API) |
+| `src/lib/mock-ai.ts`, `src/lib/proto-api.ts` | **Scripted answers** when the backend is off; the prototype's data served to the backend | No |
 | `src/routes/issues.tsx`, `rule-detail.tsx` | Issues by rule, and one rule's affected pages | Yes (swap the data source) |
 | `src/lib/custom-rules.ts`, `src/components/rule-*.tsx` | Custom rules, saved in the browser for now | Yes (store rules via the API) |
 | `src/components/crawl-settings-dialog.tsx` | New crawl / paused settings / read-only settings dialog | Yes |

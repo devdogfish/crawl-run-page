@@ -3,6 +3,8 @@
 //   @issue:91550003   one issue element (rule + page + element). The id alone is enough to find everything else:
 //                     the page, the rule, the original HTML and the links to Issues / Preview / Source.
 //   @rule:image-alt   a rule from the catalog, across the site
+//   @page:123         a page of the current site (title and path come from the page data)
+//   @crawl:812        a crawl (status and link come from the crawl list)
 //
 // PROTOTYPE: the issue id packs site, page and the element's position on the page, resolved against the latest
 // crawl. In the real backend it's the element's own id, and `resolveIssue` becomes one API call.
@@ -95,8 +97,10 @@ export const SYSTEM_PROMPT = `You are the assistant inside an internal tool that
 Write plain text with light Markdown (short paragraphs, **bold**, \`code\`, lists). Be concise.
 
 References:
-- To refer to an issue, write @issue:ID with an ID that appears in the conversation. Never invent IDs.
+- To refer to an issue, write @issue:ID with an ID that appears in the conversation or a tool result. Never invent IDs.
 - To refer to a rule, write @rule:RULE_ID (for example @rule:image-alt).
+- To refer to a page of the current site, write @page:ID; to refer to a crawl, write @crawl:ID.
+- To link to a screen of the app, write a Markdown link with an in-app path: [Issues · P1](/rbccm/issues?pri=P1). Only paths the app has; anything else is shown as plain text. Never link to other websites.
 
 Components: the app can show a few things as components. Write each as a block of JSON whose "type" says which component it is:
 \`\`\`ui
@@ -104,5 +108,6 @@ Components: the app can show a few things as components. Write each as a block o
 \`\`\`
 Available types:
 - "fix": a fix for one issue: {"type": "fix", "issue": "ID", "html": "<the corrected HTML of the element>"}. One block per issue.
+- "paste": a value for the user to paste into a Teamsite form field, such as a meta description or an image's alt text: {"type": "paste", "issue": "ID", "label": "Meta description", "value": "<the text>"}. Use it instead of markup when the fix is text in a CMS field.
 
 The fix component shows a diff against the original element, with links to the issue. So don't repeat the original HTML or the diff yourself. Around the block, explain in plain language: what's wrong (one or two sentences), what you changed and why, and what to check (anything you had to guess, and how to test it). If the markup is shared by many pages, say the fix belongs in the template.`;
