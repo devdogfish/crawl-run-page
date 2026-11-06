@@ -31,3 +31,29 @@ export function patternError(pattern: string, regex: boolean): string | null {
   if (regex) { try { new RegExp(pattern); } catch (e) { return (e as Error).message.replace(/^Invalid regular expression: /, ""); } }
   return null;
 }
+
+
+// Validate model output at the browser boundary before storing or exposing an editable chip.
+export function saveChatRule(value: unknown): CustomRule {
+  if (!value || typeof value !== "object") throw new Error("AI returned an invalid rule.");
+  const r = value as Record<string, unknown>;
+  if (typeof r.id !== "string" || !/^custom-[\w-]+$/.test(r.id) ||
+    typeof r.site !== "string" || !["rbccm", "rbccm-qa", "rbcits", "rbcits-qa"].includes(r.site) ||
+    typeof r.name !== "string" || !r.name.trim() || typeof r.pattern !== "string" ||
+    !["content", "attributes", "source"].includes(String(r.scope)) || !["found", "missing"].includes(String(r.when)) ||
+    typeof r.regex !== "boolean" || typeof r.matchCase !== "boolean" || typeof r.description !== "string") {
+    throw new Error("AI returned an incomplete rule. Ask it to fill in the missing details.");
+  }
+  const error = patternError(r.pattern, r.regex);
+  if (error) throw new Error(`Rule not saved: ${error}`);
+  const rule: CustomRule = { id: r.id, name: r.name.trim(), pattern: r.pattern, scope: r.scope as Scope,
+    when: r.when as CustomRule["when"], regex: r.regex, matchCase: r.matchCase, howToFix: r.description,
+    type: "all", priority: "P3", category: "seo" };
+  const rules = loadRules(r.site);
+  // Replayed events cannot duplicate a rule or overwrite later manual edits.
+  const existing = rules.find((item) => item.id === rule.id);
+  if (existing) return existing;
+  localStorage.setItem(key(r.site), JSON.stringify([...rules, rule]));
+  window.dispatchEvent(new Event("crawler:rules-changed"));
+  return rule;
+}

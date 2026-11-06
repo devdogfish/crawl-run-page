@@ -12,6 +12,7 @@ export type ChatEvent =
   | { type: "delta"; text: string }
   | ToolEvent
   | { type: "navigate"; url: string; label: string }
+  | { type: "create_rule"; rule: unknown }
   | { type: "error"; message: string };
 
 const FORCE_SCRIPTED = import.meta.env.VITE_AI === "scripted";
@@ -29,6 +30,7 @@ function* parse(data: Record<string, unknown>): Generator<ChatEvent> {
   }
   const n = data.navigate as Record<string, unknown> | undefined;
   if (n && typeof n.url === "string") yield { type: "navigate", url: n.url, label: typeof n.label === "string" ? n.label : n.url };
+  if (data.create_rule) yield { type: "create_rule", rule: data.create_rule };
   if (typeof data.error === "string") yield { type: "error", message: data.error };
 }
 

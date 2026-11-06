@@ -22,11 +22,14 @@ import { HealthBoard } from "@/components/analytics/board";
 import { HealthExplorer } from "@/components/analytics/explorer";
 import { HealthDashboard } from "@/components/analytics/dashboard";
 import { HealthSummary } from "@/components/analytics/summary";
+import Overview from "@/routes/overview";
 import { RANGES, type Range } from "@/lib/analytics";
 
-type Variant = "summary" | "dashboard" | "report" | "board" | "explorer";
+type Variant = "overview" | "summary" | "dashboard" | "report" | "board" | "explorer";
 const VARIANTS: { value: Variant; label: string }[] = [
-  { value: "summary", label: "Summary" }, { value: "dashboard", label: "Dashboard" }, { value: "report", label: "Report" }, { value: "board", label: "Board" }, { value: "explorer", label: "Explorer" },
+  { value: "summary", label: "Overview" },
+  { value: "overview", label: "Old overview" },
+  { value: "dashboard", label: "Dashboard" }, { value: "report", label: "Report" }, { value: "board", label: "Board" }, { value: "explorer", label: "Explorer" },
 ];
 
 export default function AnalyticsPage() {
@@ -51,7 +54,7 @@ function Analytics() {
         <Container maxW="7xl" pt="7" pb="5">
           <Flex gap="4" align={{ base: "start", md: "center" }} direction={{ base: "column", md: "row" }} justify="space-between" wrap="wrap">
           <HStack gap="3" align="center" flexShrink={0}>
-            <Heading size="xl" fontWeight="semibold">Analytics</Heading>
+            <Heading size="xl" fontWeight="semibold">Overview</Heading>
             <Menu.Root positioning={{ placement: "bottom-start" }}>
               <Menu.Trigger asChild>
                 <Button size="sm" variant="ghost" color="fg.muted">
@@ -80,8 +83,9 @@ function Analytics() {
 
   return (
     <Box bg="bg" minH="100vh">
-      {v !== "summary" && header()}
+      {v !== "summary" && v !== "overview" && header()}
       <TrendRangeContext.Provider value={{ range, setRange }}>
+      {v === "overview" && <Overview header={header} />}
       {v === "summary" && <HealthSummary site={site} range={range} header={header} />}
       {v === "dashboard" && <HealthDashboard site={site} range={range} />}
       {v === "report" && <HealthReport site={site} range={range} />}

@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import Home from "@/routes/home";
 import SiteLayout from "@/routes/site-layout";
 import Crawls from "@/routes/crawls";
@@ -9,7 +9,6 @@ import Issues from "@/routes/issues";
 import RuleDetail from "@/routes/rule-detail";
 import Settings from "@/routes/settings";
 import Analytics from "@/routes/analytics";
-import Overview from "@/routes/overview";
 import SectionPlaceholder from "@/routes/section-placeholder";
 import { NotFound } from "@/routes/not-found";
 
@@ -20,7 +19,7 @@ export function App() {
       <Routes>
         <Route index element={<Home />} />
         <Route path=":site" element={<SiteLayout />}>
-          <Route path="overview" element={<Overview />} />
+          <Route path="overview" element={<Navigate to="../analytics" replace />} />
           <Route path="crawls" element={<Crawls />} />
           <Route path="crawls/:crawlId" element={<CrawlRun />} />
           <Route path="pages" element={<Pages />} />

@@ -1,11 +1,12 @@
 // Links and reference chips inside the assistant's text.
 //   TextLink       an in-app link in running text: plain, underlined softly
 //   @issue/@rule/@page/@crawl chips, resolved from the id (src/lib/refs.ts), never from the model's words
-import { Children, Fragment } from "react";
+import { Children, Fragment, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router";
 import { Box, Code, Text } from "@chakra-ui/react";
 
-import { loadRules } from "@/lib/custom-rules";
+import { RuleDialog } from "@/components/rule-dialog";
+import { loadRules, saveRules } from "@/lib/custom-rules";
 import { Tooltip } from "@/components/ui/tooltip";
 import { SEVERITIES } from "@/lib/page-issues";
 import { PRIORITY, PRIORITY_COLOR } from "@/lib/priority";
@@ -58,12 +59,17 @@ function IssueChip({ id }: { id: string }) {
 }
 
 function RuleChip({ id }: { id: string }) {
+  const [editing, setEditing] = useState(false);
   const { pathname } = useLocation();
   const site = siteIn(pathname) || DEFAULT_SITE;
   const custom = loadRules(site).find((r) => r.id === id);
-  if (custom) return <Box asChild {...chip} maxW="280px" title={custom.pattern}>
-    <RouterLink to={`/${site}/issues`}><Text as="span" truncate>{custom.name}</Text></RouterLink>
-  </Box>;
+  if (custom) return <>
+    <Box asChild {...chip} maxW="280px" title={custom.pattern}>
+      <button type="button" onClick={() => setEditing(true)}><Text as="span" truncate>{custom.name}</Text></button>
+    </Box>
+    <RuleDialog key={`${site}:${id}`} rule={custom} open={editing} onOpenChange={setEditing}
+      onCreate={(updated) => saveRules(site, loadRules(site).map((r) => r.id === updated.id ? updated : r))} />
+  </>;
   const r = resolveRule(id);
   if (!r) return <Code textStyle="xs" title="Unknown rule">@rule:{id}</Code>;
   return (

@@ -3,7 +3,7 @@
 //   Trend → Fix next → What changed → By category.
 // Numbers are always the latest finished crawl, so the page never shows half-crawled data; the only trace of the
 // crawler is "as of <date>". Everything links into Pages or Issues for the people doing the fixing.
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router";
 import { Badge, Box, Container, Flex, Grid, HStack, Heading, SegmentGroup, Stack, Text } from "@chakra-ui/react";
 
@@ -17,20 +17,24 @@ import { SITES, type SiteId } from "@/lib/sites";
 
 const fmtDate = (d: Date) => d.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
 
-export default function Overview() {
+export default function Overview({ header }: { header?: (filters?: ReactNode) => ReactNode }) {
   const site = useSite();
   const m = model(site);
   const snap = snapshot(site);
   return (
     <Box bg="bg" minH="100vh">
-      <Box borderBottomWidth="1px" bg="bg.subtle">
+      {header ? header(
+        <Text textStyle="sm" color="fg.muted">
+          {SITES[site].url.replace(/^https?:\/\/(www\.)?/, "")} · {fmtInt(snap.pages)} pages · as of {fmtDate(m.date)}
+        </Text>
+      ) : <Box borderBottomWidth="1px" bg="bg.subtle">
         <Container maxW="6xl" pt="7" pb="5">
           <Heading size="xl" fontWeight="semibold">Overview</Heading>
           <Text textStyle="sm" color="fg.muted" mt="1">
             {SITES[site].url.replace(/^https?:\/\/(www\.)?/, "")} · {fmtInt(snap.pages)} pages · as of {fmtDate(m.date)}
           </Text>
         </Container>
-      </Box>
+      </Box>}
       <Container maxW="6xl" py={{ base: "6", md: "8" }}>
         <Stack gap={{ base: "10", md: "12" }}>
           <Trend site={site} />

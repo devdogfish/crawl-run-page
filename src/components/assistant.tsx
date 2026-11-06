@@ -14,10 +14,12 @@ import { NavAction } from "@/components/nav-action";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useStickToBottom } from "use-stick-to-bottom";
-import { Box, Button, CloseButton, Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, IconButton, Stack } from "@chakra-ui/react";
 import { LuArrowDown, LuSparkles, LuSquarePen } from "react-icons/lu";
 
 import { Tooltip } from "@/components/ui/tooltip";
+import { saveChatRule } from "@/lib/custom-rules";
+import { DEFAULT_SITE } from "@/lib/sites";
 import { streamChat, type ChatMessage } from "@/lib/ai";
 import { type Seed } from "@/lib/refs";
 import { validateUrl } from "@/lib/nav/url-map";
@@ -25,10 +27,11 @@ import { Composer } from "./assistant/composer";
 import { EmptyState } from "./assistant/empty";
 import { AssistantMessage, UserMessage } from "./assistant/messages";
 import { siteIn } from "./assistant/route";
+import { AssistantFrame, type Placement } from "./assistant/frame";
 import type { AssistantMsg, Msg } from "./assistant/types";
 
-type Assistant = { open: boolean; setOpen: (v: boolean) => void; send: (q: string | Seed) => void };
-const Ctx = createContext<Assistant>({ open: false, setOpen: () => {}, send: () => {} });
+type Assistant = { placement: Placement; open: boolean; setOpen: (v: boolean) => void; send: (q: string | Seed) => void };
+const Ctx = createContext<Assistant>({ placement: "right", open: false, setOpen: () => {}, send: () => {} });
 export const useAssistant = () => useContext(Ctx);
 export const PANEL_W = "400px";
 
@@ -45,6 +48,7 @@ function load(): Msg[] {
 
 export function AssistantProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<Placement>("right");
   const [msgs, setMsgs] = useState<Msg[]>(load);
   const [busy, setBusy] = useState(false);
   const abort = useRef<AbortController | null>(null);
@@ -71,13 +75,20 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
         .map((m): ChatMessage => ({ role: m.role, content: m.role === "user" && m.context ? `${m.text}\n\nContext:\n${m.context}` : m.text }))
         .filter((m) => m.content.trim());
       // POST /api/chat (src/lib/ai.ts): the agent loop in the backend, or the scripted answers with no backend
-      for await (const ev of streamChat(messages, { site: siteIn(loc.pathname), url: where }, ctl.signal)) {
+      for await (const ev of streamChat(messages, { site: siteIn(loc.pathname) || DEFAULT_SITE, url: where }, ctl.signal)) {
         if (ev.type === "delta") update((m) => ({ ...m, text: m.text + ev.text }));
         else if (ev.type === "tool") {
           update((m) => {
             const tools = m.tools ?? [];
             return { ...m, tools: tools.some((t) => t.id === ev.id) ? tools.map((t) => (t.id === ev.id ? { ...t, ...ev } : t)) : [...tools, ev] };
           });
+        } else if (ev.type === "create_rule") {
+          try {
+            const rule = saveChatRule(ev.rule);
+            update((m) => ({ ...m, text: `${m.text}\n\nCreated @rule:${rule.id}. Click to edit.\n\n` }));
+          } catch (e) {
+            update((m) => ({ ...m, error: e instanceof Error ? e.message : "Could not save the rule." }));
+          }
         } else if (ev.type === "navigate") {
           // Only to places url-map.json knows; the panel stays open
           const v = validateUrl(ev.url);
@@ -108,9 +119,9 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
   const reset = () => { abort.current?.abort(); abort.current = null; setBusy(false); setMsgs([]); };
 
   return (
-    <Ctx.Provider value={{ open, setOpen, send }}>
+    <Ctx.Provider value={{ open, placement, setOpen, send }}>
       {children}
-      {open && <Panel msgs={msgs} busy={busy} where={where} onSend={send} onStop={stop} onRegenerate={regenerate} onReset={reset} onClose={() => setOpen(false)} />}
+      {open && <Panel placement={placement} onPlacementChange={setPlacement} msgs={msgs} busy={busy} where={where} onSend={send} onStop={stop} onRegenerate={regenerate} onReset={reset} onClose={() => setOpen(false)} />}
     </Ctx.Provider>
   );
 }
@@ -121,8 +132,8 @@ export function AskAiButton() {
   return <NavAction aria-expanded={open} onClick={() => setOpen(!open)}><LuSparkles />Ask AI</NavAction>;
 }
 
-function Panel({ msgs, busy, where, onSend, onStop, onRegenerate, onReset, onClose }: {
-  msgs: Msg[]; busy: boolean; where: string; onSend: (q: string) => void; onStop: () => void; onRegenerate: () => void; onReset: () => void; onClose: () => void;
+function Panel({ placement, onPlacementChange, msgs, busy, where, onSend, onStop, onRegenerate, onReset, onClose }: {
+  placement: Placement; onPlacementChange: (placement: Placement) => void; msgs: Msg[]; busy: boolean; where: string; onSend: (q: string) => void; onStop: () => void; onRegenerate: () => void; onReset: () => void; onClose: () => void;
 }) {
   // follows the answer while it streams; lets go when the user scrolls up
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: "smooth", initial: "instant" });
@@ -130,19 +141,10 @@ function Panel({ msgs, busy, where, onSend, onStop, onRegenerate, onReset, onClo
   useEffect(() => { if (msgs.length) scrollToBottom(); }, [msgs.length, scrollToBottom]);
 
   return (
-    <Flex direction="column" position="fixed" right="0" top="var(--sticky-top, 3.5rem)" bottom="0" w={{ base: "100%", md: PANEL_W }}
-      bg="bg" borderStartWidth="1px" zIndex="docked" shadow={{ base: "lg", lg: "none" }} aria-label="Ask AI" role="complementary">
-      <HStack px="4" h="12" flexShrink={0} gap="1">
-        <Text textStyle="sm" fontWeight="medium" flex="1">Ask AI</Text>
-        {msgs.length > 0 && (
-          <Tooltip content="New conversation">
-            <IconButton size="xs" variant="ghost" aria-label="New conversation" onClick={onReset}><LuSquarePen /></IconButton>
-          </Tooltip>
-        )}
-        <CloseButton size="xs" onClick={onClose} aria-label="Close" />
-      </HStack>
-
-      <Box position="relative" flex="1" minH="0" borderTopWidth="1px">
+    <AssistantFrame placement={placement} onPlacementChange={onPlacementChange} onClose={onClose} actions={msgs.length > 0 && (
+      <Tooltip content="New conversation"><IconButton size="xs" variant="ghost" aria-label="New conversation" onClick={onReset}><LuSquarePen /></IconButton></Tooltip>
+    )}>
+      <Box position="relative" flex="1" minH="0">
         <Box ref={scrollRef} h="full" overflowY="auto">
           {msgs.length === 0 ? (
             <Box px="4" py="4"><EmptyState where={where} onSend={onSend} /></Box>
@@ -163,6 +165,6 @@ function Panel({ msgs, busy, where, onSend, onStop, onRegenerate, onReset, onClo
       </Box>
 
       <Composer where={where} busy={busy} onSend={onSend} onStop={onStop} />
-    </Flex>
+    </AssistantFrame>
   );
 }

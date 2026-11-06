@@ -136,13 +136,13 @@ export function Heatmap({ h }: { h: ReturnType<typeof useHealth> }) {
   const cell = (p: string, c: string) => snap.rules.filter((r) => r.priority === p && r.rule.category === c).reduce((t, r) => t + r.pages, 0);
   const max = Math.max(1, ...PRIORITIES.flatMap((p) => CATEGORIES.map((c) => cell(p, c.id))));
   return (
-    <Box overflowX="auto">
-      <Grid templateColumns="88px repeat(4, minmax(72px, 1fr))" gap="2px" minW="380px" textStyle="xs">
+    <Box minW="0">
+      <Grid templateColumns={{ base: "32px repeat(4, minmax(0, 1fr))", sm: "88px repeat(4, minmax(0, 1fr))" }} gap="2px" textStyle="xs">
         <Box />
         {CATEGORIES.map((c) => <Text key={c.id} color="fg.muted" px="2" pb="1" truncate>{c.label}</Text>)}
         {PRIORITIES.map((p) => (
           <Box key={p} display="contents">
-            <HStack gap="1.5" px="1"><Box boxSize="2" rounded="sm" bg={PRI_COLOR[p]} /><Text fontWeight="medium">{p}</Text><Text color="fg.muted">{PRI_LABEL[p]}</Text></HStack>
+            <HStack gap="1.5" px="1"><Box boxSize="2" rounded="sm" bg={PRI_COLOR[p]} /><Text fontWeight="medium">{p}</Text><Text color="fg.muted" display={{ base: "none", sm: "inline" }}>{PRI_LABEL[p]}</Text></HStack>
             {CATEGORIES.map((c) => {
               const v = cell(p, c.id);
               const t = v ? 0.16 + 0.76 * Math.sqrt(v / max) : 0;

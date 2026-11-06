@@ -3,11 +3,14 @@
 //   center  → one row: site switcher · centered segmented sections · New crawl, no border
 //   side    → left sidebar (site switcher, New crawl, sections); pages get the full height
 // Pick one, then delete the others and the Settings control.
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
 import { useLocation } from "react-router";
-import { Box, Container, Flex, Grid, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, ChakraProvider, Container, Flex, Grid, HStack, Icon, Menu, Portal, Stack, Text, useMediaQuery } from "@chakra-ui/react";
 
+import { LuMenu } from "react-icons/lu";
+import { system, dockedSystem } from "./ui/system";
+import { CompactNavActions, NavAction } from "./nav-action";
 import { NewCrawlButton, NewRuleButton, SECTIONS, SiteSwitcher } from "@/components/app-navbar";
 import { AskAiButton, AssistantProvider, PANEL_W, useAssistant } from "@/components/assistant";
 import { PaletteProvider, SearchButton } from "@/components/command-palette";
@@ -45,19 +48,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <LayoutContext.Provider value={{ layout, setLayout: choose }}>
+      <Box css={{ "--app-header-height": layout === "center" ? "65px" : "57px" }}>
       <AssistantProvider><PaletteProvider>
-        {layout === "compact" && <CompactLayout><Content>{children}</Content></CompactLayout>}
-        {layout === "center" && <CenterLayout><Content>{children}</Content></CenterLayout>}
-        {layout === "side" && <SideLayout><Content>{children}</Content></SideLayout>}
+        <Content>
+          {layout === "compact" && <CompactLayout>{children}</CompactLayout>}
+          {layout === "center" && <CenterLayout>{children}</CenterLayout>}
+          {layout === "side" && <SideLayout>{children}</SideLayout>}
+        </Content>
       </PaletteProvider></AssistantProvider>
+      </Box>
     </LayoutContext.Provider>
   );
 }
 
-// Makes room for the Ask AI panel on wide screens (it overlays on narrow ones)
+// Reserve the dock beside the entire app, including its navigation. Overlay on narrow screens.
+const AvailableWidth = createContext(window.innerWidth);
+
 function Content({ children }: { children: React.ReactNode }) {
-  const { open } = useAssistant();
-  return <Box pe={{ lg: open ? PANEL_W : 0 }}>{children}</Box>;
+  const { open, placement } = useAssistant();
+  const [canShare] = useMediaQuery(["(min-width: 48rem)"], { ssr: false });
+  const docked = open && placement !== "floating" && canShare;
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return <Box ref={ref} minW="0" w={docked ? `calc(100% - ${PANEL_W})` : "full"} ms={docked && placement === "left" ? PANEL_W : 0}>
+    <ChakraProvider value={docked ? dockedSystem : system}>
+      <AvailableWidth.Provider value={width}>{children}</AvailableWidth.Provider>
+    </ChakraProvider>
+  </Box>;
 }
 
 function useActiveSection() {
@@ -68,13 +92,16 @@ function useActiveSection() {
 function CompactLayout({ children }: { children: React.ReactNode }) {
   const site = useSite();
   const active = useActiveSection();
+  const width = useContext(AvailableWidth);
+  const compactActions = width < 1100;
+  const collapseSections = width < 700;
   return (
     <Box css={{ "--sticky-top": "3.5rem" }}>
       <Box as="header" position="sticky" top="0" zIndex="sticky" bg="bg/90" backdropFilter="blur(8px)" borderBottomWidth="1px">
         <Container maxW="7xl">
-          <Flex h="14" align="center" gap="6">
-            <SiteSwitcher logoH="9" />
-            <HStack gap="1" as="nav" aria-label="Sections">
+          <Flex h="14" align="center" gap={compactActions ? "2" : "6"} minW="0">
+            <SiteSwitcher logoH={compactActions ? "6" : "9"} />
+            {collapseSections ? <SectionMenu /> : <HStack gap="1" as="nav" aria-label="Sections">
               {SECTIONS.map((s) => {
                 const on = s.id === active;
                 return (
@@ -85,8 +112,8 @@ function CompactLayout({ children }: { children: React.ReactNode }) {
                   </Box>
                 );
               })}
-            </HStack>
-            <HStack ms="auto" gap="2"><SearchButton /><AskAiButton /><NewRuleButton /><NewCrawlButton /></HStack>
+            </HStack>}
+            <CompactNavActions.Provider value={compactActions}><HStack ms="auto" gap={compactActions ? "1" : "2"} flexShrink={0}><SearchButton /><AskAiButton /><NewRuleButton /><NewCrawlButton /></HStack></CompactNavActions.Provider>
           </Flex>
         </Container>
       </Box>
@@ -99,6 +126,8 @@ function CompactLayout({ children }: { children: React.ReactNode }) {
 function CenterLayout({ children }: { children: React.ReactNode }) {
   const site = useSite();
   const active = useActiveSection();
+  const width = useContext(AvailableWidth);
+  if (width < 1200) return <CompactLayout>{children}</CompactLayout>;
   return (
     <Box css={{ "--sticky-top": "4rem" }}>
       <Box as="header" position="sticky" top="0" zIndex="sticky" bg="bg/80" backdropFilter="blur(10px)">
@@ -130,6 +159,8 @@ function CenterLayout({ children }: { children: React.ReactNode }) {
 function SideLayout({ children }: { children: React.ReactNode }) {
   const site = useSite();
   const active = useActiveSection();
+  const width = useContext(AvailableWidth);
+  if (width < 1000) return <CompactLayout>{children}</CompactLayout>;
   return (
     <Flex minH="100vh" css={{ "--sticky-top": "0.5rem" }}>
       <Flex as="nav" aria-label="Sections" direction="column" w="60" flexShrink={0} position="sticky" top="0" h="100vh"
@@ -158,4 +189,18 @@ function SideLayout({ children }: { children: React.ReactNode }) {
       <Box flex="1" minW="0">{children}</Box>
     </Flex>
   );
+}
+
+
+function SectionMenu() {
+  const site = useSite();
+  const active = useActiveSection();
+  return <Menu.Root>
+    <Menu.Trigger asChild><NavAction w="9" minW="9" h="9" px="0" aria-label="Sections"><LuMenu /></NavAction></Menu.Trigger>
+    <Portal><Menu.Positioner><Menu.Content>
+      {SECTIONS.map((section) => <Menu.Item key={section.id} value={section.id} asChild>
+        <RouterLink to={`/${site}/${section.id}`} aria-current={active === section.id ? "page" : undefined}><Icon as={section.icon} />{section.label}</RouterLink>
+      </Menu.Item>)}
+    </Menu.Content></Menu.Positioner></Portal>
+  </Menu.Root>;
 }

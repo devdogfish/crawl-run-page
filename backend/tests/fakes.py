@@ -26,8 +26,8 @@ class FakeGateway:
         return self.json_answer or {"url": None}
 
 
-def call(name: str, **args: Any) -> ToolCalls:
-    return ToolCalls([ToolCall("x", name, json.dumps(args))])
+def call(tool_name: str, **args: Any) -> ToolCalls:
+    return ToolCalls([ToolCall("x", tool_name, json.dumps(args))])
 
 
 def say(text: str) -> list[GatewayEvent]:

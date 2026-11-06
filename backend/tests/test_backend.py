@@ -118,3 +118,35 @@ async def test_mcp_over_http():
         h = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
         r = await client.post("/mcp/", headers=h, json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
         assert r.status_code == 200 and "find_pages" in r.text
+
+
+async def test_rule_assistant_partial_fields_and_followup():
+    fields = dict(name=None, pattern="old\\.example", scope="attributes", when=None, regex=True, matchCase=None, description=None)
+    gw = FakeGateway(json_answer={"fields": fields, "message": "Flag found or missing links?"})
+    app = create_app(Settings(), FakeCore(), gw)
+    current = dict(name="", pattern="", scope="content", when="found", regex=False, matchCase=False, description="")
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
+        messages = [{"role": "user", "content": "Find links to old.example"}]
+        r = await c.post("/api/rules/assist", json={"messages": messages, "current": current})
+        assert r.status_code == 200 and r.json()["fields"] == fields
+        messages += [{"role": "assistant", "content": r.json()["message"]}, {"role": "user", "content": "Found"}]
+        gw.json_answer = {"fields": {**fields, "when": "found"}, "message": "What name should this rule have?"}
+        r = await c.post("/api/rules/assist", json={"messages": messages, "current": current})
+        assert r.status_code == 200 and r.json()["fields"]["when"] == "found"
+        assert gw.seen[-1]["messages"][-3:] == messages
+        gw.json_answer = {"fields": {**fields, "scope": "invalid"}, "message": "Done"}
+        assert (await c.post("/api/rules/assist", json={"messages": messages, "current": current})).status_code == 502
+
+
+async def test_chat_creates_validated_rule_event_and_edit_reference():
+    fields = dict(name="Old links", pattern="old\\.example", scope="attributes", when="found", regex=True, matchCase=False, description="Find old links")
+    gw = FakeGateway([[call("create_rule", **fields)], say("Ready to edit.")])
+    events = await collect(gw, "Create an old links rule")
+    created = [e["create_rule"] for e in events if "create_rule" in e]
+    assert len(created) == 1
+    assert created[0]["site"] == "rbccm" and created[0]["pattern"] == fields["pattern"]
+    assert "@rule:" + created[0]["id"] in gw.seen[1]["messages"][-1]["content"]
+    gw = FakeGateway([[call("create_rule", name="Missing details")], say("Where should I look?")])
+    events = await collect(gw)
+    assert not any("create_rule" in e for e in events)
+    assert any(e.get("tool", {}).get("status") == "error" for e in events)

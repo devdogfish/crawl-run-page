@@ -5,7 +5,10 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 
 const config = defineConfig({
-  globalCss: { html: { colorPalette: "brand", "--brand": "#005daa" } },
+  globalCss: {
+    html: { colorPalette: "brand", "--brand": "#005daa", overscrollBehavior: "none" },
+    body: { overscrollBehavior: "none" },
+  },
   theme: {
     tokens: {
       colors: {
@@ -34,3 +37,9 @@ const config = defineConfig({
 });
 
 export const system = createSystem(defaultConfig, config);
+
+// The dock reserves 400px. Shift existing responsive rules by that same amount,
+// so every app component responds to its usable width rather than the full viewport.
+export const dockedSystem = createSystem(defaultConfig, config, defineConfig({
+  theme: { breakpoints: { sm: "880px", md: "1168px", lg: "1424px", xl: "1680px", "2xl": "1936px" } },
+}));

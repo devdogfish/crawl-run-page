@@ -25,6 +25,7 @@ from crawler_ai.gateway import Gateway, GatewayError, OpenAIGateway
 from crawler_ai.mcp_server import build_mcp
 from crawler_ai.navigation import navigate
 from crawler_ai.prompts import SYSTEM_PROMPT
+from crawler_ai.rule_assistant import RuleFields, RuleReply, PROMPT as RULE_PROMPT
 from crawler_ai.url_map import UrlMap
 
 log = logging.getLogger("crawler_ai.app")
@@ -44,6 +45,11 @@ class Context(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=MAX_MESSAGES)
     context: Context = Context()
+
+
+class RuleAssistRequest(BaseModel):
+    messages: list[ChatMessage] = Field(min_length=1, max_length=MAX_MESSAGES)
+    current: RuleFields
 
 
 class NavigateRequest(BaseModel):
@@ -114,6 +120,23 @@ def create_app(settings: Settings | None = None, core: Core | None = None, gatew
         if not dest:
             return {"url": None, "label": "", "chips": []}
         return {"url": dest.url, "label": dest.label, "chips": dest.chips}
+
+    @app.post("/api/rules/assist")
+    async def rule_assist(body: RuleAssistRequest):
+        if sum(len(m.content) for m in body.messages) > MAX_CHARS:
+            return JSONResponse({"error": "The conversation is too long. Reopen the rule dialog to start again."}, status_code=413)
+        messages = [{"role": "system", "content": RULE_PROMPT},
+                    {"role": "user", "content": "Current form: " + body.current.model_dump_json()},
+                    *[m.model_dump() for m in body.messages]]
+        try:
+            result = await asyncio.wait_for(gateway.complete_json(messages, RuleReply.model_json_schema(), timeout=s.chat_timeout), s.chat_timeout + 1)
+            return RuleReply.model_validate(result).model_dump()
+        except (asyncio.TimeoutError, GatewayError) as e:
+            slow = isinstance(e, asyncio.TimeoutError) or e.timeout
+            return JSONResponse({"error": "The AI service took too long. Try again." if slow else str(e)}, status_code=504 if slow else 502)
+        except Exception:
+            log.exception("rule assistant failed")
+            return JSONResponse({"error": "The AI service returned an unusable reply. Try again."}, status_code=502)
 
     @app.get("/api/assistant/system")
     async def system() -> dict[str, str]:

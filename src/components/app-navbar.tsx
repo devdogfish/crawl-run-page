@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Badge, Box, Button, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
-import { LuChartColumn, LuLayoutDashboard, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuRegex, LuSettings } from "react-icons/lu";
+import { LuChartColumn, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuRegex, LuSettings } from "react-icons/lu";
 
 import { NavAction } from "@/components/nav-action";
 import { RuleDialog } from "@/components/rule-dialog";
@@ -14,11 +14,10 @@ import { crawlsFor } from "@/lib/crawls-list";
 import { defaultSettings, hostOf } from "@/lib/settings";
 import { SITES, SITE_IDS, type SiteId } from "@/lib/sites";
 
-// Top-level sections. Overview is where the app opens.
+// Top-level sections. Prototype collects the overview variations.
 export const SECTIONS = [
-  { id: "overview", label: "Overview", icon: LuLayoutDashboard },
+  { id: "analytics", label: "Overview", icon: LuChartColumn },
   { id: "crawls", label: "Crawls", icon: LuList },
-  { id: "analytics", label: "Analytics", icon: LuChartColumn },
   { id: "pages", label: "Pages", icon: LuFileText },
   { id: "issues", label: "Issues", icon: LuCircleAlert },
   { id: "settings", label: "Settings", icon: LuSettings },
@@ -31,7 +30,8 @@ export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; f
   return (
     <Menu.Root positioning={{ placement: "bottom-start", gutter: 6 }}>
       <Menu.Trigger asChild>
-        <Button variant="ghost" h="12" px="2" ms="-2" gap="3" w={full ? "calc(100% + 1rem)" : undefined} justifyContent="space-between"
+        <Button variant="ghost" colorPalette="gray" h="10" px={full ? "2" : "0"} ms={full ? "-2" : "0"} gap="2"
+          _hover={{ bg: "transparent" }} _expanded={{ bg: "transparent" }} w={full ? "calc(100% + 1rem)" : undefined} justifyContent="space-between"
           aria-label={`${SITES[site].name}: switch site`}>
           <SiteLogo id={site} h={logoH} />
           <Icon as={LuChevronsUpDown} boxSize="4" color="fg.muted" />

@@ -11,6 +11,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from uuid import uuid4
+
+from pydantic import ValidationError
 from dataclasses import dataclass
 from typing import Any, AsyncIterator
 
@@ -21,6 +24,7 @@ from crawler_ai.core import FactsCache
 from crawler_ai.navigation import describe, navigate
 from crawler_ai.gateway import Gateway, GatewayError, Messages, TextDelta, ToolCall, ToolCalls, Tools
 from crawler_ai.prompts import SYSTEM_PROMPT
+from crawler_ai.rule_assistant import CREATE_RULE, CreateRuleFields
 from crawler_ai.url_map import UrlError, UrlMap
 
 log = logging.getLogger("crawler_ai.agent")
@@ -48,6 +52,7 @@ class ToolResult:
     summary: str  # what the user sees under the tool chip
     is_error: bool = False
     navigate: dict[str, str] | None = None
+    create_rule: dict[str, Any] | None = None
 
 
 class Toolbox:
@@ -59,9 +64,22 @@ class Toolbox:
         # strict stays off: the MCP-generated schemas don't meet OpenAI's strict-mode rules
         tools = [{"type": "function", "function": {"name": t.name, "description": t.description or "", "parameters": t.input_schema}}
                  for t in await self._mcp.list_tools()]
-        return [*tools, NAVIGATE]
+        return [*tools, NAVIGATE, CREATE_RULE]
 
     async def call(self, name: str, args: dict[str, Any], context: dict[str, str] | None = None) -> ToolResult:
+        if name == "create_rule":
+            site = (context or {}).get("site", "")
+            if site not in (await self._facts.get()).crawls:
+                return ToolResult("Choose a site before creating a rule.", "no site selected", is_error=True)
+            try:
+                fields = CreateRuleFields.model_validate(args)
+                if not fields.name.strip() or not fields.pattern.strip():
+                    raise ValueError("Name and pattern must not be blank")
+            except (ValidationError, ValueError) as e:
+                return ToolResult(f"Invalid rule: {e}. Ask for missing details or correct the arguments.", "invalid rule", is_error=True)
+            rule_id = f"custom-{uuid4()}"
+            return ToolResult(f"Sent rule @rule:{rule_id} to the browser for validation and saving. Reference @rule:{rule_id} so the user can edit it. Do not claim server persistence.",
+                              "Rule sent to browser", create_rule={"site": site, "id": rule_id, **fields.model_dump()})
         if name == "navigate":
             return await self._navigate(args, context or {})
         try:
@@ -145,6 +163,8 @@ async def run_agent(messages: list[dict[str, str]], context: dict[str, str], gat
             for (i, c, a), r in zip(parsed, results):
                 if c.name != "navigate":
                     yield {"tool": {"id": i, "name": c.name, "args": a or {}, "status": "error" if r.is_error else "done", "summary": r.summary}}
+                if r.create_rule:
+                    yield {"create_rule": r.create_rule}
                 if r.navigate:
                     yield {"navigate": r.navigate}
                 convo.append({"role": "tool", "tool_call_id": i, "content": r.text})
