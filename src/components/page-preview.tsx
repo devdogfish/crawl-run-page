@@ -9,13 +9,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
+import { PRIORITY, PRIORITY_DOT } from "@/lib/priority";
 import { placeholdMissing, withBase } from "@/lib/asset-placeholders";
 
 export type Layer = "issues" | "tab" | "headings" | "landmarks" | "alt";
 type Rect = { x: number; y: number; w: number; h: number };
 type Mark = Rect & { label: string; bad?: boolean };
 
-const SEV_COLOR: Record<string, string> = { critical: "#e5484d", serious: "#f76b15", moderate: "#d6a300", minor: "#8b8d98" };
 const ACCENT = "#0d74ce"; // selection and hover, like a browser inspector
 const rectOf = (el: Element): Rect => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; };
 // Rough accessible name: aria-label, alt, or visible text with at least one letter or digit (an icon glyph isn't a name)
@@ -164,7 +164,7 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
             const on = it.k === selected;
             return (
               <Box key={`dot${it.k}`} as="button" aria-label={RULE_CATALOG[it.rule].title} position="absolute" top={u(-5, y * s)} left={u(6 + col * 12)}
-                w={u(10)} h={u(10)} rounded="full" bg={SEV_COLOR[RULE_CATALOG[it.rule].severity]} cursor="pointer"
+                w={u(10)} h={u(10)} rounded="full" bg={PRIORITY_DOT[PRIORITY[RULE_CATALOG[it.rule].severity]]} cursor="pointer"
                 boxShadow={on ? `0 0 0 ${u(2)} white, 0 0 0 ${u(3.5)} ${ACCENT}` : `0 0 0 ${u(2)} white`}
                 opacity={on || peekK === it.k ? 1 : 0.85} transition="transform 0.1s" _hover={{ transform: "scale(1.25)" }}
                 onMouseEnter={() => setPeekK(it.k)} onMouseLeave={() => setPeekK(null)}

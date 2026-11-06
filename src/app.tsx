@@ -8,6 +8,8 @@ import PageDetail from "@/routes/page-detail";
 import Issues from "@/routes/issues";
 import RuleDetail from "@/routes/rule-detail";
 import Settings from "@/routes/settings";
+import Analytics from "@/routes/analytics";
+import Overview from "@/routes/overview";
 import SectionPlaceholder from "@/routes/section-placeholder";
 import { NotFound } from "@/routes/not-found";
 
@@ -18,12 +20,14 @@ export function App() {
       <Routes>
         <Route index element={<Home />} />
         <Route path=":site" element={<SiteLayout />}>
+          <Route path="overview" element={<Overview />} />
           <Route path="crawls" element={<Crawls />} />
           <Route path="crawls/:crawlId" element={<CrawlRun />} />
           <Route path="pages" element={<Pages />} />
           <Route path="pages/:pageId" element={<PageDetail />} />
           <Route path="issues" element={<Issues />} />
           <Route path="issues/:ruleId" element={<RuleDetail />} />
+          <Route path="analytics" element={<Analytics />} />
           <Route path="settings" element={<Settings />} />
           <Route path=":section" element={<SectionPlaceholder />} />
           <Route path="*" element={<NotFound />} />

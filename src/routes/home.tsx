@@ -9,7 +9,7 @@ export default function Home() {
   useEffect(() => {
     let site: string = DEFAULT_SITE;
     try { const saved = localStorage.getItem(LAST_SITE_KEY); if (saved && saved in SITES) site = saved; } catch { /* use default */ }
-    navigate(`/${site}/crawls`, { replace: true });
+    navigate(`/${site}/overview`, { replace: true });
   }, [navigate]);
   return null;
 }
