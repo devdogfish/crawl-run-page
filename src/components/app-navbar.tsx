@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Badge, Box, Button, Icon, Image, Menu, Portal, Text, type ButtonProps } from "@chakra-ui/react";
-import { LuChartColumn, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
+import { LuChartColumn, LuLayoutDashboard, LuCircleAlert, LuFileText, LuCheck, LuChevronsUpDown, LuList, LuPlus, LuSettings } from "react-icons/lu";
 
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
 import { useSite } from "@/components/site-context";
@@ -11,8 +11,9 @@ import { crawlsFor } from "@/lib/crawls-list";
 import { defaultSettings, hostOf } from "@/lib/settings";
 import { SITES, SITE_IDS, type SiteId } from "@/lib/sites";
 
-// Top-level sections. Only Crawls is built; the others are placeholders to try the navigation.
+// Top-level sections. Overview is where the app opens.
 export const SECTIONS = [
+  { id: "overview", label: "Overview", icon: LuLayoutDashboard },
   { id: "crawls", label: "Crawls", icon: LuList },
   { id: "analytics", label: "Analytics", icon: LuChartColumn },
   { id: "pages", label: "Pages", icon: LuFileText },
@@ -38,7 +39,7 @@ export function SiteSwitcher({ logoH = "10", full = false }: { logoH?: string; f
           <Menu.Content minW="80" p="1.5">
             <Text textStyle="xs" fontWeight="medium" color="fg.muted" px="2" pt="1" pb="2">Switch site</Text>
             {SITE_IDS.map((id) => (
-              <Menu.Item key={id} value={id} onClick={() => id !== site && navigate(`/${id}/crawls`)} gap="3" py="2.5" px="2" rounded="l2">
+              <Menu.Item key={id} value={id} onClick={() => id !== site && navigate(`/${id}/overview`)} gap="3" py="2.5" px="2" rounded="l2">
                 <Box w="24" flexShrink={0}><SiteLogo id={id} h="9" /></Box>
                 <Box flex="1" minW="0">
                   <Text textStyle="xs" color="fg.muted" truncate>{hostOf(SITES[id].url)}</Text>

@@ -60,7 +60,7 @@ function Content({ children }: { children: React.ReactNode }) {
 }
 
 function useActiveSection() {
-  return useLocation().pathname.split("/")[2] ?? "crawls";
+  return useLocation().pathname.split("/")[2] ?? "overview";
 }
 
 // ───────────────────────── Option 1: compact, one row ─────────────────────────
