@@ -10,6 +10,18 @@ An internal tool that crawls the RBC websites, checks every page against accessi
 One website the tool crawls, such as RBC Capital Markets. Each has its own crawl history. A QA copy (www.sterbccm.com) is a separate site: it holds a minimal baseline of content for testing new components and isn't updated with new content, so it's never compared with production.
 _Avoid_: domain, property, project
 
+**Origin**:
+The servers that build the pages of one or more sites. All production sites share one origin and the QA sites share another, so overloading one production site takes every production site down. Inside the company network, nothing in front of an origin slows the crawler down.
+_Avoid_: server, backend, host (when meaning the shared servers)
+
+**Speed limit**:
+The most page loads per second a crawl may make on its origin. It is a ceiling, not a target, and never above the origin's own ceiling, which every crawl on that origin shares. Static files don't count; calls a page makes that can't be cached do.
+_Avoid_: rate, throughput, requests per second (when meaning the setting)
+
+**Strain**:
+Signs that an origin is struggling: responses much slower than at the start of the crawl, or server errors and timeouts. The crawler slows down on strain and pauses itself if it lasts.
+_Avoid_: rate limiting, throttling (nothing throttles the crawler from outside)
+
 **Crawl**:
 One run of the crawler over a site, producing a snapshot of every page it found.
 _Avoid_: run, scan, job
@@ -17,6 +29,14 @@ _Avoid_: run, scan, job
 **Step**:
 One stage of a crawl, such as discovery, fetching, or the Lighthouse audit.
 _Avoid_: stage, task, phase
+
+**Lighthouse sample**:
+The pages the Lighthouse step audits when it doesn't audit every page: every new or changed page, plus a random share of each page type, with a larger share of Other pages. A crawl audited with a sample can later get a full audit of every page.
+_Avoid_: Lighthouse subset, spot check
+
+**Schedule**:
+When a site is crawled without anyone starting it: daily or weekly at a set time. A site has at most one crawl in progress and at most one more waiting; a schedule that comes due while one is already waiting is skipped.
+_Avoid_: cron, recurring job
 
 **Baseline**:
 An older crawl of the same site that another crawl is compared against.
