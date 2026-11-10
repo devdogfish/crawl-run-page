@@ -9,7 +9,7 @@ export function NotFound() {
         <EmptyState.Root mt="16">
           <EmptyState.Content>
             <EmptyState.Title>Page not found</EmptyState.Title>
-            <EmptyState.Description><Link asChild><RouterLink to="/">Open demo</RouterLink></Link></EmptyState.Description>
+            <EmptyState.Description><Link asChild><RouterLink to="/">Go to Crawls</RouterLink></Link></EmptyState.Description>
           </EmptyState.Content>
         </EmptyState.Root>
       </Container>

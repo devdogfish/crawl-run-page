@@ -44,12 +44,16 @@ export const PRI_LABEL: Record<Priority, string> = { P1: "Critical", P2: "Seriou
 
 // ───────── Scope: the whole site, one page type, or one part of it (a year, or a folder of "other" pages) ─────────
 export type Filter = { type?: PageType; sub?: string };
+export type IssueFilter = { pri?: readonly Priority[]; markup?: "shared" | "page" };
 export const subOf = (p: { path: string; type: PageType }): string | null => {
   const y = yearOf(p.path);
   if (y) return String(y);
   return p.type === "other" ? p.path.split("/")[2] ?? null : null;
 };
 const inScope = (p: PageView, f: Filter) => (!f.type || p.type === f.type) && (!f.sub || subOf(p) === f.sub);
+const matchesIssue = (h: Hit, f: IssueFilter) =>
+  (!f.markup || h.shared === (f.markup === "shared")) &&
+  (!f.pri?.length || f.pri.includes(PRIORITY[RULE_CATALOG[h.rule].severity]));
 export const scopeKey = (f: Filter) => [f.type ?? "", f.sub ?? ""].join("/");
 export const typeName = (t: PageType) => PAGE_TYPES.find((x) => x.id === t)!.label;
 export const subName = (t: PageType, sub: string) => (t === "other" ? `/en/${sub}` : sub);
@@ -62,8 +66,9 @@ const qs = (q: Record<string, string | undefined>) => {
   const s = p.toString();
   return s ? `?${s}` : "";
 };
-export const links = (site: SiteId) => ({
-  issues: (q: { pri?: Priority; cat?: Category; type?: PageType; markup?: "shared" | "page"; q?: string; vs?: string; seg?: "new" | "fixed" } = {}) => `/${site}/issues${qs(q)}`,
+type IssueQuery = { pri?: Priority; cat?: Category; type?: PageType; markup?: IssueFilter["markup"]; q?: string; vs?: string; seg?: "new" | "fixed" };
+export const links = (site: SiteId, issueScope: IssueQuery = {}) => ({
+  issues: (q: IssueQuery = {}) => `/${site}/issues${qs({ ...issueScope, ...q })}`,
   rule: (id: string, el?: string) => `/${site}/issues/${id}${qs({ el })}`,
   page: (i: number) => `/${site}/pages/${i}`,
   // A year narrows Pages with its year filter; a folder of other pages with a URL search
@@ -100,16 +105,15 @@ export type Snapshot = {
 const zeroCat = (): CatStat => ({ issues: 0, elements: 0, pages: 0, score: 0, scoreNoShared: 0, scored: 0 });
 
 const cache = new Map<string, Snapshot>();
-export function snapshot(site: SiteId, filter: Filter = {}): Snapshot {
+export function snapshot(site: SiteId, filter: Filter = {}, issueFilter: IssueFilter = {}): Snapshot {
   const crawl = defaultCrawl(site);
   const a = Number(crawl.id);
-  const key = `${site}:${a}:${scopeKey(filter)}`;
+  const key = `${site}:${a}:${scopeKey(filter)}:${issueFilter.markup ?? ""}:${PRIORITIES.filter((pri) => issueFilter.pri?.includes(pri)).join(",")}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
-  const all = hitsFor(site, a, null).filter((h) => inScope(h.p, filter));
-  // Pages in scope (every one, even with no issue) come from the hits' pages plus none: every page has at least the
-  // shared header issue, so the hits cover them all.
+  const scopedPages = pagesFor(site, a, null).filter((p) => inScope(p, filter));
+  const all = hitsFor(site, a, null).filter((h) => inScope(h.p, filter) && matchesIssue(h, issueFilter));
   const byPage = new Map<number, Hit[]>();
   for (const h of all) { const l = byPage.get(h.p.i); if (l) l.push(h); else byPage.set(h.p.i, [h]); }
 
@@ -123,13 +127,12 @@ export function snapshot(site: SiteId, filter: Filter = {}): Snapshot {
   const scores: PageScore[] = [];
   let scoreSum = 0, noSharedSum = 0, p1Pages = 0, notFound = 0, serverError = 0, elements = 0, issues = 0;
 
-  for (const hs of byPage.values()) {
-    const p = hs[0].p;
+  for (const p of scopedPages) {
     if (p.status === 404) notFound++;
     if (p.status >= 500) serverError++;
     // Per rule on this page: its priority, and whether anything is left once shared markup is fixed
     const rules = new Map<string, { pri: Priority; cat: Category; specific: boolean; sharedPatterns: string[] }>();
-    for (const h of hs) {
+    for (const h of byPage.get(p.i) ?? []) {
       const r = RULE_CATALOG[h.rule];
       let x = rules.get(h.rule);
       if (!x) { x = { pri: PRIORITY[r.severity], cat: r.category, specific: false, sharedPatterns: [] }; rules.set(h.rule, x); }
@@ -190,7 +193,7 @@ export function snapshot(site: SiteId, filter: Filter = {}): Snapshot {
     groupAcc.set(gk, g);
   }
 
-  const pages = byPage.size || 1;
+  const pages = scopedPages.length || 1;
   for (const c of CATEGORIES) {
     const cs = category[c.id];
     cs.score = cs.scored ? Math.round(cs.score / cs.scored) : 100;
@@ -201,7 +204,7 @@ export function snapshot(site: SiteId, filter: Filter = {}): Snapshot {
 
   const snap: Snapshot = {
     crawl: a, date: crawl.startedAt, filter,
-    pages: byPage.size, score: Math.round(scoreSum / pages), scoreNoShared: Math.round(noSharedSum / pages), p1Pages,
+    pages: scopedPages.length, score: Math.round(scoreSum / pages), scoreNoShared: Math.round(noSharedSum / pages), p1Pages,
     bands, worstPages, issues, elements, priority, category, shared, specific,
     fixes: [...fixAcc.values()].map((f) => {
       const rule = RULE_CATALOG[f.rule];
@@ -274,7 +277,7 @@ export function history(site: SiteId, snap: Snapshot): Point[] {
 
 // ───────── What changed since the previous crawl, per issue (one rule on one page) ─────────
 export type Diff = { prev: number | null; added: number; fixed: number; persisting: number; byPriority: Record<Priority, { added: number; fixed: number }> };
-export type DiffOpts = { vs?: number | null; pri?: Priority[]; markup?: "shared" | "page" };
+export type DiffOpts = IssueFilter & { vs?: number | null };
 export function diff(site: SiteId, filter: Filter = {}, o: DiffOpts = {}): Diff {
   const a = Number(defaultCrawl(site).id);
   const b = o.vs !== undefined ? o.vs : Number(baselinesFor(site, String(a))[0]?.id ?? NaN);
@@ -283,8 +286,7 @@ export function diff(site: SiteId, filter: Filter = {}, o: DiffOpts = {}): Diff 
   // Per page and rule: is anything still failing, and was any of it there before?
   const acc = new Map<string, { rule: string; now: number; added: number; fixed: number }>();
   for (const h of hitsFor(site, a, b)) {
-    if (!inScope(h.p, filter)) continue;
-    if (o.markup && h.shared !== (o.markup === "shared")) continue;
+    if (!inScope(h.p, filter) || !matchesIssue(h, o)) continue;
     const k = `${h.p.i}|${h.rule}`;
     const x = acc.get(k) ?? { rule: h.rule, now: 0, added: 0, fixed: 0 };
     x.now += h.elements; x.added += h.added; x.fixed += h.fixed;
@@ -293,7 +295,6 @@ export function diff(site: SiteId, filter: Filter = {}, o: DiffOpts = {}): Diff 
   let added = 0, fixed = 0, persisting = 0;
   for (const x of acc.values()) {
     const pri = PRIORITY[RULE_CATALOG[x.rule].severity];
-    if (o.pri && !o.pri.includes(pri)) continue;
     // Same definition as the Issues list's New and Fixed segments: a rule on a page counts once if any element on it is new or was fixed
     if (x.added > 0) { added++; byPriority[pri].added++; }
     if (x.fixed > 0) { fixed++; byPriority[pri].fixed++; }
@@ -382,11 +383,11 @@ export function vitals(site: SiteId, filter: Filter = {}): Vitals {
 // ───────── Pages to fix first: ranked by how many critical (P1) issues they have, then serious (P2), then the rest ─────────
 // No score involved: just counts of rules failing on the page, by priority, and the names of the most serious ones.
 export type AttentionRow = { page: PageView; counts: Record<Priority, number>; total: number; top: string[] };
-export function attention(site: SiteId, filter: Filter = {}, pris?: Priority[], limit = 8): AttentionRow[] {
+export function attention(site: SiteId, filter: Filter = {}, issueFilter: IssueFilter = {}, limit = 8): AttentionRow[] {
   const a = Number(defaultCrawl(site).id);
   const byPage = new Map<number, { page: PageView; rules: Map<string, Priority> }>();
   for (const h of hitsFor(site, a, null)) {
-    if (!inScope(h.p, filter)) continue;
+    if (!inScope(h.p, filter) || !matchesIssue(h, issueFilter)) continue;
     let e = byPage.get(h.p.i);
     if (!e) { e = { page: h.p, rules: new Map() }; byPage.set(h.p.i, e); }
     e.rules.set(h.rule, PRIORITY[RULE_CATALOG[h.rule].severity]);
@@ -394,9 +395,8 @@ export function attention(site: SiteId, filter: Filter = {}, pris?: Priority[], 
   const rows: AttentionRow[] = [];
   for (const { page, rules } of byPage.values()) {
     const counts = { P1: 0, P2: 0, P3: 0, P4: 0 } as Record<Priority, number>;
-    const list = [...rules.entries()].filter(([, pri]) => !pris || pris.includes(pri));
+    const list = [...rules.entries()];
     for (const [, pri] of list) counts[pri]++;
-    if (!list.length) continue;
     const worst = PRIORITIES.find((p) => counts[p] > 0)!;
     rows.push({ page, counts, total: list.length, top: list.filter(([, pri]) => pri === worst).map(([r]) => RULE_CATALOG[r].title).slice(0, 2) });
   }

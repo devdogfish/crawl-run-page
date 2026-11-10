@@ -27,7 +27,10 @@ export function pageIndex(site: SiteId): PageIndex {
   if (!ix) {
     const all = pagesFor(site, Number(defaultCrawl(site).id), null).map((p) => ({ i: p.i, path: p.path, title: p.title, hay: (p.path + " " + p.title).toLowerCase() }));
     const byPath = new Map<string, PageRef>();
-    for (const p of all) if (!byPath.has(p.path)) byPath.set(p.path, p);
+    for (const p of all) {
+      const key = p.path.replace(/\/+$/, "") || "/";
+      if (!byPath.has(key)) byPath.set(key, p);
+    }
     ix = { byPath, all };
     pageIdx.set(site, ix);
   }

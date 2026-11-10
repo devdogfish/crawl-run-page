@@ -1,46 +1,8 @@
-# SiteLens — website quality demo
+# Crawl run page
 
-[Live demo](https://crawl-run-page.vercel.app)
+[Live demo](https://crawl-run-page.vercel.app) · All audit results are simulated.
 
-Interactive portfolio demo built on the crawler prototype in this repository. The root URL opens SiteLens; the original app remains available at `/rbccm/analytics` and its existing routes.
-
-- One shared filter state drives dashboard metrics, trends, issue groups, page lists, and CSV exports.
-- Public page titles and URLs provide recognizable content; all audit findings, scores, response times, and crawl history are **simulated**, not claims about the public sites.
-- Inspect a page, trace a finding to its suggested fix, compare sample crawls, or replay the crawl pipeline.
-- Runs entirely in the browser. No database, credentials, crawler, or AI service required.
-
-## Run the demo
-
-```bash
-nvm use
-pnpm install --frozen-lockfile
-pnpm dev
-```
-
-Open <http://localhost:5173>. Node 24 is required by the current toolchain. `pnpm test` runs tests only in this checkout's `src/`; nested worktrees are excluded. `pnpm build` typechecks and produces `dist/`.
-
-## Two-minute walkthrough
-
-1. Open Overview and choose **Services**. Metrics, health history, categories, and fix priorities update together.
-2. Choose **Accessibility** and **Critical** to narrow the findings. Open a fix to see its affected pages, then inspect a page.
-3. Export the current selection to CSV. Reset the filters and switch sites to compare a different inventory.
-4. Open Crawls, inspect an earlier snapshot, then replay the sample pipeline. Pause and resume the replay.
-
-## Deploy
-
-The Vercel configuration builds the static Vite app and rewrites client routes to `index.html`. Backend code and local worktrees are excluded from deployment.
-
-```bash
-vercel --prod
-```
-
-The demo is independent of the original prototype's Python backend. Public source inventory and collection notes live in `src/demo/sources.json`; the deterministic data model and aggregation tests live beside it.
-
----
-
-# Original crawler prototype
-
-A Chakra UI v3 prototype of the crawler UI (crawls, run page, pages, issues, settings, Cmd+K search, Ask AI): a React + Vite single-page app with React Router, ready to drop into the app. All data is simulated in the browser. The AI (Cmd+K's fallback, Ask AI's agent and the MCP server) runs in a small Python backend in `backend/`, built to be copied into the real FastAPI app.
+A Chakra UI v3 prototype of the crawler UI (crawls, run page, pages, issues, settings, Cmd+K search, Ask AI): a React + Vite single-page app with React Router, ready to drop into the app. Audit results are simulated in the browser. Selected featured page titles and URLs come from the public sites; their source inventory is in `src/lib/public-pages.json`. The AI (Cmd+K's fallback, Ask AI's agent and the MCP server) runs in a small Python backend in `backend/`, built to be copied into the real FastAPI app.
 
 Docs, in the order to read them:
 
@@ -57,11 +19,12 @@ Docs, in the order to read them:
 ## Run it
 
 ```bash
+nvm use
 pnpm install
 pnpm dev
 ```
 
-Open http://localhost:5173/rbccm/analytics for the original prototype (`pnpm dev`; `pnpm build` writes a static `dist/`). The root URL opens the portfolio demo. Switch sites with the logo menu in the top-left. Crawl 812 is a live simulation; older crawls open finished; **New crawl** starts a new simulated crawl with your settings.
+Open http://localhost:5173 (`pnpm dev`; `pnpm build` writes a static `dist/`). It opens the original Overview at `/rbccm/analytics` (or the site you used last). Switch sites with the logo menu in the top-left. Crawl 812 is a live simulation; older crawls open finished; **New crawl** starts a new simulated crawl with your settings.
 
 **The AI** needs two more processes (Python via `uv`, and the Codex CLI signed in, which stands in for the corporate gateway):
 

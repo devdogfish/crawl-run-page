@@ -6,6 +6,7 @@
 // Deterministic from the page index, so rows don't change between renders.
 import { crawlsFor, type CrawlRow } from "@/lib/crawls-list";
 import { SITES, type SiteId } from "@/lib/sites";
+import publicPages from "./public-pages.json";
 
 const rand = (i: number, salt: number) => {
   let x = (i + 1) * 374761393 + salt * 668265263;
@@ -26,7 +27,11 @@ export const PAGE_TYPES: { id: PageType; label: string; prefix: string | null }[
   { id: "people", label: "People", prefix: "/en/people/" },
   { id: "other", label: "Other pages", prefix: null }, // nothing above matched
 ];
-export const typeOf = (path: string): PageType => PAGE_TYPES.find((t) => t.prefix && path.startsWith(t.prefix))?.id ?? "other";
+export const typeOf = (path: string): PageType => {
+  if (path === "/en/insights/podcasts" || path.startsWith("/en/insights/podcasts/")) return "podcast";
+  if (path === "/en/insights/rbc-research") return "research";
+  return PAGE_TYPES.find((t) => t.prefix && path.startsWith(t.prefix))?.id ?? "other";
+};
 export const typeLabel = (t: PageType) => ({ article: "Article", research: "Research", news: "News", podcast: "Podcast", video: "Video", event: "Event", people: "Person", other: "Other" })[t];
 
 // Year in the URL (/en/insights/2024/…). Filter goes back 10 years.
@@ -144,12 +149,24 @@ export const LH_SAMPLE = 200;
 const SIZE: Record<SiteId, number> = { rbccm: 48_300, "rbccm-qa": 1_200, rbcits: 19_400, "rbcits-qa": 650 };
 export const siteSize = (site: SiteId) => SIZE[site];
 const cache = new Map<SiteId, { pages: SitePage[]; ids: number[] }>();
+
+function applyPublicPages(site: SiteId, pages: SitePage[]) {
+  if (site !== "rbccm" && site !== "rbcits") return;
+  // Keep the existing IDs and simulated audit data for navigation, high-traffic, and high-issue rows.
+  for (const { id, title, url } of publicPages[site]) {
+    const { pathname, search } = new URL(url);
+    const path = pathname + search;
+    pages[id] = { ...pages[id], path, title, h1: title, type: typeOf(path) };
+  }
+}
+
 function universe(site: SiteId) {
   let u = cache.get(site);
   if (!u) {
     const ids = crawlsFor(site).map((c) => Number(c.id)).sort((a, b) => a - b);
     const n = siteSize(site);
     u = { pages: Array.from({ length: n }, (_, i) => makePage(i, ids)), ids };
+    applyPublicPages(site, u.pages);
     cache.set(site, u);
   }
   return u;
@@ -215,8 +232,9 @@ export function normalizeTarget(input: string) {
 }
 export function linksTo(target: string, rows: PageView[]) {
   const h = hashStr(target);
-  const page = rows.find((p) => p.path === target);
+  const isTarget = (p: PageView) => p.path === target || p.path === `${target}/`;
+  const page = rows.find(isTarget);
   // Nav/footer pages are linked from almost everywhere; people and articles from a handful of pages
   const p = !page ? 0.0015 : page.type === "other" ? (OTHER.indexOf(target.replace(/^\/en\//, "")) >= 0 && target.split("/").length <= 3 ? 0.9 : 0.04) : page.type === "people" ? 0.002 : 0.0009;
-  return { target: page ?? null, from: new Set(rows.filter((r) => r.path !== target && rand(r.i, h % 100_000) < p).map((r) => r.i)) };
+  return { target: page ?? null, from: new Set(rows.filter((r) => !isTarget(r) && rand(r.i, h % 100_000) < p).map((r) => r.i)) };
 }

@@ -61,30 +61,30 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
   // The year filter exists only for page types that have year folders
   const years = useMemo(() => type === "all" ? [] : snapshot(site, { type: type as PageType }).groups.map((g) => g.filter.sub).filter((x): x is string => !!x && /^\d{4}$/.test(x)), [site, type]);
   const yearValue = years.includes(year) ? year : "all";
-  const scope: Filter = type === "all" ? {} : { type: type as PageType, ...(yearValue !== "all" ? { sub: yearValue } : {}) };
+  const scope: Filter = useMemo(() => type === "all" ? {} : { type: type as PageType, sub: yearValue === "all" ? undefined : yearValue }, [type, yearValue]);
+  const markup = where === "all" ? undefined : where;
 
-  const h = useHealth(site, range, scope);
+  const h = useHealth(site, range, scope, { pri: pris, markup });
   const { snap, L } = h;
-  const d = useMemo(() => diff(site, scope, { vs: vsNum, pri: pris.length ? pris : undefined, markup: where === "all" ? undefined : where }), [site, type, yearValue, vsNum, pris, where]); // eslint-disable-line react-hooks/exhaustive-deps
-  const pc = useMemo(() => pageChanges(site, scope, vsNum), [site, type, yearValue, vsNum]); // eslint-disable-line react-hooks/exhaustive-deps
+  const d = useMemo(() => diff(site, scope, { vs: vsNum, pri: pris, markup }), [site, scope, vsNum, pris, markup]);
+  const pc = useMemo(() => pageChanges(site, scope, vsNum), [site, scope, vsNum]);
 
   const date = base ? fmtDay(base.date) : null;
   const since = date ? `since ${date}` : "no earlier crawl";
   const net = d.added - d.fixed;
-  const share = (n: number) => (snap.issues ? `${((n / snap.issues) * 100).toFixed(1)}% of all issues` : "");
+  const share = (n: number) => (snap.issues ? `${((n / snap.issues) * 100).toFixed(1)}% of current issues` : "");
   const vsParam = vs === "prev" || !base ? undefined : base.id;
-  const issueQ = { type: scope.type, vs: vsParam, pri: pris.length === 1 ? pris[0] : undefined, markup: where === "all" ? undefined : where };
-  // Template fixes are shared markup by definition, so "page-specific" leaves none. Most serious first, then the most pages.
-  const fixes = (where === "page" ? [] : snap.fixes.filter((f) => !pris.length || pris.includes(f.priority)))
+  // Most serious first, then the most pages.
+  const fixes = [...snap.fixes]
     .sort((x, y) => x.priority.localeCompare(y.priority) || y.pages - x.pages).slice(0, 5);
-  const worstPages = useMemo(() => attention(site, scope, pris.length ? pris : undefined), [site, type, yearValue, pris]); // eslint-disable-line react-hooks/exhaustive-deps
+  const worstPages = useMemo(() => attention(site, scope, { pri: pris, markup }), [site, scope, pris, markup]);
   // Where the pages with a critical (P1) issue are: by page type, or by year or folder once a type is picked
   const SECTION_COLORS = ["cyan.500", "blue.500", "purple.500", "teal.500", "pink.500", "green.500", "gray.400"];
   const p1Groups = snap.groups.filter((g) => g.p1Pages > 0).sort((x, y) => y.p1Pages - x.p1Pages);
   const p1Parts: Part[] = p1Groups.slice(0, 6).map((g, i) => ({ name: g.label, value: g.p1Pages, color: SECTION_COLORS[i], to: L.pages(g.filter, "worst") }));
   const p1Rest = p1Groups.slice(6).reduce((t, g) => t + g.p1Pages, 0);
   if (p1Rest > 0) p1Parts.push({ name: "Other", value: p1Rest, color: SECTION_COLORS[6], to: L.pages(scope, "worst") });
-  const vt = useMemo(() => vitals(site, scope), [site, type, yearValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  const vt = useMemo(() => vitals(site, scope), [site, scope]);
   const passed = vt.stats.every((x) => x.rating === "good");
   const priorityItems = useItems([
     { value: "all", label: "All priorities" },
@@ -145,8 +145,8 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
           </Text>
           <Grid templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }} borderWidth="1px" rounded="l3" overflow="hidden">
             {[
-              { label: "New issues", icon: LuCircleAlert, value: `+${fmtInt(d.added)}`, color: "red.fg", sub: share(d.added), to: L.issues({ ...issueQ, seg: "new" }) },
-              { label: "Fixed issues", icon: LuCircleCheck, value: `−${fmtInt(d.fixed)}`, color: "green.fg", sub: share(d.fixed), to: L.issues({ ...issueQ, seg: "fixed" }) },
+              { label: "New issues", icon: LuCircleAlert, value: `+${fmtInt(d.added)}`, color: "red.fg", sub: share(d.added), to: L.issues({ vs: vsParam, seg: "new" }) },
+              { label: "Fixed issues", icon: LuCircleCheck, value: `−${fmtInt(d.fixed)}`, color: "green.fg", sub: share(d.fixed), to: L.issues({ vs: vsParam, seg: "fixed" }) },
               { label: "Pages added", icon: LuPlus, value: fmtInt(pc.added), color: undefined, sub: `first seen ${since}`, to: L.pages(scope, undefined, { vs: vsParam, change: "new" }) },
               { label: "Pages changed", icon: LuPencil, value: fmtInt(pc.changed), color: undefined, sub: `edited ${since}`, to: L.pages(scope, undefined, { vs: vsParam, change: "changed" }) },
             ].map((t, k) => (
@@ -222,7 +222,7 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
 
         {/* ───────── Pages to fix first ───────── */}
         <Box as="section">
-          <SectionHeading title="Pages with the most critical issues" action={<MoreLink to={L.pages(scope, "worst")}>All pages</MoreLink>} />
+          <SectionHeading title={pris.length > 0 && !pris.includes("P1") ? "Pages with the most matching issues" : "Pages with the most critical issues"} action={<MoreLink to={L.pages(scope, "worst")}>All pages</MoreLink>} />
           <Stack gap="0" borderWidth="1px" rounded="l3" overflow="hidden">
             {worstPages.length === 0 && <Text px="4" py="3" textStyle="sm" color="fg.muted">No pages match these filters.</Text>}
             {worstPages.map((w) => (
