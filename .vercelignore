@@ -1,0 +1,9 @@
+.claude/
+.git/
+node_modules/
+dist/
+backend/
+presentation/
+research/
+docs/images/
+work/

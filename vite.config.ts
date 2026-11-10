@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig, type Plugin } from "vite";
+import type { Plugin } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 // DEV ONLY: POST /__proto/<fn> calls an export of src/lib/proto-api.ts (the prototype's data, shaped like the backend's
@@ -36,6 +37,8 @@ function protoApi(): Plugin {
 export default defineConfig({
   plugins: [react(), protoApi()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  // The navigation suite contains a strict latency budget; avoid worker contention.
+  test: { include: ["src/**/*.test.{ts,tsx}"], fileParallelism: false },
   // The Python backend (backend/, `pnpm dev:api`): chat, navigation, the MCP server. Without it the app falls back
   // to scripted answers (the backend marks its responses with X-Crawler-AI).
   server: { proxy: { "/api": { target: "http://127.0.0.1:8000", changeOrigin: false } } },

@@ -1,38 +1,20 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
-import Home from "@/routes/home";
-import SiteLayout from "@/routes/site-layout";
-import Crawls from "@/routes/crawls";
-import CrawlRun from "@/routes/crawl-run";
-import Pages from "@/routes/pages";
-import PageDetail from "@/routes/page-detail";
-import Issues from "@/routes/issues";
-import RuleDetail from "@/routes/rule-detail";
-import Settings from "@/routes/settings";
-import Analytics from "@/routes/analytics";
-import SectionPlaceholder from "@/routes/section-placeholder";
-import { NotFound } from "@/routes/not-found";
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Route, Routes } from "react-router";
 
-// Every route of the prototype. Static segments win over :section, so /:site/:section only catches the placeholders.
+const DemoApp = lazy(() => import("@/demo/app"));
+const PrototypeApp = lazy(() => import("@/prototype-app"));
+
+// Keep the full prototype available while the portfolio entry loads independently.
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route index element={<Home />} />
-        <Route path=":site" element={<SiteLayout />}>
-          <Route path="overview" element={<Navigate to="../analytics" replace />} />
-          <Route path="crawls" element={<Crawls />} />
-          <Route path="crawls/:crawlId" element={<CrawlRun />} />
-          <Route path="pages" element={<Pages />} />
-          <Route path="pages/:pageId" element={<PageDetail />} />
-          <Route path="issues" element={<Issues />} />
-          <Route path="issues/:ruleId" element={<RuleDetail />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path=":section" element={<SectionPlaceholder />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<div style={{ padding: "48px", color: "#42516b", fontFamily: "system-ui" }}>Loading SiteLens…</div>}>
+        <Routes>
+          <Route index element={<DemoApp />} />
+          <Route path="demo" element={<DemoApp />} />
+          <Route path="*" element={<PrototypeApp />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

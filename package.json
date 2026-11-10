@@ -2,6 +2,9 @@
   "name": "crawl-run-page",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -54,5 +57,6 @@
     "vite": "^8.3.6",
     "vitest": "^5.1.0"
   },
-  "type": "module"
+  "type": "module",
+  "packageManager": "pnpm@9.8.0"
 }
