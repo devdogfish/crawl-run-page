@@ -1,4 +1,4 @@
-# Crawl run page
+# Crawler Analytics Platform
 
 [Live demo](https://rbc-analytics.demo.girke.dev) · Original UI, captured public pages, sample crawl history.
 
@@ -96,6 +96,8 @@ Replay controls simulate processing the saved page inventory; they do not crawl 
 
 ## Vercel hosting
 
-Production: https://rbc-analytics.demo.girke.dev (project `crawl-run-page`). The default https://crawl-run-page.vercel.app alias remains available. DNS is managed at Spaceship: `rbc-analytics.demo` is a CNAME to `d0857d0f6e65c5bb.vercel-dns-017.com`. Vercel verifies ownership using the `_vercel` TXT record and manages HTTPS.
+Production: https://rbc-analytics.demo.girke.dev. The Vercel project `crawler-analytics-platform` belongs to the personal **DevDogFish's projects** workspace (`devdogfishs-projects`). DNS is managed at Spaceship; Vercel manages HTTPS.
 
-Deploy from this repository with `vercel --prod --yes --scope ydas-projects-3c771dde --build-env VITE_AI=scripted`. The build runs the JSON size guard, TypeScript, and Vite. Run `pnpm test` before deployment.
+The GitHub repository is [devdogfish/crawler-analytics-platform](https://github.com/devdogfish/crawler-analytics-platform). Vercel's Git integration tracks **`resume-demo` as the production branch**: every push runs tests, the 20 MB JSON guard, TypeScript, and Vite, then updates the custom domain after a successful build. Keep demo work on `resume-demo`; it does not need to merge into `main`.
+
+`VITE_AI=scripted` is configured for Production and Preview. For a manual production deployment, verify `vercel whoami` shows `devdogfish`, then run `vercel --prod --yes --scope devdogfishs-projects` from `resume-demo`.
