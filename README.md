@@ -1,5 +1,7 @@
 # SiteLens — website quality demo
 
+[Live demo](https://crawl-run-page.vercel.app)
+
 Interactive portfolio demo built on the crawler prototype in this repository. The root URL opens SiteLens; the original app remains available at `/rbccm/analytics` and its existing routes.
 
 - One shared filter state drives dashboard metrics, trends, issue groups, page lists, and CSV exports.
