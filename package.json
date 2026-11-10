@@ -7,13 +7,14 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "pnpm check:data && tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
     "dev:api": "uv run --directory backend uvicorn crawler_ai.app:app --reload --port 8000",
     "dev:codex": "uv run --directory backend python -m dev.codex_openai --port 8787",
-    "test:api": "uv run --directory backend pytest -q"
+    "test:api": "uv run --directory backend pytest -q",
+    "check:data": "node scripts/check-data-size.mjs"
   },
   "dependencies": {
     "@chakra-ui/charts": "3.38.0",

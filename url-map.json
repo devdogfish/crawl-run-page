@@ -5,8 +5,15 @@
   "routes": [
     { "id": "home", "path": "/", "label": "Home", "params": {} },
     { "id": "overview", "path": "/:site/overview", "label": "Overview", "params": {} },
-    { "id": "crawls", "path": "/:site/crawls", "label": "Crawls", "params": {} },
-    { "id": "crawl", "path": "/:site/crawls/:crawlId", "label": "Crawl", "path_params": { "crawlId": { "type": "crawl" } }, "params": {} },
+    { "id": "crawls", "path": "/:site/crawls", "label": "Crawls", "params": {
+      "q": { "type": "text", "label": "Search", "default": "" },
+      "status": { "type": "enum", "label": "Status", "default": "all", "values": ["all", "active", "failed", "success"] }
+    } },
+    { "id": "crawl", "path": "/:site/crawls/:crawlId", "label": "Crawl", "path_params": { "crawlId": { "type": "crawl" } }, "params": {
+      "step": { "type": "enum", "label": "Step", "values": ["crawl", "parse", "transform", "load", "lighthouse", "publish", "lighthouse-full"] },
+      "tab": { "type": "enum", "label": "Tab", "default": "logs", "values": ["logs", "metrics", "pages", "scores"] },
+      "from": { "type": "text", "label": "Return path", "default": "" }
+    } },
     {
       "id": "pages", "path": "/:site/pages", "label": "Pages",
       "params": {
@@ -16,6 +23,15 @@
         "type": { "type": "enum", "label": "Type", "default": "all", "values": ["all", "article", "research", "news", "podcast", "video", "event", "people", "other"],
           "labels": { "article": "Articles", "research": "Research", "news": "News releases", "podcast": "Podcasts", "video": "Videos", "event": "Events", "people": "People", "other": "Other pages" } },
         "year": { "type": "enum", "label": "Year", "default": "all", "values": ["all", "2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "none"], "labels": { "none": "No year in URL" } },
+        "sub": { "type": "text", "label": "Folder", "default": "" },
+        "pri": { "type": "list", "label": "Priority", "default": "all", "extra": ["all"], "values": ["P1", "P2", "P3", "P4"] },
+        "cat": { "type": "list", "label": "Category", "default": "all", "extra": ["all"], "values": ["accessibility", "performance", "seo", "security"] },
+        "markup": { "type": "enum", "label": "Markup", "default": "all", "values": ["all", "shared", "page"] },
+        "auditRule": { "type": "rule", "label": "Audit rule" },
+        "el": { "type": "text", "label": "Element", "default": "all" },
+        "seg": { "type": "enum", "label": "Issue status", "default": "all", "values": ["all", "new", "fixed"] },
+        "band": { "type": "enum", "label": "Health", "default": "all", "values": ["all", "good", "fair", "poor"] },
+        "worst": { "type": "enum", "label": "Worst priority", "default": "all", "values": ["all", "P1", "P2", "P3", "P4", "none"] },
         "rule": { "type": "enum", "label": "Content rule", "default": "none", "values": ["none", "copyright", "legacy-domain", "placeholder", "phone", "old-brand"],
           "labels": { "copyright": "Outdated copyright year", "legacy-domain": "Links to legacy .page URLs", "placeholder": "Placeholder text", "phone": "Hard-coded phone numbers", "old-brand": "Old brand name" } },
         "links": { "type": "text", "label": "Links to", "default": "" },
@@ -28,13 +44,17 @@
       "id": "page", "path": "/:site/pages/:pageId", "label": "Page", "path_params": { "pageId": { "type": "page" } },
       "params": {
         "crawl": { "type": "crawl", "label": "Crawl" },
-        "vs": { "type": "crawl", "label": "Compared with" },
+        "vs": { "type": "crawl", "label": "Compared with", "extra": ["none"] },
         "issue": { "type": "int", "label": "Selected issue" },
         "tab": { "type": "enum", "label": "Tab", "default": "issues", "values": ["issues", "preview", "source"] },
         "q": { "type": "text", "label": "Search", "default": "" },
         "seg": { "type": "enum", "label": "Status", "default": "all", "values": ["all", "new", "fixed"] },
-        "pri": { "type": "list", "label": "Priority", "values": ["P1", "P2", "P3", "P4"] },
-        "cat": { "type": "list", "label": "Category", "values": ["accessibility", "performance", "seo", "security"] }
+        "pri": { "type": "list", "label": "Priority", "default": "all", "extra": ["all"], "values": ["P1", "P2", "P3", "P4"] },
+        "cat": { "type": "list", "label": "Category", "default": "all", "extra": ["all"], "values": ["accessibility", "performance", "seo", "security"] },
+        "markup": { "type": "enum", "label": "Markup", "default": "all", "values": ["all", "shared", "page"] },
+        "auditRule": { "type": "rule", "label": "Audit rule" },
+        "el": { "type": "text", "label": "Element", "default": "all" },
+        "from": { "type": "text", "label": "Return path", "default": "" }
       }
     },
     {
@@ -43,11 +63,15 @@
         "crawl": { "type": "crawl", "label": "Crawl" },
         "vs": { "type": "crawl", "label": "Compared with", "extra": ["none"] },
         "q": { "type": "text", "label": "Search", "default": "" },
-        "cat": { "type": "enum", "label": "Category", "default": "all", "values": ["all", "accessibility", "performance", "seo", "security"],
+        "cat": { "type": "list", "label": "Category", "default": "all", "extra": ["all"], "values": ["accessibility", "performance", "seo", "security"],
           "labels": { "accessibility": "Accessibility", "performance": "Performance", "seo": "SEO & canonicals", "security": "Security & compliance" } },
-        "pri": { "type": "enum", "label": "Priority", "default": "all", "values": ["all", "P1", "P2", "P3", "P4"] },
+        "pri": { "type": "list", "label": "Priority", "default": "all", "extra": ["all"], "values": ["P1", "P2", "P3", "P4"] },
         "markup": { "type": "enum", "label": "Markup", "default": "all", "values": ["all", "shared", "page"], "labels": { "shared": "Shared markup", "page": "Page-specific markup" } },
         "type": { "type": "enum", "label": "Page type", "default": "all", "values": ["all", "article", "research", "news", "podcast", "video", "event", "people", "other"] },
+        "year": { "type": "enum", "label": "Year", "default": "all", "values": ["all", "2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "none"] },
+        "sub": { "type": "text", "label": "Folder", "default": "" },
+        "auditRule": { "type": "rule", "label": "Audit rule" },
+        "el": { "type": "text", "label": "Element", "default": "all" },
         "sort": { "type": "enum", "label": "Sort", "default": "priority", "values": ["priority", "pages", "elements", "new"] },
         "seg": { "type": "enum", "label": "Status", "default": "all", "values": ["all", "new", "fixed"] }
       }
@@ -60,6 +84,12 @@
         "q": { "type": "text", "label": "Search", "default": "" },
         "el": { "type": "text", "label": "Element", "default": "all" },
         "type": { "type": "enum", "label": "Page type", "default": "all", "values": ["all", "article", "research", "news", "podcast", "video", "event", "people", "other"] },
+        "year": { "type": "enum", "label": "Year", "default": "all", "values": ["all", "2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "none"] },
+        "sub": { "type": "text", "label": "Folder", "default": "" },
+        "pri": { "type": "list", "label": "Priority", "default": "all", "extra": ["all"], "values": ["P1", "P2", "P3", "P4"] },
+        "cat": { "type": "list", "label": "Category", "default": "all", "extra": ["all"], "values": ["accessibility", "performance", "seo", "security"] },
+        "markup": { "type": "enum", "label": "Markup", "default": "all", "values": ["all", "shared", "page"] },
+        "from": { "type": "text", "label": "Return path", "default": "" },
         "seg": { "type": "enum", "label": "Status", "default": "all", "values": ["all", "new", "fixed"] }
       }
     },

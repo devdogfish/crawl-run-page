@@ -1,0 +1,15 @@
+{
+  "provenance": "Simulated compatibility records for preexisting element deep links. No captured HTML or real-world audit evidence exists for these paths.",
+  "rbccm": {
+    "21": [
+      {"rule":"link-name","pattern":"header .utility a.icon","selector":"header .utility a.icon.search","snippet":"","onPage":false,"origin":"sample"}
+    ],
+    "9155": [
+      {"rule":"link-name","pattern":"header .utility a.icon","selector":"header .utility a.icon.search","snippet":"","onPage":false,"origin":"sample"},
+      {"rule":"link-name","pattern":"header .utility a.icon","selector":"header .utility a.icon.globe","snippet":"","onPage":false,"origin":"sample"},
+      {"rule":"region","pattern":"body > .cookie-banner","selector":"body > .cookie-banner","snippet":"","onPage":false,"origin":"sample"},
+      {"rule":"color-contrast","pattern":"footer .legal a","selector":"footer .legal a:nth-child(1)","snippet":"","onPage":false,"origin":"sample"}
+    ]
+  },
+  "rbcits": {}
+}

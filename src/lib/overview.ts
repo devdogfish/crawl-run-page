@@ -18,34 +18,29 @@
 // research and articles; anything older decays fast (a 2021 article that gets edited still ranks low).
 // Pages too new to have 30 days of views borrow an estimate (the median of their type's pages from this year) and are
 // marked "est." in the UI.
+import traffic from "@/data/traffic.json";
 import { RULE_CATALOG } from "@/lib/page-issues";
 import { PRIORITY, type Priority } from "@/lib/priority";
 import { hitsFor } from "@/lib/site-issues";
-import { crawlChoices, defaultCrawl, pagesFor, typeLabel, yearOf, type Change, type PageType, type PageView } from "@/lib/site-pages";
+import { baselinesFor, crawlChoices, defaultCrawl, pagesFor, typeLabel, yearOf, type Change, type PageType, type PageView } from "@/lib/site-pages";
 import type { SiteId } from "@/lib/sites";
 
 export const URGENCY_WEIGHT: Record<Priority, number> = { P1: 10, P2: 4, P3: 1, P4: 0.25 };
-export const URGENCY_HELP = "Urgency = badness × √views. Badness adds up each rule failing on the page: P1 10, P2 4, P3 1, P4 0.25. Views are the last 30 days. Square root so busy pages rank higher without the homepage always winning.";
-
-const rand = (i: number, salt: number) => {
-  let x = (i + 1) * 2246822519 + salt * 3266489917;
-  x = (x ^ (x >>> 15)) * 668265263;
-  return ((x ^ (x >>> 13)) >>> 0) / 4294967296;
-};
+export const URGENCY_HELP = "Urgency = badness × √views. Each failing rule adds 10 for P1, 4 for P2, 1 for P3, or 0.25 for P4. Views represent simulated traffic over 30 days.";
 
 // ───────── Views (30 days) ─────────
 const BASE: Record<PageType, number> = { other: 300, research: 2600, article: 1800, news: 1200, podcast: 700, video: 600, event: 400, people: 250 };
 function modelledViews(p: PageView) {
-  const year = yearOf(p.path);
-  const age = year ? Math.max(0, 2026 - year) : 0;
-  const decay = p.type === "other" || p.type === "people" ? 1 : 0.42 ** age; // last year's article gets ~40%, 2021's ~1%
-  const top = p.i < 21 ? 40 + (21 - p.i) * 4 : 1; // the 21 nav pages (about, careers, contact, sectors…) are linked everywhere
-  const spread = Math.exp((rand(p.i, 1) - 0.5) * 2.4); // long tail: ×0.3 to ×3.3
-  return Math.max(3, Math.round(BASE[p.type] * decay * top * spread));
+  return (traffic.sites[p.site] as Record<string, number>)[p.i] ?? 0;
 }
 
 // Too new for 30 days of data: born within the last 30 days of the crawl
-const isFresh = (p: PageView, crawl: number) => p.born !== -Infinity && crawl - p.born < 30;
+const isFresh = (p: PageView, crawl: number) => {
+  const history = crawlChoices(p.site);
+  const current = history.find((c) => Number(c.id) === crawl)?.startedAt;
+  const first = history.find((c) => Number(c.id) === p.born)?.startedAt;
+  return !!current && !!first && current.getTime() - first.getTime() < 30 * 86_400_000;
+};
 
 // ───────── Ranked pages and fixes ─────────
 export type RankedPage = {
@@ -117,7 +112,7 @@ export function model(site: SiteId): Model {
 // ───────── What changed in a window ─────────
 export type Window = "1" | "7" | "30";
 export const WINDOWS: { value: Window; label: string; long: string }[] = [
-  { value: "1", label: "24 hours", long: "since yesterday's crawl" },
+  { value: "1", label: "Previous crawl", long: "since the previous crawl" },
   { value: "7", label: "7 days", long: "in the last 7 days" },
   { value: "30", label: "30 days", long: "in the last 30 days" },
 ];
@@ -125,11 +120,12 @@ export const WINDOWS: { value: Window; label: string; long: string }[] = [
 export type ChangedPage = RankedPage & { change: Exclude<Change, "same" | "removed">; added: number; addedTop: Priority | null };
 export type Changes = { since: Date | null; newPages: number; changedPages: number; removed: number; newP1P2: number; rows: ChangedPage[] };
 
-// The baseline is the newest finished crawl at least `days` before the latest one
+// Compare the previous crawl or the most recent crawl at the selected window boundary.
 export function changes(site: SiteId, w: Window): Changes {
   const m = model(site);
   const DAY = 86_400_000;
-  const base = crawlChoices(site).find((c) => m.date.getTime() - c.startedAt.getTime() >= Number(w) * DAY - DAY / 2);
+  const base = w === "1" ? baselinesFor(site, String(m.crawl))[0]
+    : crawlChoices(site).find((c) => m.date.getTime() - c.startedAt.getTime() >= Number(w) * DAY - DAY / 2);
   if (!base) return { since: null, newPages: 0, changedPages: 0, removed: 0, newP1P2: 0, rows: [] };
   const b = Number(base.id);
 

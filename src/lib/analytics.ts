@@ -9,9 +9,7 @@
 // "If shared markup were fixed" recomputes the score without the elements in markup shared across pages
 // (header, footer, cookie banner), which are one fix each in the templates.
 //
-// History: the real backend stores these rollups per crawl. Here the latest point is computed from the issues and
-// earlier points are modelled from it (P1s going down after a fix release, P3s creeping up with new content), so
-// the trends have a shape to look at.
+// Every history point is computed from its stored crawl snapshot with the same filters as the current point.
 import { RULE_CATALOG, type Rule } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, PRIORITY_DOT, type Priority } from "@/lib/priority";
 import { byRule, hitsFor, type Hit, type RuleRow } from "@/lib/site-issues";
@@ -48,7 +46,7 @@ export type IssueFilter = { pri?: readonly Priority[]; markup?: "shared" | "page
 export const subOf = (p: { path: string; type: PageType }): string | null => {
   const y = yearOf(p.path);
   if (y) return String(y);
-  return p.type === "other" ? p.path.split("/")[2] ?? null : null;
+  return p.type === "other" ? p.path.split("/")[2] || "__root__" : null;
 };
 const inScope = (p: PageView, f: Filter) => (!f.type || p.type === f.type) && (!f.sub || subOf(p) === f.sub);
 const matchesIssue = (h: Hit, f: IssueFilter) =>
@@ -56,7 +54,7 @@ const matchesIssue = (h: Hit, f: IssueFilter) =>
   (!f.pri?.length || f.pri.includes(PRIORITY[RULE_CATALOG[h.rule].severity]));
 export const scopeKey = (f: Filter) => [f.type ?? "", f.sub ?? ""].join("/");
 export const typeName = (t: PageType) => PAGE_TYPES.find((x) => x.id === t)!.label;
-export const subName = (t: PageType, sub: string) => (t === "other" ? `/en/${sub}` : sub);
+export const subName = (t: PageType, sub: string) => (t === "other" ? sub === "__root__" ? "Root pages" : `/en/${sub}` : sub);
 export const scopeName = (f: Filter) => (!f.type ? "Whole site" : f.sub ? `${typeName(f.type)} · ${subName(f.type, f.sub)}` : typeName(f.type));
 
 // ───────── Links into the rest of the app (latest crawl, so the defaults apply) ─────────
@@ -66,16 +64,16 @@ const qs = (q: Record<string, string | undefined>) => {
   const s = p.toString();
   return s ? `?${s}` : "";
 };
-type IssueQuery = { pri?: Priority; cat?: Category; type?: PageType; markup?: IssueFilter["markup"]; q?: string; vs?: string; seg?: "new" | "fixed" };
+type IssueQuery = { crawl?: string; pri?: string; cat?: Category; type?: PageType; year?: string; sub?: string; markup?: IssueFilter["markup"]; q?: string; vs?: string; seg?: "new" | "fixed" };
 export const links = (site: SiteId, issueScope: IssueQuery = {}) => ({
   issues: (q: IssueQuery = {}) => `/${site}/issues${qs({ ...issueScope, ...q })}`,
-  rule: (id: string, el?: string) => `/${site}/issues/${id}${qs({ el })}`,
-  page: (i: number) => `/${site}/pages/${i}`,
+  rule: (id: string, el?: string, scope: IssueQuery = {}) => `/${site}/issues/${id}${qs({ ...issueScope, ...scope, el })}`,
+  page: (i: number) => `/${site}/pages/${i}${qs(issueScope)}`,
   // A year narrows Pages with its year filter; a folder of other pages with a URL search
-  pages: (f: Filter, sort?: string, extra: { vs?: string; change?: "new" | "changed" | "removed" } = {}) => {
+  pages: (f: Filter, sort?: string, extra: { vs?: string; change?: "new" | "changed" | "removed"; pri?: string; markup?: IssueFilter["markup"]; band?: Band; worst?: Priority | "none" } = {}) => {
     const year = f.sub && /^\d{4}$/.test(f.sub) ? f.sub : undefined;
-    const q = f.sub && !year ? `/en/${f.sub}/` : undefined;
-    return `/${site}/pages${qs({ type: f.type, year, q, sort, ...extra })}`;
+    const sub = f.sub && !year ? f.sub : undefined;
+    return `/${site}/pages${qs({ ...issueScope, type: f.type, year: year ?? issueScope.year, sub: sub ?? issueScope.sub, sort, ...extra })}`;
   },
 });
 
@@ -87,7 +85,7 @@ export type Group = { filter: Filter; label: string; pages: number; score: numbe
 export type PageScore = { page: PageView; score: number; p1: number; issues: number };
 
 export type Snapshot = {
-  crawl: number; date: Date; filter: Filter;
+  crawl: number; date: Date; filter: Filter; issueFilter: IssueFilter;
   pages: number; score: number; scoreNoShared: number; p1Pages: number;
   bands: Record<Band, number>; // pages per health band
   worstPages: Record<Priority | "none", number>; // each page counted once, at its worst issue
@@ -105,8 +103,8 @@ export type Snapshot = {
 const zeroCat = (): CatStat => ({ issues: 0, elements: 0, pages: 0, score: 0, scoreNoShared: 0, scored: 0 });
 
 const cache = new Map<string, Snapshot>();
-export function snapshot(site: SiteId, filter: Filter = {}, issueFilter: IssueFilter = {}): Snapshot {
-  const crawl = defaultCrawl(site);
+export function snapshot(site: SiteId, filter: Filter = {}, issueFilter: IssueFilter = {}, at?: number): Snapshot {
+  const crawl = crawlChoices(site).find((c) => Number(c.id) === at) ?? defaultCrawl(site);
   const a = Number(crawl.id);
   const key = `${site}:${a}:${scopeKey(filter)}:${issueFilter.markup ?? ""}:${PRIORITIES.filter((pri) => issueFilter.pri?.includes(pri)).join(",")}`;
   const hit = cache.get(key);
@@ -163,7 +161,8 @@ export function snapshot(site: SiteId, filter: Filter = {}, issueFilter: IssueFi
       priority[x.pri].issues++;
       category[x.cat].issues++;
       issues++;
-      (x.specific ? specific : shared).issues++;
+      if (x.specific) specific.issues++;
+      if (x.sharedPatterns.length) shared.issues++;
       if (x.pri === "P1") p1++;
     }
     const score = Math.max(0, 100 - lost);
@@ -203,7 +202,7 @@ export function snapshot(site: SiteId, filter: Filter = {}, issueFilter: IssueFi
   for (const p of PRIORITIES) priority[p].rules = rules.filter((r) => r.priority === p).sort((x, y) => y.pages - x.pages);
 
   const snap: Snapshot = {
-    crawl: a, date: crawl.startedAt, filter,
+    crawl: a, date: crawl.startedAt, filter, issueFilter,
     pages: scopedPages.length, score: Math.round(scoreSum / pages), scoreNoShared: Math.round(noSharedSum / pages), p1Pages,
     bands, worstPages, issues, elements, priority, category, shared, specific,
     fixes: [...fixAcc.values()].map((f) => {
@@ -232,54 +231,26 @@ export type Point = {
   note?: string; // something that changed the numbers without the site changing (rule set, scope) or a release
 };
 
-const rand = (i: number, salt: number) => {
-  let x = (i + 1) * 2654435761 + salt * 97531;
-  x = (x ^ (x >>> 15)) * 2246822519;
-  return ((x ^ (x >>> 13)) >>> 0) / 4294967296;
-};
-const noise = (i: number, salt: number, amp: number) => (rand(i, salt) * 2 - 1) * amp;
-
 export function history(site: SiteId, snap: Snapshot): Point[] {
-  const crawls = crawlChoices(site).slice().reverse(); // oldest first
-  const latest = crawls[crawls.length - 1];
-  const pts = crawls.map((c): Point => {
-    const id = Number(c.id);
-    const d = Math.round((latest.startedAt.getTime() - c.startedAt.getTime()) / 86_400_000);
-    const now = d === 0;
-    // Before a fix release ~16 days ago there were noticeably more P1s; P3s creep up as new content is published
-    const m = {
-      P1: now ? 1 : 1 + 0.009 * d + (d > 16 ? 0.14 : 0) + noise(id, 1, 0.025),
-      P2: now ? 1 : 1 + 0.003 * d + noise(id, 2, 0.012),
-      P3: now ? 1 : 1 - 0.0035 * d + noise(id, 3, 0.01),
-      P4: now ? 1 : 1 - 0.001 * d + noise(id, 4, 0.01),
-    };
-    const counts = Object.fromEntries(PRIORITIES.map((p) => [p, Math.round(snap.priority[p].issues * m[p])])) as Record<Priority, number>;
-    const pages = Math.round(snap.pages * (c.pages / latest.pages));
-    const lost = PRIORITIES.reduce((t, p) => t + (counts[p] - snap.priority[p].issues) * WEIGHT[p], 0) / Math.max(1, snap.pages);
-    const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
+  return crawlChoices(site).filter((c) => c.startedAt <= snap.date).slice().reverse().map((c): Point => {
+    const current = Number(c.id) === snap.crawl ? snap : snapshot(site, snap.filter, snap.issueFilter, Number(c.id));
     return {
-      crawl: id, date: c.startedAt, daysAgo: d, label: c.startedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
-      score: now ? snap.score : clamp(snap.score - lost), pages, ...counts,
-      cat: {
-        accessibility: now ? snap.category.accessibility.score : clamp(snap.category.accessibility.score - 0.16 * d - (d > 16 ? 2 : 0) + noise(id, 5, 0.6)),
-        performance: now ? snap.category.performance.score : clamp(snap.category.performance.score + 0.12 * d + noise(id, 6, 1.4)),
-        seo: now ? snap.category.seo.score : clamp(snap.category.seo.score + 0.03 * d + noise(id, 7, 0.5)),
-        security: now ? snap.category.security.score : clamp(snap.category.security.score + noise(id, 8, 0.3)),
-      },
+      crawl: Number(c.id), date: c.startedAt,
+      daysAgo: Math.round((snap.date.getTime() - c.startedAt.getTime()) / 86_400_000),
+      label: c.startedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
+      score: current.score, pages: current.pages,
+      P1: current.priority.P1.issues, P2: current.priority.P2.issues,
+      P3: current.priority.P3.issues, P4: current.priority.P4.issues,
+      cat: Object.fromEntries(CATEGORIES.map(({ id }) => [id, current.category[id].score])) as Record<Category, number>,
     };
   });
-  // Modelled events: the fix release behind the P1 drop, and the rule-set update a week before it
-  const mark = (days: number, note: string) => { const p = pts.find((x) => x.daysAgo <= days && x.daysAgo > 0); if (p && !p.note) p.note = note; };
-  mark(16, "Template fix released");
-  mark(24, `Rule set ${RULESET}: 4 new checks`);
-  return pts;
 }
 
 // ───────── What changed since the previous crawl, per issue (one rule on one page) ─────────
 export type Diff = { prev: number | null; added: number; fixed: number; persisting: number; byPriority: Record<Priority, { added: number; fixed: number }> };
-export type DiffOpts = IssueFilter & { vs?: number | null };
+export type DiffOpts = IssueFilter & { vs?: number | null; crawl?: number };
 export function diff(site: SiteId, filter: Filter = {}, o: DiffOpts = {}): Diff {
-  const a = Number(defaultCrawl(site).id);
+  const a = o.crawl ?? Number(defaultCrawl(site).id);
   const b = o.vs !== undefined ? o.vs : Number(baselinesFor(site, String(a))[0]?.id ?? NaN);
   const byPriority = Object.fromEntries(PRIORITIES.map((p) => [p, { added: 0, fixed: 0 }])) as Diff["byPriority"];
   if (b == null || Number.isNaN(b)) return { prev: null, added: 0, fixed: 0, persisting: 0, byPriority };
@@ -304,8 +275,8 @@ export function diff(site: SiteId, filter: Filter = {}, o: DiffOpts = {}): Diff 
 }
 
 // Pages added and changed against a baseline crawl, within a scope
-export function pageChanges(site: SiteId, filter: Filter = {}, vs?: number | null) {
-  const a = Number(defaultCrawl(site).id);
+export function pageChanges(site: SiteId, filter: Filter = {}, vs?: number | null, at?: number) {
+  const a = at ?? Number(defaultCrawl(site).id);
   const b = vs !== undefined ? vs : Number(baselinesFor(site, String(a))[0]?.id ?? NaN);
   if (b == null || Number.isNaN(b)) return { added: 0, changed: 0, removed: 0 };
   let added = 0, changed = 0, removed = 0;
@@ -338,8 +309,7 @@ export const fmtInt = (x: number) => Math.round(x).toLocaleString("en-US");
 export const pct = (x: number, of: number) => (of ? Math.round((x / of) * 100) : 0);
 
 // ───────── Core Web Vitals, from the Lighthouse audits in the latest crawl ─────────
-// PROTOTYPE DATA: the app stores a count of Lighthouse issues per page, not the measured values, so each audited
-// page gets stable modelled values here. The real backend would store LCP, CLS and TBT from each audit.
+// Simulated lab measurements are persisted per page and crawl in crawl-history.json.
 // Lighthouse is a lab test: it measures LCP, CLS and Total Blocking Time. INP needs real users, so TBT stands in for it.
 // Thresholds are Google's "good" and "poor" limits (Lighthouse uses the same for TBT).
 export type VitalId = "lcp" | "cls" | "tbt";
@@ -348,27 +318,19 @@ export const VITALS: { id: VitalId; name: string; full: string; unit: string; go
   { id: "cls", name: "CLS", full: "Cumulative Layout Shift", unit: "", good: 0.1, poor: 0.25, fmt: (v) => v.toFixed(2), help: "How much the page jumps around while loading. Good is 0.1 or less, poor is over 0.25." },
   { id: "tbt", name: "TBT", full: "Total Blocking Time", unit: "ms", good: 200, poor: 600, fmt: (v) => `${Math.round(v)} ms`, help: "How long scripts freeze the page after it appears. Lighthouse measures this in the lab instead of INP (which needs real visitors). Good is 200 ms or less, poor is over 600 ms." },
 ];
-// Heavier page types load slower (charts, media)
-const HEAVY: Partial<Record<PageType, number>> = { research: 1.15, video: 1.35, podcast: 1.2, event: 1.1, people: 0.9 };
-const vitalValue = (id: VitalId, p: { i: number; type: PageType }) => {
-  const r = rand(p.i, { lcp: 31, cls: 32, tbt: 33 }[id]);
-  const k = HEAVY[p.type] ?? 1;
-  return id === "lcp" ? (0.9 + 4.2 * r ** 1.8) * k : id === "cls" ? 0.4 * r ** 2.5 * Math.min(k, 1.2) : 900 * r ** 2.2 * k;
-};
-
 export type VitalStat = { id: VitalId; p75: number; good: number; ni: number; poor: number; rating: "good" | "ni" | "poor" };
 export type Vitals = { audited: number; pages: number; full: boolean; stats: VitalStat[] };
 const vitalsCache = new Map<string, Vitals>();
-export function vitals(site: SiteId, filter: Filter = {}): Vitals {
-  const crawl = defaultCrawl(site);
+export function vitals(site: SiteId, filter: Filter = {}, at?: number): Vitals {
+  const crawl = crawlChoices(site).find((c) => Number(c.id) === at) ?? defaultCrawl(site);
   const a = Number(crawl.id);
   const key = `${site}:${a}:${scopeKey(filter)}`;
   const hit = vitalsCache.get(key);
   if (hit) return hit;
   const all = pagesFor(site, a, null).filter((p) => inScope(p, filter));
-  const audited = all.filter((p) => p.perf != null);
+  const audited = all.filter((p) => p.vitals != null);
   const stats = VITALS.map((v): VitalStat => {
-    const vals = audited.map((p) => vitalValue(v.id, p)).sort((x, y) => x - y);
+    const vals = audited.map((p) => p.vitals![v.id]).sort((x, y) => x - y);
     let good = 0, poor = 0;
     for (const x of vals) { if (x <= v.good) good++; else if (x > v.poor) poor++; }
     const p75 = vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * 0.75))] : 0; // Google judges the 75th percentile
@@ -383,8 +345,8 @@ export function vitals(site: SiteId, filter: Filter = {}): Vitals {
 // ───────── Pages to fix first: ranked by how many critical (P1) issues they have, then serious (P2), then the rest ─────────
 // No score involved: just counts of rules failing on the page, by priority, and the names of the most serious ones.
 export type AttentionRow = { page: PageView; counts: Record<Priority, number>; total: number; top: string[] };
-export function attention(site: SiteId, filter: Filter = {}, issueFilter: IssueFilter = {}, limit = 8): AttentionRow[] {
-  const a = Number(defaultCrawl(site).id);
+export function attention(site: SiteId, filter: Filter = {}, issueFilter: IssueFilter = {}, limit = 8, at?: number): AttentionRow[] {
+  const a = at ?? Number(defaultCrawl(site).id);
   const byPage = new Map<number, { page: PageView; rules: Map<string, Priority> }>();
   for (const h of hitsFor(site, a, null)) {
     if (!inScope(h.p, filter) || !matchesIssue(h, issueFilter)) continue;

@@ -5,12 +5,12 @@
 //   crop → a zoomed slice around one element, used as evidence in the issue panel (no hover, no layers).
 // Issues are shown in "focus" style: only the selected one is outlined; every other
 // issue is a dot on a rail at the left edge, at its element's height. Hover a dot to outline it, click to select.
-// PROTOTYPE: renders the generated HTML from src/lib/page-issues.ts.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, Portal, type BoxProps } from "@chakra-ui/react";
 import { RULE_CATALOG, type Instance } from "@/lib/page-issues";
 import { PRIORITY, PRIORITY_DOT } from "@/lib/priority";
 import { placeholdMissing, withBase } from "@/lib/asset-placeholders";
+import { prepareStoredPreview } from "@/lib/stored-html";
 
 export type Layer = "issues" | "tab" | "headings" | "landmarks" | "alt";
 type Rect = { x: number; y: number; w: number; h: number };
@@ -40,7 +40,7 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
-  const doc = useMemo(() => withBase(html, origin), [html, origin]); // assets aren't stored: they load from the site
+  const doc = useMemo(() => prepareStoredPreview(withBase(html, origin)), [html, origin]);
   const [width, setWidth] = useState(0);
   const [docH, setDocH] = useState(1200);
   const [boxes, setBoxes] = useState<Map<number, Rect>>(new Map());
@@ -57,12 +57,15 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
     if (!doc?.body || !doc.documentElement.scrollHeight) return; // hidden (e.g. an inactive tab): measure later
     setDocH(doc.documentElement.scrollHeight);
     const b = new Map<number, Rect>();
-    doc.querySelectorAll("[data-ix]").forEach((el) => b.set(Number(el.getAttribute("data-ix")), rectOf(el)));
+    doc.querySelectorAll("[data-ix]").forEach((el) => {
+      const rect = rectOf(el);
+      if (rect.w && rect.h) b.set(Number(el.getAttribute("data-ix")), rect);
+    });
     setBoxes(b);
     const focusable = [...doc.querySelectorAll("a[href], button, input, select, textarea, [tabindex]:not([tabindex='-1'])")];
     let prev = 0;
     setMarks({
-      tab: focusable.map((el, n) => ({ ...rectOf(el), label: String(n + 1), bad: !nameOf(el) && !(el.tagName === "INPUT" && doc.querySelector(`label[for="${el.id}"]`)) })),
+      tab: focusable.map((el, n) => ({ ...rectOf(el), label: String(n + 1), bad: !nameOf(el) && !(el.tagName === "INPUT" && (el as HTMLInputElement).labels?.length) })),
       headings: [...doc.querySelectorAll("h1,h2,h3,h4,h5,h6")].map((el) => {
         const lvl = Number(el.tagName[1]);
         const bad = prev > 0 && lvl > prev + 1;
@@ -161,7 +164,7 @@ export function PagePreview({ html, origin, instances, selected, highlightRule, 
       <Box position="relative" overflow="hidden" h={crop != null ? `${cropHeight}px` : `${docH * scale}px`}>
       <Box position="absolute" top="0" left="0" w={`${viewport}px`} h={`${docH}px`} transformOrigin="top left"
         style={{ transform: `translate(${tx}px, ${ty}px) scale(${s})` }}>
-        <iframe ref={frame} srcDoc={doc} sandbox="allow-same-origin" title="Crawled page" onLoad={() => { measure(); const d = frame.current?.contentDocument; if (d) placeholdMissing(d, measure); }}
+        <iframe ref={frame} srcDoc={doc} sandbox="allow-same-origin" tabIndex={-1} title="Crawled page" onLoad={() => { measure(); const d = frame.current?.contentDocument; if (d) placeholdMissing(d, measure); }}
           style={{ width: viewport, height: docH, border: 0, display: "block", pointerEvents: "none" }} />
 
         {/* Overlay, in page pixels */}

@@ -18,9 +18,9 @@ import { LuCheck, LuCopy, LuDownload, LuWandSparkles } from "react-icons/lu";
 import { downloadText } from "@/components/data-toolbar";
 import { Tooltip } from "@/components/ui/tooltip";
 import { fixMessage, resolveIssue } from "@/lib/refs";
-import { PRIORITIES, PRIORITY, PRIORITY_COLOR, PRIORITY_DOT, type Priority } from "@/lib/priority";
-import { RULE_CATALOG, pageIssues } from "@/lib/page-issues";
-import { baselinesFor, defaultCrawl, pageView, siteSize, typeLabel } from "@/lib/site-pages";
+import { PRIORITIES, PRIORITY_COLOR, PRIORITY_DOT } from "@/lib/priority";
+import { issueSlots } from "@/lib/page-issues";
+import { baselinesFor, currentIssueCounts, defaultCrawl, pageView, typeLabel } from "@/lib/site-pages";
 import { DEFAULT_SITE, type SiteId } from "@/lib/sites";
 import { siteIn } from "./route";
 import { CodeBlock } from "./code-block";
@@ -291,7 +291,7 @@ function IssuesTable({ ids, title }: { ids: string[]; title?: string }) {
   const fold = useRows(ids.length);
   const { rows: list, missing } = useResolved(ids, fold.shown, resolveIssue);
   if (!list.length) return <CodeBlock code={JSON.stringify({ type: "issues", issues: ids.slice(0, 20) })} lang="ui" />;
-  const all = () => issueRows(ids.map(resolveIssue).filter((r): r is Resolved => !!r));
+  const all = () => issueRows(ids.map((id) => resolveIssue(id)).filter((r): r is Resolved => !!r));
   return (
     <TableCard title={title ?? "Issues"} total={ids.length - missing} missing={missing} rows={all} file={`issues-${list[0].site}.csv`} fold={fold}>
       {list.map((r) => (
@@ -328,15 +328,9 @@ function computePageSummary(site: SiteId, id: number) {
   const base = Number.isNaN(b) ? null : b;
   const page = pageView(site, id, a, base);
   if (!page || page.change === "removed") return null;
-  const open = pageIssues(page, a, base, siteSize(site)).instances.filter((it) => it.status !== "fixed");
-  const byPri = Object.fromEntries(PRIORITIES.map((p) => [p, 0])) as Record<Priority, number>;
-  const byCat: Partial<Record<keyof typeof CATEGORY_LABEL, number>> = {};
-  for (const it of open) {
-    const r = RULE_CATALOG[it.rule];
-    byPri[PRIORITY[r.severity]]++;
-    byCat[r.category] = (byCat[r.category] ?? 0) + 1;
-  }
-  return { page, href: `/${site}/pages/${id}`, open: open.length, fresh: open.filter((it) => it.status === "new").length, byPri, byCat };
+  const counts = currentIssueCounts(page);
+  const fresh = new Set(issueSlots(page, a, base).filter((element) => element.status === "new").map(({ rule }) => rule)).size;
+  return { page, href: `/${site}/pages/${id}`, open: counts.total, fresh, byPri: counts.byPriority, byCat: counts.byCategory };
 }
 
 const CATEGORY_LABEL = { accessibility: "Accessibility", seo: "SEO", security: "Security", performance: "Performance" } as const;

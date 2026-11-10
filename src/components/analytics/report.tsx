@@ -119,7 +119,7 @@ export function HealthReport({ site, range }: { site: SiteId; range: Range }) {
           <Stack gap="0" borderWidth="1px" rounded="l3" overflow="hidden">
             {snap.fixes.filter((f) => f.gain >= 0.1).slice(0, 5).map((f) => (
               <HStack asChild key={f.rule.id + f.pattern} gap="4" px="4" py="3" borderTopWidth="1px" _first={{ borderTopWidth: 0 }} _hover={{ bg: "bg.subtle" }}>
-                <RouterLink to={`${L.rule(f.rule.id, f.pattern)}`}>
+                <RouterLink to={`${L.rule(f.rule.id, f.pattern, { markup: "shared" })}`}>
                   <Badge variant="subtle" colorPalette="green" fontVariantNumeric="tabular-nums" flexShrink={0} w="16" justifyContent="center">+{f.gain.toFixed(1)} pts</Badge>
                   <Stack gap="0" flex="1" minW="0">
                     <Text textStyle="sm" truncate>{f.rule.title}</Text>

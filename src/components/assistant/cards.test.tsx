@@ -7,7 +7,7 @@ import { MemoryRouter } from "react-router";
 import { Diff, UiActions, UiBlock, splitChoices } from "./cards";
 import { issueId, resolveIssue } from "@/lib/refs";
 import { pageIssues } from "@/lib/page-issues";
-import { baselinesFor, defaultCrawl, pageView, siteSize } from "@/lib/site-pages";
+import { baselinesFor, defaultCrawl, pagesFor } from "@/lib/site-pages";
 import { DEFAULT_SITE } from "@/lib/sites";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -47,12 +47,13 @@ test("copy confirmation waits for clipboard success and stays absent on failure"
 // The first pages of the default site that have open issues, and their issue ids
 function openIssues(n: number) {
   const a = Number(defaultCrawl(DEFAULT_SITE).id), b = Number(baselinesFor(DEFAULT_SITE, String(a))[0]?.id);
-  const out: { page: number; ids: string[] }[] = [];
-  for (let i = 0; out.length < n && i < 500; i++) {
-    const page = pageView(DEFAULT_SITE, i, a, b);
-    if (!page || page.change === "removed") continue;
-    const ids = pageIssues(page, a, b, siteSize(DEFAULT_SITE)).instances.filter((it) => it.status !== "fixed").map((it) => issueId(DEFAULT_SITE, i, it.k));
-    if (ids.length >= 2) out.push({ page: i, ids });
+  const out: { page: number; ids: string[]; issues: number }[] = [];
+  for (const page of pagesFor(DEFAULT_SITE, a, b)) {
+    if (out.length === n) break;
+    if (page.change === "removed") continue;
+    const elements = pageIssues(page, a, b).instances.filter((it) => it.status !== "fixed");
+    const ids = elements.map((it) => issueId(DEFAULT_SITE, page.i, it.k));
+    if (ids.length >= 2) out.push({ page: page.i, ids, issues: new Set(elements.map(({ rule }) => rule)).size });
   }
   return out;
 }
@@ -116,9 +117,9 @@ test("issues: no known id falls back to the code block", () => {
 });
 
 test("page: open issue count, priorities and links to the page", () => {
-  const [{ page, ids }] = openIssues(1);
+  const [{ page, issues }] = openIssues(1);
   const ui = renderUi({ type: "page", page: String(page) });
-  expect(ui.getByText(new RegExp(`^${ids.length} open`))).toBeTruthy();
+  expect(ui.getByText(new RegExp(`^${issues} open`))).toBeTruthy();
   const hrefs = ui.getAllByRole("link").map((a) => a.getAttribute("href"));
   expect(hrefs).toContain(`/${DEFAULT_SITE}/pages/${page}?tab=preview`);
 });
@@ -128,7 +129,7 @@ test("pages: one row per page in order with its open issues", () => {
   const ui = renderUi({ type: "pages", pages: [String(q.page), String(p.page), "abc"] });
   const rows = ui.getAllByRole("row");
   expect(rows.map((tr) => tr.querySelector("a")!.getAttribute("href"))).toEqual([`/${DEFAULT_SITE}/pages/${q.page}`, `/${DEFAULT_SITE}/pages/${p.page}`]);
-  expect(rows[1].textContent).toContain(`${p.ids.length} open`);
+  expect(rows[1].textContent).toContain(`${p.issues} open`);
   expect(ui.getByRole("button", { name: "Export (.csv)" })).toBeTruthy();
 });
 

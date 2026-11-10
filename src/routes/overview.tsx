@@ -1,8 +1,7 @@
 // Overview · /[site]/overview: the executive view, and the page the app opens on.
 // One screen, four blocks, each answering one question (see src/lib/overview.ts):
 //   Trend → Fix next → What changed → By category.
-// Numbers are always the latest finished crawl, so the page never shows half-crawled data; the only trace of the
-// crawler is "as of <date>". Everything links into Pages or Issues for the people doing the fixing.
+// Numbers use the latest finished sample crawl. Everything links into Pages or Issues.
 import { useMemo, useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router";
 import { Badge, Box, Container, Flex, Grid, HStack, Heading, SegmentGroup, Stack, Text } from "@chakra-ui/react";
@@ -49,25 +48,29 @@ export default function Overview({ header }: { header?: (filters?: ReactNode) =>
 
 // ───────── 1. Are we getting better or worse? ─────────
 function Trend({ site }: { site: SiteId }) {
-  const { snap, pts, d } = useMemo(() => {
+  const { snap, pts, previous, d } = useMemo(() => {
     const snap = snapshot(site);
-    return { snap, pts: inRange(history(site, snap), "30"), d: diff(site) };
+    const points = history(site, snap);
+    const d = diff(site);
+    return { snap, pts: inRange(points, "30"), previous: points.find((point) => point.crawl === d.prev), d };
   }, [site]);
-  const first = pts[0], prev = pts[pts.length - 2] ?? first;
+  const first = pts[0];
+  const baseline = pts.length > 1 ? `since ${first.label}` : undefined;
+  const change = previous ? snap.score - previous.score : null;
   const L = links(site);
   return (
     <Box as="section">
-      <SectionHeading title="Are we getting better?" description="The whole site, compared with 30 days ago." />
+      <SectionHeading title="Are we getting better?" description="Sample crawl history over the last 30 days." />
       <Grid templateColumns={{ base: "repeat(2, minmax(0, 1fr))", lg: "repeat(4, minmax(0, 1fr))" }} gap="3">
         <TrendCard label="Health score" help={SCORE_HELP} value={snap.score} spark={pts.map((p) => p.score)}
-          delta={<Delta now={snap.score} then={first.score} goodWhen="up" label="in 30 days" />} />
-        <TrendCard label="P1 critical issues" value={fmtInt(snap.priority.P1.issues)} spark={pts.map((p) => p.P1)} to={L.issues({ pri: "P1" })}
-          delta={<Delta now={snap.priority.P1.issues} then={first.P1} goodWhen="down" label="in 30 days" />} />
-        <TrendCard label="P2 serious issues" value={fmtInt(snap.priority.P2.issues)} spark={pts.map((p) => p.P2)} to={L.issues({ pri: "P2" })}
-          delta={<Delta now={snap.priority.P2.issues} then={first.P2} goodWhen="down" label="in 30 days" />} />
-        <TrendCard label="Since yesterday" value={<HStack gap="2" as="span"><Text as="span" color="green.fg">−{fmtInt(d.fixed)}</Text><Text as="span" color="fg.subtle">/</Text><Text as="span" color="red.fg">+{fmtInt(d.added)}</Text></HStack>}
+          delta={baseline && <Delta now={snap.score} then={first.score} goodWhen="up" label={baseline} />} />
+        <TrendCard label="P1 critical issues" value={fmtInt(snap.priority.P1.issues)} spark={pts.map((p) => p.P1)} to={snap.priority.P1.issues ? L.issues({ pri: "P1" }) : undefined}
+          delta={baseline && <Delta now={snap.priority.P1.issues} then={first.P1} goodWhen="down" label={baseline} />} />
+        <TrendCard label="P2 serious issues" value={fmtInt(snap.priority.P2.issues)} spark={pts.map((p) => p.P2)} to={snap.priority.P2.issues ? L.issues({ pri: "P2" }) : undefined}
+          delta={baseline && <Delta now={snap.priority.P2.issues} then={first.P2} goodWhen="down" label={baseline} />} />
+        <TrendCard label="Since previous crawl" value={change == null ? "—" : <HStack gap="2" as="span"><Text as="span" color="green.fg">−{fmtInt(d.fixed)}</Text><Text as="span" color="fg.subtle">/</Text><Text as="span" color="red.fg">+{fmtInt(d.added)}</Text></HStack>}
           help="Issues fixed since the previous crawl, and issues that are new in this one."
-          delta={<Text textStyle="xs" color="fg.muted">fixed / new · score {snap.score - prev.score >= 0 ? "+" : "−"}{Math.abs(snap.score - prev.score)} vs yesterday</Text>} />
+          delta={<Text textStyle="xs" color="fg.muted">{change == null ? "No earlier crawl" : `fixed / new · score ${change >= 0 ? "+" : "−"}${Math.abs(change)}`}</Text>} />
       </Grid>
     </Box>
   );
@@ -104,7 +107,7 @@ function FixNext({ site }: { site: SiteId }) {
           <Stack gap="1">
             {m.fixes.slice(0, 6).map((f) => (
               <Box asChild key={`${f.rule}|${f.pattern}`} display="block" rounded="l2" px="2" py="2" mx="-2" _hover={{ bg: "bg.muted" }}>
-                <RouterLink to={L.rule(f.rule)}>
+                <RouterLink to={links(site, { markup: "shared" }).rule(f.rule, f.pattern)}>
                   <HStack gap="2" align="start">
                     <PriBadge p={f.priority} />
                     <Box flex="1" minW="0">
@@ -191,7 +194,7 @@ function WhatChanged({ site }: { site: SiteId }) {
   const top = c.rows.slice(0, 8);
   return (
     <Box as="section">
-      <SectionHeading title="What changed" description="New and edited pages, ranked by urgency. New pages get the most traffic, so they rise; an edited article from years ago stays low."
+      <SectionHeading title="What changed" description="New and edited pages in the sample history, ranked by urgency."
         action={
           <SegmentGroup.Root size="sm" value={w} onValueChange={(e) => e.value && setW(e.value as Window)}>
             <SegmentGroup.Indicator bg="bg" />
@@ -249,12 +252,14 @@ function ByCategory({ site }: { site: SiteId }) {
                 <Stack gap="2">
                   <HStack gap="2"><Box boxSize="2.5" rounded="sm" bg={CAT_COLOR[c.id]} flexShrink={0} /><Text textStyle="xs" color="fg.muted" truncate>{c.label}</Text></HStack>
                   <HStack gap="2" align="baseline">
-                    <Text textStyle="2xl" fontWeight="semibold" lineHeight="1" fontVariantNumeric="tabular-nums">{s.score}</Text>
-                    <Text textStyle="xs" color={`${bandColor(s.score)}.fg`} fontWeight="medium">{BANDS.find((b) => b.id === bandOf(s.score))!.label}</Text>
+                    <Text textStyle="2xl" fontWeight="semibold" lineHeight="1" fontVariantNumeric="tabular-nums">{s.scored ? s.score : "—"}</Text>
+                    {s.scored > 0 && <Text textStyle="xs" color={`${bandColor(s.score)}.fg`} fontWeight="medium">{BANDS.find((b) => b.id === bandOf(s.score))!.label}</Text>}
                   </HStack>
-                  <Delta now={s.score} then={pts[0].cat[c.id]} goodWhen="up" label="in 30 days" />
-                  <Sparkline values={pts.map((p) => p.cat[c.id])} color={CAT_COLOR[c.id]} h="8" />
-                  <Text textStyle="xs" color="fg.muted">{fmtInt(s.pages)} pages with issues</Text>
+                  {s.scored > 0 && <>
+                    {pts.length > 1 && <Delta now={s.score} then={pts[0].cat[c.id]} goodWhen="up" label={`since ${pts[0].label}`} />}
+                    <Sparkline values={pts.map((p) => p.cat[c.id])} color={CAT_COLOR[c.id]} h="8" />
+                  </>}
+                  <Text textStyle="xs" color="fg.muted">{s.scored ? `${fmtInt(s.pages)} pages with issues` : "No pages scored"}</Text>
                 </Stack>
               </RouterLink>
             </Box>

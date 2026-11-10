@@ -6,13 +6,13 @@
 // the app builds links (refs.ts href, analytics.ts links()). Element ids are issueId(site, pageId, k) so the
 // frontend's resolveIssue understands them.
 // ON INTEGRATION: delete this file; the real app's core returns the same shapes.
-import { RULE_CATALOG, pageIssues, type Instance, type Rule } from "@/lib/page-issues";
+import { RULE_CATALOG, issueSlots, pageIssues, type Instance, type Rule } from "@/lib/page-issues";
 import { crawlsFor, type CrawlRow } from "@/lib/crawls-list";
 import { PRIORITY, PRIORITIES, type Priority } from "@/lib/priority";
-import { issueId } from "@/lib/refs";
-import { hitsFor } from "@/lib/site-issues";
+import { issueId, resolveIssue } from "@/lib/refs";
+import { byRule, hitsFor } from "@/lib/site-issues";
 import {
-  CATEGORIES, PAGE_TYPES, baselinesFor, crawlChoices, defaultCrawl, issuesIn, pagesFor, pageView, severity, siteSize, totalIssues, typeLabel,
+  PAGE_TYPES, baselinesFor, crawlChoices, currentIssueCounts, defaultCrawl, pagesFor, pageView, severity, typeLabel,
   type Category, type PageView,
 } from "@/lib/site-pages";
 import { SITES, SITE_IDS, type SiteId } from "@/lib/sites";
@@ -49,7 +49,7 @@ const qs = (q: Record<string, string | number | null | undefined>) => {
 };
 const pageHref = (site: SiteId, id: number, crawl: number) => `/${site}/pages/${id}${qs({ crawl })}`;
 const elementHref = (site: SiteId, pageId: number, crawl: number, baseline: number | null, it: Instance) =>
-  `/${site}/pages/${pageId}?crawl=${crawl}${it.status === "fixed" && baseline != null ? `&vs=${baseline}` : ""}&issue=${it.k + 1}`; // as refs.ts
+  `/${site}/pages/${pageId}?crawl=${crawl}${baseline != null ? `&vs=${baseline}` : ""}&issue=${it.k + 1}`;
 
 // ───────── Shapes ─────────
 const crawlJson = (c: CrawlRow) => ({
@@ -66,19 +66,13 @@ const ruleJson = (r: Rule, site: SiteId, full = true) => ({
 const trim = (s: string, n = 400) => (s.length > n ? `${s.slice(0, n)}…` : s);
 const ELEMENTS_PER_ISSUE = 6;
 
-function counts(site: SiteId, p: PageView, crawl: number, baseline: number | null) {
-  const by: Record<Priority, number> = { P1: 0, P2: 0, P3: 0, P4: 0 };
-  for (const it of pageIssues(p, crawl, baseline, siteSize(site)).instances) if (it.status !== "fixed") by[PRIORITY[RULE_CATALOG[it.rule].severity]]++;
-  return by;
-}
-
 function pageJson(site: SiteId, p: PageView, crawl: number, baseline: number | null, detail: boolean) {
-  const by = p.change === "removed" ? null : counts(site, p, crawl, baseline);
+  const counts = currentIssueCounts(p);
   return {
     id: p.i, site, path: p.path, url: p.url, title: p.title, h1: p.h1, type: p.type, type_label: typeLabel(p.type), http_status: p.status,
     change: p.change, last_changed_crawl: p.lastChanged,
-    issues: by && { ...by, total: by.P1 + by.P2 + by.P3 + by.P4 },
-    by_category: by && Object.fromEntries(CATEGORIES.map((c) => [c.id, issuesIn(p, c.id)])), // performance is null when Lighthouse skipped the page
+    issues: p.change === "removed" ? null : { ...counts.byPriority, total: counts.total },
+    by_category: p.change === "removed" ? null : counts.byCategory,
     crawl, baseline, ui_url: pageHref(site, p.i, crawl),
     ...(detail ? { year: p.path.match(/\/(20\d{2})\//)?.[1] ?? null } : {}),
   };
@@ -96,7 +90,7 @@ function issuesOf(site: SiteId, p: PageView, crawl: number, baseline: number | n
       elements_total: list.length,
       elements: list.slice(0, ELEMENTS_PER_ISSUE).map((it) => ({
         id: issueId(site, p.i, it.k), selector: it.selector, html: trim(it.snippet), status: it.status, first_seen: it.firstSeen,
-        shared_pages: it.shared, ui_url: elementHref(site, p.i, crawl, baseline, it),
+        shared_pages: it.shared, origin: it.origin, ui_url: elementHref(site, p.i, crawl, baseline, it),
       })),
       ui_url: elementHref(site, p.i, crawl, baseline, list[0]),
     };
@@ -122,9 +116,10 @@ function findPage(site: SiteId, ref: string, crawl: number, baseline: number | n
   }
   let path: string;
   try { path = new URL(s, "https://x.invalid").pathname.replace(/\/+$/, "") || "/"; } catch { path = s; }
-  const hit = views(site, crawl, baseline).find((p) => p.path === path);
+  const clean = (value: string) => value.replace(/\/+$/, "") || "/";
+  const hit = views(site, crawl, baseline).find((p) => clean(p.path) === path);
   if (hit) return hit;
-  const maybe = views(site, crawl, null).find((p) => p.path.toLowerCase() === path.toLowerCase());
+  const maybe = views(site, crawl, null).find((p) => clean(p.path).toLowerCase() === path.toLowerCase());
   return fail(`No page with path ${path} in crawl ${crawl} of ${site}.${maybe ? ` Did you mean ${maybe.path}?` : " Use find_pages with q to search by path or title."}`);
 }
 
@@ -157,8 +152,12 @@ export function find_pages(a: Args) {
   if (type && !PAGE_TYPES.some((t) => t.id === type)) fail(`Unknown type "${type}". Types: ${PAGE_TYPES.map((t) => t.id).join(", ")}.`);
   let rows = views(site, crawl, baseline).filter((p) =>
     (!q || p.path.toLowerCase().includes(q) || p.title.toLowerCase().includes(q)) && (!type || p.type === type) &&
-    (!year || (year === "none" ? !/\/20\d{2}\//.test(p.path) : p.path.includes(`/${year}/`))) && (!change || p.change === change));
-  const key = (p: PageView) => sort === "p1" ? p.critical * 1000 + totalIssues(p) : severity(p, category ?? null);
+    (!year || (year === "none" ? !/\/20\d{2}\//.test(p.path) : p.path.includes(`/${year}/`))) && (change ? p.change === change : p.change !== "removed"));
+  const key = (p: PageView) => {
+    if (sort !== "p1") return severity(p, category ?? null);
+    const counts = currentIssueCounts(p);
+    return counts.critical * 1000 + counts.total;
+  };
   if (sort === "path") rows = [...rows].sort((x, y) => x.path.localeCompare(y.path));
   else if (sort === "changed") rows = [...rows].sort((x, y) => (y.lastChanged ?? -1) - (x.lastChanged ?? -1));
   else rows = [...rows].sort((x, y) => key(y) - key(x) || x.i - y.i);
@@ -188,7 +187,7 @@ export function find_issues(a: Args) {
   const cat = Array.isArray(a.category) ? (a.category as string[]) : a.category ? [String(a.category)] : [];
   const status = text(a, "status");
   for (const x of pri) if (!PRIORITIES.includes(x as Priority)) fail(`Priority must be P1, P2, P3 or P4, got "${x}".`);
-  const list = pageIssues(p, crawl, baseline, siteSize(site)).instances.filter((it) => {
+  const list = pageIssues(p, crawl, baseline).instances.filter((it) => {
     const r = RULE_CATALOG[it.rule];
     return (!pri.length || pri.includes(PRIORITY[r.severity])) && (!cat.length || cat.includes(r.category)) && (!status || it.status === status);
   });
@@ -202,12 +201,9 @@ export function find_issues_by_rule(a: Args) {
   const { crawl, baseline } = scope(site, a);
   const hits = hitsFor(site, crawl, baseline).filter((h) => h.rule === id && h.elements > 0);
   const byPage = new Map<number, { h: (typeof hits)[number]; elements: number; added: number }>();
-  const patterns = new Map<string, { pattern: string; shared: boolean; pages: number; elements: number }>();
   for (const h of hits) {
     const cur = byPage.get(h.p.i);
     if (cur) { cur.elements += h.elements; cur.added += h.added; } else byPage.set(h.p.i, { h, elements: h.elements, added: h.added });
-    const x = patterns.get(h.pattern) ?? { pattern: h.pattern, shared: h.shared, pages: 0, elements: 0 };
-    x.pages++; x.elements += h.elements; patterns.set(h.pattern, x);
   }
   const rows = [...byPage.values()].sort((x, y) => y.elements - x.elements || x.h.p.i - y.h.p.i);
   const start = a.cursor ? Number(Buffer.from(String(a.cursor), "base64url").toString()) || 0 : 0;
@@ -215,7 +211,7 @@ export function find_issues_by_rule(a: Args) {
   return {
     site, crawl, baseline, rule: ruleJson(rule, site, false),
     pages_affected: rows.length, elements: rows.reduce((n, r) => n + r.elements, 0),
-    patterns: [...patterns.values()].sort((x, y) => y.pages - x.pages).slice(0, 10),
+    patterns: byRule(hits, "all")[0]?.patterns.slice(0, 10) ?? [],
     pages: rows.slice(start, start + limit).map((r) => ({
       page: r.h.p.i, path: r.h.p.path, elements: r.elements, new_elements: r.added, example_element: issueId(site, r.h.p.i, r.h.k),
       ui_url: pageHref(site, r.h.p.i, crawl),
@@ -227,19 +223,15 @@ export function find_issues_by_rule(a: Args) {
 
 export function get_issue(a: Args) {
   const id = String(a.element_id ?? "").trim();
-  const n = Number(id);
-  const site = SITE_IDS[Math.floor(n / 1e9)];
-  if (!Number.isInteger(n) || n < 0 || !site) return fail(`"${id}" isn't an element id. Ids come from @issue references or find_issues / find_issues_by_rule results.`);
-  const pageId = Math.floor((n % 1e9) / 1e4), k = n % 1e4;
-  const { crawl, baseline } = scope(site, {});
-  const p = pageView(site, pageId, crawl, baseline);
-  const instances = p ? pageIssues(p, crawl, baseline, siteSize(site)).instances : [];
-  const it = instances.find((x) => x.k === k);
-  if (!p || !it) return fail(`No element with id ${id} in the latest crawl of ${site}. Ids come from @issue references or find_issues / find_issues_by_rule results.`);
-  const issue = issuesOf(site, p, crawl, baseline, instances.filter((x) => x.rule === it.rule), k)[0];
-  // everything the app knows about the element: what a "Fix @issue" or "Explain @issue" message needs in one call
-  const r = RULE_CATALOG[it.rule];
-  return { site, page_url: p.url, source: r.source, why: r.why, ...issue };
+  if (!/^\d+$/.test(id)) return fail(`"${id}" isn't an element id. Ids come from @issue references or find_issues / find_issues_by_rule results.`);
+  const requested = a.crawl == null || a.crawl === "latest" ? undefined : Number(a.crawl);
+  const comparison = a.baseline === undefined ? undefined : a.baseline === null || a.baseline === "none" ? null : Number(a.baseline);
+  const resolved = resolveIssue(id, { crawl: requested, baseline: comparison });
+  if (!resolved) return fail(`No recorded element with id ${id}${requested == null ? "" : ` in crawl ${requested}`}. Ids come from @issue references or find_issues / find_issues_by_rule results.`);
+  const { site, page, crawl, baseline, it, rule } = resolved;
+  const instances = issueSlots(page, crawl, baseline).filter((element) => element.rule === it.rule);
+  const issue = issuesOf(site, page, crawl, baseline, instances, it.k)[0];
+  return { site, page_url: page.url, source: rule.source, why: rule.why, ...issue, ui_url: resolved.href() };
 }
 
 export function list_rules(a: Args) {

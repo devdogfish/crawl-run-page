@@ -10,8 +10,7 @@
 //   not a filter: a sort never hides pages, so there's no "has any" vs "has only" ambiguity.
 //
 // PROTOTYPE: data comes from src/lib/site-pages.ts. Rows don't open a page detail yet.
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Suspense, useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router";
 import {
   Badge, Box, Button, Container, Flex, Grid, HStack, Heading, IconButton, Input, InputGroup, Stack, Text,
@@ -23,18 +22,24 @@ import { FilterSelect } from "@/components/filter-select";
 import { CrawlScope } from "@/components/scope-select";
 import { TablePagination } from "@/components/table-pagination";
 import { useSite } from "@/components/site-context";
+import { bandOf, WEIGHT } from "@/lib/analytics";
 import { crawlsFor } from "@/lib/crawls-list";
+import { RULE_CATALOG } from "@/lib/page-issues";
+import { PRIORITIES, PRIORITY } from "@/lib/priority";
+import { folderLabel, inPageScope, issueScopeDefaults, matchesIssueScope, pageScopeDefaults, queryString, useRouteQuery } from "@/lib/route-query";
+import { countOf, hitsFor, type Seg } from "@/lib/site-issues";
 import {
-  CATEGORIES, defaultScope, LH_SAMPLE, PAGE_TYPES, RULES, YEARS, fullLighthouse, issuesIn, linksTo, normalizeTarget, pagesFor, ruleMatches,
-  severity, totalIssues, yearOf, type Category, type Change, type PageView, type RuleId,
+  CATEGORIES, currentIssueCounts, defaultScope, lighthouseCoverage, PAGE_TYPES, RULES, YEARS, issuesIn, linksTo, normalizeTarget, pagesFor, ruleMatches,
+  severity, totalIssues, type Category, type Change, type PageView, type RuleId,
 } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
 
 type Sort = "worst" | `cat:${Category}` | "changed" | "path" | "matches";
 type ChangeFilter = "all" | Exclude<Change, "same">;
-type State = { crawl: string; vs: string; q: string; type: string; year: string; rule: string; links: string; sort: Sort; change: ChangeFilter };
 
 const PAGE_SIZE = 50;
+const bandDefaults = { band: "all", worst: "all" };
+const noMatchingIssues = { issues: 0, critical: 0, serious: 0, score: 100, worst: "none" };
 const CHANGE_BADGE: Record<Change, { label: string; color: string } | null> = {
   new: { label: "New", color: "green" }, changed: { label: "Changed", color: "blue" }, removed: { label: "Removed", color: "red" }, same: null,
 };
@@ -48,49 +53,61 @@ export default function PagesPage() {
 function Pages() {
   const site = useSite();
   const dates = useMemo(() => new Map(crawlsFor(site).map((c) => [Number(c.id), c.startedAt])), [site]); // any crawl, failed ones too
-  const sp = useSearchParams()[0];
-
-  // Defaults: the latest finished crawl, compared with the one before it
-  const defaults: State = { ...defaultScope(site), q: "", type: "all", year: "all", rule: "none", links: "", sort: "worst", change: "all" };
-  const [s, setS] = useState<State>(() => {
-    const init = { ...defaults };
-    for (const k of Object.keys(defaults) as (keyof State)[]) { const v = sp.get(k); if (v != null) (init as Record<string, string>)[k] = v; }
-    return init;
-  });
-  const [page, setPage] = useState(1);
-  const set = (patch: Partial<State>) => { setS((x) => ({ ...x, ...patch })); setPage(1); };
-
-  // Mirror non-default values into the URL without a navigation
-  useEffect(() => {
-    const p = new URLSearchParams();
-    for (const k of Object.keys(s) as (keyof State)[]) if (s[k] !== defaults[k]) p.set(k, s[k]);
-    const qs = p.toString();
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-  }, [s]); // eslint-disable-line react-hooks/exhaustive-deps
+  const defaults = { ...defaultScope(site), ...pageScopeDefaults, ...issueScopeDefaults, ...bandDefaults, q: "", rule: "none", links: "", sort: "worst", change: "all" };
+  const [s, set, query] = useRouteQuery(site, defaults);
+  const paginationKey = `${site}:${query}`;
+  const [pagination, setPagination] = useState({ key: paginationKey, page: 1 });
+  const page = pagination.key === paginationKey ? pagination.page : 1;
+  const setPage = (next: number) => setPagination({ key: paginationKey, page: next });
 
   const a = Number(s.crawl);
   const b = s.vs === "none" ? null : Number(s.vs);
   const all = useMemo(() => pagesFor(site, a, b), [site, a, b]);
   const comparing = b != null;
+  const coverage = lighthouseCoverage(site, a);
   // Sorting by an issue category ranks pages by that category and shows it in the Issues column; it never hides pages
-  const cat = s.sort.startsWith("cat:") ? (s.sort.slice(4) as Category) : null;
+  const cat = s.cat !== "all" && !s.cat.includes(",") ? s.cat as Category : s.cat === "all" && s.sort.startsWith("cat:") ? (s.sort.slice(4) as Category) : null;
   const rule = s.rule === "none" ? null : (s.rule as RuleId);
   const target = normalizeTarget(s.links);
   const links = useMemo(() => (target ? linksTo(target, all) : null), [target, all]);
+  const { type, year, sub, pri, markup, auditRule, el } = s;
+  const seg = (comparing ? s.seg : "all") as Seg;
+  const issueFiltered = Object.keys(issueScopeDefaults).some((key) => s[key as keyof typeof issueScopeDefaults] !== issueScopeDefaults[key as keyof typeof issueScopeDefaults]);
+  const { band, worst } = s;
+  const bandFiltered = band !== "all" || worst !== "all";
+  const matchingIssues = useMemo(() => {
+    if (!issueFiltered && !bandFiltered) return null;
+    const rules = new Map<number, Set<string>>();
+    for (const hit of hitsFor(site, a, b)) {
+      if (!countOf(hit, seg) || !matchesIssueScope(hit, { pri, cat: s.cat, markup, auditRule, el })) continue;
+      const matched = rules.get(hit.p.i) ?? new Set();
+      matched.add(hit.rule);
+      rules.set(hit.p.i, matched);
+    }
+    return new Map([...rules].map(([id, matched]) => {
+      const priorities = [...matched].map((ruleId) => PRIORITY[RULE_CATALOG[ruleId].severity]);
+      return [id, {
+        issues: matched.size,
+        critical: priorities.filter((priority) => priority === "P1").length,
+        serious: priorities.filter((priority) => priority === "P2").length,
+        score: Math.max(0, 100 - priorities.reduce((points, priority) => points + WEIGHT[priority], 0)),
+        worst: PRIORITIES.find((priority) => priorities.includes(priority)) ?? "none",
+      }];
+    }));
+  }, [site, a, b, seg, issueFiltered, bandFiltered, pri, s.cat, markup, auditRule, el]);
 
   // Every filter except the change segment, so the segment counts follow the other filters
   const filtered = useMemo(() => {
     const q = s.q.trim().toLowerCase();
-    const year = s.year === "all" ? null : s.year === "none" ? "none" : Number(s.year);
     return all
-      .map((p) => ({ p, matches: rule ? ruleMatches(p, rule) : 0 }))
-      .filter(({ p, matches }) =>
+      .map((p) => ({ p, matches: rule ? ruleMatches(p, rule) : 0, matching: matchingIssues ? matchingIssues.get(p.i) ?? noMatchingIssues : null }))
+      .filter(({ p, matches, matching }) =>
         (!q || p.path.toLowerCase().includes(q) || p.title.toLowerCase().includes(q) || p.h1.toLowerCase().includes(q)) &&
-        (s.type === "all" || p.type === s.type) &&
-        (year == null || (year === "none" ? yearOf(p.path) == null : yearOf(p.path) === year)) &&
+        inPageScope(p, { type, year, sub }) &&
+        (!matching || (bandFiltered ? p.change !== "removed" && (band === "all" || bandOf(matching.score) === band) && (worst === "all" || matching.worst === worst) : matching.issues > 0)) &&
         (!rule || matches > 0) &&
         (!links || links.from.has(p.i)));
-  }, [all, s.q, s.type, s.year, rule, links]);
+  }, [all, s.q, type, year, sub, rule, links, matchingIssues, bandFiltered, band, worst]);
 
   const counts = useMemo(() => {
     const c = { all: 0, new: 0, changed: 0, removed: 0 };
@@ -101,7 +118,7 @@ function Pages() {
   const rows = useMemo(() => {
     const change = comparing ? s.change : "all";
     const r = filtered.filter(({ p }) => (change === "all" ? p.change !== "removed" : p.change === change));
-    const sort = s.sort === "matches" && !rule ? "worst" : s.sort;
+    const sort = (s.sort === "matches" && !rule ? "worst" : s.sort) as Sort;
     type Row = (typeof r)[number];
     const by: Record<"worst" | "cat" | "changed" | "path" | "matches", (x: Row, y: Row) => number> = {
       worst: (x, y) => severity(y.p, null) - severity(x.p, null),
@@ -110,14 +127,22 @@ function Pages() {
       path: (x, y) => x.p.path.localeCompare(y.p.path),
       matches: (x, y) => y.matches - x.matches,
     };
-    return r.sort((x, y) => by[sort.startsWith("cat:") ? "cat" : (sort as Exclude<Sort, `cat:${Category}`>)](x, y) || x.p.path.localeCompare(y.p.path));
+    return r.sort((x, y) => {
+      const order = (sort === "worst" || sort.startsWith("cat:")) && x.matching && y.matching
+        ? y.matching.critical - x.matching.critical || y.matching.serious - x.matching.serious || y.matching.issues - x.matching.issues
+        : by[sort.startsWith("cat:") ? "cat" : (sort as Exclude<Sort, `cat:${Category}`>)](x, y);
+      return order || x.p.path.localeCompare(y.p.path);
+    });
   }, [filtered, comparing, s.change, s.sort, rule, cat]);
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const active = (["q", "type", "year", "rule", "links"] as const).some((k) => s[k] !== defaults[k]);
+  const active = issueFiltered || bandFiltered || (["q", "type", "year", "sub", "rule", "links"] as const).some((k) => s[k] !== defaults[k]);
+  const issuesCount = (p: PageView) => cat ? issuesIn(p, cat) : totalIssues(p);
+  const criticalCount = (p: PageView) => !cat || cat === "accessibility" ? currentIssueCounts(p).critical : 0;
+  const from = `/${site}/pages${queryString({ ...s })}`;
 
   const toCsv = () => ["url,title,type,status,issues,critical,change,last_changed" + (rule ? ",rule_matches" : ""),
-    ...rows.map(({ p, matches }) => [p.path, p.title, p.type, p.status, totalIssues(p), p.critical, p.change ?? "", p.lastChanged ?? "", ...(rule ? [matches] : [])]
+    ...rows.map(({ p, matches, matching }) => [p.path, p.title, p.type, p.status, matching ? matching.issues : issuesCount(p) ?? "", matching?.critical ?? criticalCount(p), p.change ?? "", p.lastChanged ?? "", ...(rule ? [matches] : [])]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
 
   // Page · Issues · Matches (only with a rule) · Last changed. Type is visible in the path; status shows only when it isn't 200;
@@ -146,7 +171,7 @@ function Pages() {
               { value: "changed", label: `Changed (${fmtNum(counts.changed)})` },
               { value: "removed", label: `Removed (${fmtNum(counts.removed)})` },
             ] : undefined}
-            value={s.change} onValue={(change) => set({ change })}
+            value={s.change as ChangeFilter} onValue={(change) => set({ change })}
             count={active ? `${rows.length.toLocaleString("en-US")} matches` : comparing ? "" : `${counts.all.toLocaleString("en-US")} pages`}
             copyLabel="Copy URLs" onCopy={() => navigator.clipboard.writeText(rows.map(({ p }) => p.path).join("\n"))}
             downloadLabel="Download these pages (.csv)" onDownload={() => downloadText(toCsv(), `pages-${site}-${s.crawl}.csv`, "text/csv")}
@@ -154,7 +179,7 @@ function Pages() {
 
           {/* Filters: one row, every control the same small size */}
           <HStack gap="2" px="2" py="1.5" borderBottomWidth="1px" bg="bg.subtle" wrap="wrap">
-            <FilterSelect value={s.type} onChange={(type) => set({ type })} w="36" items={[
+            <FilterSelect value={s.type} onChange={(type) => set({ type, sub: "" })} w="36" items={[
               { value: "all", label: "All types" }, ...PAGE_TYPES.map((t) => ({ value: t.id, label: t.label, hint: t.prefix ?? "No match" })),
             ]} />
             <FilterSelect value={s.year} onChange={(year) => set({ year })} w="28" items={[
@@ -167,7 +192,10 @@ function Pages() {
               endElement={s.links ? <IconButton aria-label="Clear link target" size="2xs" variant="ghost" onClick={() => set({ links: "" })}><LuX /></IconButton> : undefined}>
               <Input size="xs" placeholder="Links to… paste a URL" value={s.links} onChange={(e) => set({ links: e.target.value })} />
             </InputGroup>
-            {active && <Button size="xs" variant="ghost" onClick={() => set({ q: "", type: "all", year: "all", rule: "none", links: "", sort: s.sort === "matches" ? "worst" : s.sort })}>Clear filters</Button>}
+            {s.sub && <Button size="xs" variant="ghost" onClick={() => set({ sub: "" })}>{folderLabel(s.sub)} ×</Button>}
+            {issueFiltered && <Button size="xs" variant="ghost" onClick={() => set(issueScopeDefaults)}>Issue scope {[pri !== "all" ? pri : "", s.cat !== "all" ? s.cat : "", markup !== "all" ? markup : ""].filter(Boolean).join(" · ")} ×</Button>}
+            {bandFiltered && <Button size="xs" variant="ghost" onClick={() => set(bandDefaults)}>{[band !== "all" ? `Health: ${band}` : "", worst !== "all" ? `Worst: ${worst}` : ""].filter(Boolean).join(" · ")} ×</Button>}
+            {active && <Button size="xs" variant="ghost" onClick={() => set({ ...pageScopeDefaults, ...issueScopeDefaults, ...bandDefaults, q: "", rule: "none", links: "", sort: s.sort === "matches" ? "worst" : s.sort })}>Clear filters</Button>}
             <HStack gap="2" ms="auto">
               <Text textStyle="xs" color="fg.muted">Sort</Text>
               <FilterSelect value={s.sort === "matches" && !rule ? "worst" : s.sort} onChange={(v) => set({ sort: v as Sort })} w="48" items={[
@@ -204,9 +232,9 @@ function Pages() {
                 <Text p="4" textStyle="sm" color="fg.muted">
                   {links && links.from.size === 0 ? `No page in crawl #${s.crawl} links to ${target}.` : "No pages match these filters."}
                 </Text>
-              ) : pageRows.map(({ p, matches }) => (
-                <PageRowView key={p.i} p={p} cols={cols} cat={cat} matches={rule ? matches : null}
-                  href={`/${site}/pages/${p.i}?crawl=${p.change === "removed" ? s.vs : s.crawl}${b != null ? `&vs=${s.vs}` : ""}`}
+              ) : pageRows.map(({ p, matches, matching }) => (
+                <PageRowView key={p.i} p={p} cols={cols} issues={matching ? matching.issues : issuesCount(p)} critical={matching?.critical ?? criticalCount(p)} matches={rule ? matches : null}
+                  href={`/${site}/pages/${p.i}${queryString({ crawl: s.crawl, vs: s.vs, pri, cat: s.cat, markup, auditRule, el, seg, from })}`}
                   changedOn={p.lastChanged != null ? dates.get(p.lastChanged) ?? null : null} since={crawlsFor(site).at(-1)!.startedAt} />
               ))}
             </Box>
@@ -216,9 +244,9 @@ function Pages() {
             <TablePagination count={rows.length} pageSize={PAGE_SIZE} page={page} onPageChange={setPage} />
           )}
         </Flex>
-        {!fullLighthouse(a) && cat === "performance" && (
+        {coverage.audited < coverage.pages && cat === "performance" && (
           <Text mt="3" textStyle="xs" color="fg.muted">
-            Performance issues come from Lighthouse, which audited a sample of {LH_SAMPLE} pages in this crawl. Pick a full-site crawl (every 10th) to see all pages.
+            This sample includes Lighthouse results for {coverage.audited} of {coverage.pages} pages in this crawl.
           </Text>
         )}
       </Container>
@@ -226,11 +254,10 @@ function Pages() {
   );
 }
 
-function PageRowView({ p, cols, cat, matches, changedOn, since, href }: {
-  p: PageView; cols: string; cat: Category | null; matches: number | null; changedOn: Date | null; since: Date; href: string;
+function PageRowView({ p, cols, issues, critical, matches, changedOn, since, href }: {
+  p: PageView; cols: string; issues: number | null; critical: number; matches: number | null; changedOn: Date | null; since: Date; href: string;
 }) {
   const removed = p.change === "removed";
-  const n = cat ? issuesIn(p, cat) : totalIssues(p);
   const change = p.change ? CHANGE_BADGE[p.change] : null;
   return (
     <Grid asChild templateColumns={cols} gap="3" px="3" py="2" alignItems="center" textStyle="xs"
@@ -244,8 +271,8 @@ function PageRowView({ p, cols, cat, matches, changedOn, since, href }: {
         <Text fontFamily="mono" color="fg.muted" truncate title={p.path}>{p.path}</Text>
       </Stack>
       <HStack gap="2">
-        {n == null ? <Text color="fg.subtle">Not audited</Text> : <Text fontWeight="medium" color={n === 0 ? "fg.subtle" : undefined}>{n}</Text>}
-        {p.critical > 0 && (!cat || cat === "accessibility") && <Badge size="xs" variant="subtle" colorPalette="red">{p.critical} critical</Badge>}
+        {issues == null ? <Text color="fg.subtle">Not audited</Text> : <Text fontWeight="medium" color={issues === 0 ? "fg.subtle" : undefined}>{issues}</Text>}
+        {critical > 0 && <Badge size="xs" variant="subtle" colorPalette="red">{critical} critical</Badge>}
       </HStack>
       {matches != null && <Text textAlign="right" fontWeight="medium">{matches}</Text>}
       <HStack gap="2">

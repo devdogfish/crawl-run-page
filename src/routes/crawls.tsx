@@ -11,6 +11,7 @@ import { DataToolbar, downloadText } from "@/components/data-toolbar";
 import { TablePagination } from "@/components/table-pagination";
 import { StageIcon } from "@/components/step-ui";
 import { crawlsFor, type CrawlListStatus, type CrawlRow } from "@/lib/crawls-list";
+import { queryString, useRouteQuery } from "@/lib/route-query";
 import { useSite } from "@/components/site-context";
 import { hostOf } from "@/lib/settings";
 import { fmtDur, fmtNum, type StageStatus } from "@/lib/types";
@@ -33,24 +34,29 @@ const fmtDate = (d: Date) =>
 export default function CrawlsPage() {
   const site = useSite();
   const CRAWLS = useMemo(() => crawlsFor(site), [site]);
-  const [filter, setFilter] = useState<Filter>("all");
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
+  const [s, set, queryKey] = useRouteQuery(site, { status: "all", q: "" });
+  const paginationKey = `${site}:${queryKey}`;
+  const [pagination, setPagination] = useState({ key: paginationKey, page: 1 });
+  const page = pagination.key === paginationKey ? pagination.page : 1;
+  const setPage = (next: number) => setPagination({ key: paginationKey, page: next });
+  const filter = s.status as Filter;
 
-  const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.v, CRAWLS.filter(f.match).length])), [CRAWLS]);
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const f = FILTERS.find((x) => x.v === filter)!;
-    return CRAWLS.filter((c) => f.match(c) && (!q || c.id.includes(q) || c.url.includes(q)));
-  }, [CRAWLS, filter, query]);
+  const searched = useMemo(() => {
+    const q = s.q.trim().toLowerCase();
+    return CRAWLS.filter((c) => !q || c.id.includes(q) || c.url.toLowerCase().includes(q));
+  }, [CRAWLS, s.q]);
+  const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.v, searched.filter(f.match).length])), [searched]);
+  const rows = searched.filter(FILTERS.find((x) => x.v === filter)!.match);
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Facts: last 30 days
-  const recent = CRAWLS.filter((c) => c.startedAt >= new Date(Date.UTC(2026, 9, 5)));
+  const cutoff = (CRAWLS[0]?.startedAt.getTime() ?? 0) - 30 * 86_400_000;
+  const recent = rows.filter((c) => c.startedAt.getTime() >= cutoff);
   const finished = recent.filter((c) => c.status === "success" || c.status === "failed");
-  const successRate = finished.length ? (finished.filter((c) => c.status === "success").length / finished.length) * 100 : 0;
+  const successRate = finished.length ? (finished.filter((c) => c.status === "success").length / finished.length) * 100 : null;
   const prod = recent.filter((c) => c.status === "success").map((c) => c.durationSec).sort((a, b) => a - b);
-  const median = prod.length ? prod[Math.floor(prod.length / 2)] : 0;
+  const median = prod.length ? (prod[Math.floor((prod.length - 1) / 2)] + prod[Math.floor(prod.length / 2)]) / 2 : null;
+  const from = `/${site}/crawls${queryString({ q: s.q, status: filter !== "all" ? filter : undefined })}`;
 
   const toCsv = () => ["id,url,status,pages,error_pct,duration_s,started_at,trigger",
     ...rows.map((c) => [c.id, c.url, c.status, c.pages, c.errorPct, c.durationSec, c.startedAt.toISOString(), c.trigger].join(","))].join("\n");
@@ -62,10 +68,10 @@ export default function CrawlsPage() {
           <Heading size="xl" fontWeight="semibold" mb="5">Crawl history</Heading>
 
           <DataList.Root orientation="vertical" size="sm" display="grid" gridTemplateColumns={{ base: "repeat(2, 1fr)", md: "repeat(4, minmax(0, 1fr))" }} gap="5">
-            <Fact label="Running now">{counts.active}</Fact>
+            <Fact label="Running now">{rows.filter(FILTERS[1].match).length}</Fact>
             <Fact label="Crawls, last 30 days">{recent.length}</Fact>
-            <Fact label="Success rate">{successRate.toFixed(0)}%</Fact>
-            <Fact label="Median duration">{fmtDur(median)}</Fact>
+            <Fact label="Success rate">{successRate == null ? "—" : `${successRate.toFixed(0)}%`}</Fact>
+            <Fact label="Median duration">{median == null ? "—" : fmtDur(median)}</Fact>
           </DataList.Root>
         </Container>
       </Box>
@@ -73,11 +79,11 @@ export default function CrawlsPage() {
       <Container maxW="7xl" py="6">
         <Flex direction="column" borderWidth="1px" rounded="l2" overflow="hidden">
           <DataToolbar
-            query={query} onQuery={(q) => { setQuery(q); setPage(1); }} placeholder="Search crawls"
+            query={s.q} onQuery={(q) => set({ q })} placeholder="Search crawls"
             segments={FILTERS.map((f) => ({ value: f.v, label: `${f.label} ${counts[f.v]}` }))}
-            value={filter} onValue={(v) => { setFilter(v); setPage(1); }}
-            count={query ? `${rows.length} matches` : ""}
-            copyLabel="Copy visible crawl IDs" onCopy={() => navigator.clipboard.writeText(pageRows.map((c) => c.id).join("\n"))}
+            value={filter} onValue={(status) => set({ status })}
+            count={s.q ? `${rows.length} matches` : ""}
+            copyLabel="Copy matching crawl IDs" onCopy={() => navigator.clipboard.writeText(rows.map((c) => c.id).join("\n"))}
             downloadLabel="Download crawls (.csv)" onDownload={() => downloadText(toCsv(), `crawls-${site}.csv`, "text/csv")}
           />
           <Box overflowX="auto">
@@ -89,7 +95,7 @@ export default function CrawlsPage() {
               </Grid>
               {pageRows.length === 0 ? (
                 <Text p="4" textStyle="sm" color="fg.muted">No crawls match.</Text>
-              ) : pageRows.map((c) => <CrawlRowView key={c.id} c={c} site={site} />)}
+              ) : pageRows.map((c) => <CrawlRowView key={c.id} c={c} href={`/${site}/crawls/${c.id}${queryString({ from })}`} />)}
             </Box>
           </Box>
           {rows.length > 0 && (
@@ -102,14 +108,14 @@ export default function CrawlsPage() {
   );
 }
 
-function CrawlRowView({ c, site }: { c: CrawlRow; site: string }) {
+function CrawlRowView({ c, href }: { c: CrawlRow; href: string }) {
   const live = c.status === "running" || c.status === "paused";
   return (
     <Grid
       asChild templateColumns={COLS} gap="4" px="4" py="2.5" alignItems="center" textStyle="sm"
       borderBottomWidth="1px" borderColor="border.muted" _hover={{ bg: "bg.subtle" }} fontVariantNumeric="tabular-nums"
     >
-      <RouterLink to={`/${site}/crawls/${c.id}`}>
+      <RouterLink to={href}>
         <Text fontWeight="medium">{c.id}</Text>
         <Text color="fg.muted" truncate>{hostOf(c.url)}</Text>
         <HStack gap="2">

@@ -7,8 +7,8 @@
 //
 // PROTOTYPE: data comes from the simulator in src/lib/crawl.ts and src/lib/pages.ts.
 // In the real app it reads the FastAPI endpoints in SPEC.md §6.
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router";
+import { Fragment, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "react-router";
 import {
   Alert, Badge, Box, Breadcrumb, Button, Container, DataList, EmptyState, Flex, Grid, HStack, Heading, IconButton,
   Menu, Portal, Progress, ProgressCircle, Span, Stack, Tabs, Text,
@@ -25,12 +25,14 @@ import { TablePagination } from "@/components/table-pagination";
 import { Link as RouterLink } from "react-router";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CrawlSettingsDialog } from "@/components/crawl-settings-dialog";
-import { CRAWLS, type CrawlRow } from "@/lib/crawls-list";
+import { crawlsFor, type CrawlRow } from "@/lib/crawls-list";
 import { defaultSettings, hostOf, type CrawlSettings } from "@/lib/settings";
 import { SITES, type SiteId } from "@/lib/sites";
 import { useSite } from "@/components/site-context";
-import { ESTIMATED_PAGES, FULL_LH_SEC, PREVIOUS_CRAWLS, useCrawlRun, type CrawlScenario, type FullJob } from "@/lib/crawl";
-import { PAGE_FILTERS, matches, pageAt, redirectSide, type PageFilter, type PageRow } from "@/lib/pages";
+import { fullAuditDuration, useCrawlRun, type CrawlScenario, type FullJob, type RunDataset } from "@/lib/crawl";
+import { PAGE_FILTERS, matches, pageRowsFor, redirectSide, type PageFilter, type PageRow } from "@/lib/pages";
+import { queryString, returnPath } from "@/lib/route-query";
+import { defaultCrawl } from "@/lib/site-pages";
 import { fmtClock, fmtDur, fmtNum, stageDuration, type LogLine, type Stage, type StageStatus } from "@/lib/types";
 
 const SCENARIOS: { v: CrawlScenario; label: string }[] = [
@@ -39,29 +41,63 @@ const SCENARIOS: { v: CrawlScenario; label: string }[] = [
   { v: "failure", label: "Fails after crawl" },
 ];
 
-// Prototype: settings come from the "New crawl" dialog (?settings=…) or from the crawl's row in the list
-function useInitialSettings(row: CrawlRow | undefined, site: SiteId): CrawlSettings {
-  const raw = useSearchParams()[0].get("settings");
-  try { if (raw) return { ...defaultSettings(site), ...JSON.parse(raw) }; } catch { /* fall through */ }
-  return row ? { ...defaultSettings(row.site), url: row.url } : defaultSettings(site);
+function replaySettings(raw: string | null, site: SiteId): CrawlSettings | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<CrawlSettings> | null;
+    if (!value || value.site !== site) return null;
+    const defaults = defaultSettings(site);
+    const number = (key: "delayMs" | "timeoutS" | "concurrency" | "maxRetries" | "lighthouseSample", min: number, max: number) => {
+      const n = value[key];
+      return typeof n === "number" && Number.isFinite(n) ? Math.max(min, Math.min(max, Math.round(n))) : defaults[key];
+    };
+    return { ...defaults,
+      discovery: value.discovery === "sitemap" || value.discovery === "links" ? value.discovery : defaults.discovery,
+      exclude: typeof value.exclude === "string" ? value.exclude : defaults.exclude,
+      renderJs: typeof value.renderJs === "boolean" ? value.renderJs : defaults.renderJs,
+      respectRobots: typeof value.respectRobots === "boolean" ? value.respectRobots : defaults.respectRobots,
+      delayMs: number("delayMs", 0, 10_000), timeoutS: number("timeoutS", 1, 120),
+      concurrency: number("concurrency", 1, 128), maxRetries: number("maxRetries", 0, 10),
+      lighthouseSample: number("lighthouseSample", 0, 1000),
+    };
+  } catch { return null; }
 }
 
 export default function CrawlRunPage() {
   const crawlId = useCrawlId();
-  const row = CRAWLS.find((c) => c.id === crawlId);
-  // A crawl belongs to one site: if the URL names another site, send it to the right one
   const site = useSite();
-  const settings = useInitialSettings(row, site);
-  const navigate = useNavigate();
-  useEffect(() => { if (row && row.site !== site) navigate(`/${row.site}/crawls/${row.id}`, { replace: true }); }, [row, site, navigate]);
-  const finished = !!row && row.status !== "running" && row.status !== "paused";
-  const [scenario, setScenario] = useState<CrawlScenario>(row?.status === "failed" ? "failure" : "healthy");
-  const [replay, setReplay] = useState(false); // prototype bar restarts a finished crawl live
+  const rows = crawlsFor(site);
+  const row = rows.find((c) => c.id === crawlId);
+  const raw = useSearchParams()[0].get("settings");
+  const settings = row ? defaultSettings(site) : crawlId === String(Number(rows[0].id) + 1) ? replaySettings(raw, site) : null;
+  if (!settings) return <Container maxW="7xl" pt="16"><EmptyState.Root><EmptyState.Content>
+    <EmptyState.Title>This crawl isn't in the selected site.</EmptyState.Title>
+    <EmptyState.Description><RouterLink to={`/${site}/crawls`}>Back to Crawls</RouterLink></EmptyState.Description>
+  </EmptyState.Content></EmptyState.Root></Container>;
+  return <CrawlRun key={`${site}:${crawlId}:${raw ?? ""}`} row={row} settings={settings} />;
+}
+
+function CrawlRun({ row, settings }: { row?: CrawlRow; settings: CrawlSettings }) {
+  const archived = row?.status === "success" || row?.status === "failed" || row?.status === "cancelled" ? row.status : undefined;
+  const [scenario, setScenario] = useState<CrawlScenario>(archived === "failed" ? "failure" : "healthy");
   const [runKey, setRunKey] = useState(0);
-  const restart = (s: CrawlScenario) => { setScenario(s); setRunKey((k) => k + 1); setReplay(true); };
+  const restart = (next: CrawlScenario) => { setScenario(next); setRunKey((key) => key + 1); };
+  const latest = defaultCrawl(settings.site);
+  const dataset = useMemo((): RunDataset => {
+    const snapshot = archived && !runKey ? row! : latest;
+    const live = row && !archived && !runKey;
+    const savedPages = pageRowsFor(settings.site, Number(snapshot.id));
+    const fetched = live ? pageRowsFor(settings.site, Number(row.id)) : [];
+    const ids = new Set(fetched.map((page) => page.id));
+    const stored = new Map(savedPages.map((page) => [page.id, page.performance]));
+    const pages = [...fetched, ...savedPages.filter((page) => !ids.has(page.id))]
+      .map((page, i) => ({ ...page, n: i + 1, performance: page.performance ?? stored.get(page.id) ?? null }));
+    const resumed = live ? { pages: fetched.length, elapsed: row.durationSec, paused: row.status === "paused" } : undefined;
+    return { pages, durationSec: snapshot.durationSec, startedAt: row?.startedAt ?? new Date(), resumed };
+  }, [archived, runKey, row, latest, settings.site]);
   return (
     <Box bg="bg" minH="100vh">
-      <Run key={`${scenario}-${runKey}`} scenario={scenario} settings={settings} finished={finished && !replay} onScenario={restart} />
+      <Run key={runKey} scenario={scenario} settings={settings} dataset={dataset} archived={!runKey ? archived : undefined} trigger={row?.trigger ?? "Manual"} onScenario={restart} />
     </Box>
   );
 }
@@ -88,9 +124,9 @@ function useSteps(run: RunView): StepInfo[] {
   const c = state.crawl;
   const crawl: StepInfo = {
     id: "crawl", name: "Crawl", kind: "crawl",
-    status: c.status === "running" ? (state.paused ? "paused" : "running") : "success",
-    sub: c.status === "running" ? `${fmtNum(c.done)} of ~${fmtNum(ESTIMATED_PAGES)} pages` : `${fmtNum(c.done)} pages`,
-    dur: (c.endedAt ?? state.t) - c.startedAt, expected: 1260, progress: run.crawlPct, startedAt: 0, logs: c.logs,
+    status: c.status === "running" ? (state.paused ? "paused" : "running") : c.status === "cancelled" ? "blocked" : "success",
+    sub: c.status === "running" ? `${fmtNum(c.done)} of ${fmtNum(run.target)} pages` : `${fmtNum(c.done)} pages`,
+    dur: (c.endedAt ?? state.t) - c.startedAt, expected: run.expectedCrawlSec, progress: run.crawlPct, startedAt: 0, logs: c.logs,
   };
   const tail: StepInfo[] = state.tail.map((s, i) => ({
     id: s.id, name: s.name, kind: "tail", stage: s, status: s.status === "running" && state.paused ? "paused" : s.status,
@@ -110,21 +146,31 @@ function jobStep(j: FullJob): StepInfo {
   };
 }
 
-function Run({ scenario, settings, finished, onScenario }: { scenario: CrawlScenario; settings: CrawlSettings; finished: boolean; onScenario: (s: CrawlScenario) => void }) {
-  const run = useCrawlRun(scenario, settings, finished);
+function Run({ scenario, settings, dataset, archived, trigger, onScenario }: {
+  scenario: CrawlScenario; settings: CrawlSettings; dataset: RunDataset; archived?: "success" | "failed" | "cancelled";
+  trigger: CrawlRow["trigger"]; onScenario: (s: CrawlScenario) => void;
+}) {
+  const run = useCrawlRun(scenario, dataset, settings, archived);
   const steps = useSteps(run);
   const job = run.state.fullLh ? jobStep(run.state.fullLh) : null;
   const all = job ? [...steps, job] : steps;
 
   // Follow the active step until the user picks one
   const active = steps.find((s) => s.status === "running" || s.status === "paused") ?? steps.find((s) => s.status === "failed") ?? (job?.status === "running" ? job : undefined);
-  const [picked, setPicked] = useState<string | null>(null);
-  const selected = all.find((s) => s.id === (picked ?? active?.id)) ?? job ?? steps[steps.length - 1];
+  const [params, setParams] = useSearchParams();
+  const picked = params.get("step");
+  const setPicked = (id: string) => {
+    const next = new URLSearchParams(params);
+    next.set("step", id);
+    next.delete("tab");
+    setParams(next, { replace: true });
+  };
+  const selected = all.find((s) => s.id === (picked ?? active?.id)) ?? active ?? job ?? (archived ? steps[0] : steps[steps.length - 1]);
 
   return (
     <>
       <PrototypeBar scenario={scenario} onScenario={onScenario} onSkip={run.skipStage} canSkip={run.canSkip} />
-      <RunHeader run={run} onFullLighthouse={() => { run.runFullLighthouse(); setPicked("lighthouse-full"); }} />
+      <RunHeader run={run} trigger={trigger} onFullLighthouse={() => { run.runFullLighthouse(); setPicked("lighthouse-full"); }} />
       <Container maxW="7xl" py="6">
         <Grid templateColumns={{ base: "1fr", lg: "280px minmax(0, 1fr)" }} gap="6" alignItems="start">
           <Sidebar
@@ -140,23 +186,24 @@ function Run({ scenario, settings, finished, onScenario }: { scenario: CrawlScen
 
 // ───────────────────────── Header ─────────────────────────
 
-function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: () => void }) {
+function RunHeader({ run, trigger, onFullLighthouse }: { run: RunView; trigger: CrawlRow["trigger"]; onFullLighthouse: () => void }) {
   const crawlId = useCrawlId();
+  const from = useSearchParams()[0].get("from") ?? "";
   const { state } = run;
   const c = state.crawl;
   const paused = run.runStatus === "paused";
   const running = run.runStatus === "crawling" || run.runStatus === "processing";
   const active = running || paused;
-  const palette = run.runStatus === "failed" ? "red" : run.runStatus === "success" ? "green" : paused ? "yellow" : "blue";
+  const palette = run.runStatus === "failed" ? "red" : run.runStatus === "success" ? "green" : paused ? "yellow" : run.runStatus === "cancelled" ? "gray" : "blue";
   const [settingsOpen, setSettingsOpen] = useState(false);
   const fetched = Object.values(c.codes).reduce((a, n) => a + n, 0);
   const errPct = fetched ? (run.errors / fetched) * 100 : 0;
-  const label = { crawling: "Crawling", processing: "Processing", paused: "Paused", failed: "Failed", success: "Succeeded" }[run.runStatus];
+  const label = { crawling: "Crawling", processing: "Processing", paused: "Paused", failed: "Failed", success: "Succeeded", cancelled: "Cancelled" }[run.runStatus];
   const lhDone = state.tail.find((s) => s.id === "lighthouse")?.status === "success";
 
   const downloadAll = () => {
     const lines = [c.logs, ...state.tail.map((s) => s.logs)].flat();
-    const text = lines.map((l) => `${fmtClock(l.t)}  ${l.msg}`).join("\n");
+    const text = lines.map((l) => `${fmtClock(l.t, state.dataset.startedAt)}  ${l.msg}`).join("\n");
     const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
     Object.assign(document.createElement("a"), { href: url, download: `crawl-${crawlId}.log` }).click();
     URL.revokeObjectURL(url);
@@ -167,7 +214,7 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
       <Container maxW="7xl" pt="5" pb="5">
         <Breadcrumb.Root size="sm" mb="3">
           <Breadcrumb.List>
-            <Breadcrumb.Item><Breadcrumb.Link asChild><RouterLink to={`/${state.settings.site}/crawls`}>Crawls</RouterLink></Breadcrumb.Link></Breadcrumb.Item>
+            <Breadcrumb.Item><Breadcrumb.Link asChild><RouterLink to={returnPath(from, state.settings.site, `/${state.settings.site}/crawls`)}>Crawls</RouterLink></Breadcrumb.Link></Breadcrumb.Item>
             <Breadcrumb.Separator />
             <Breadcrumb.Item><Breadcrumb.CurrentLink>{crawlId}</Breadcrumb.CurrentLink></Breadcrumb.Item>
           </Breadcrumb.List>
@@ -226,19 +273,19 @@ function RunHeader({ run, onFullLighthouse }: { run: RunView; onFullLighthouse: 
               </HStack>
             </Fact>
           ) : (
-            <Fact label="Trigger">Schedule · daily 02:00</Fact>
+            <Fact label="Trigger">{trigger}</Fact>
           )}
-          <Fact label="Started">Nov 4, 02:00 UTC</Fact>
+          <Fact label="Started">{state.dataset.startedAt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC</Fact>
           <Fact label={active ? "Elapsed" : "Duration"}>
             {fmtDur(state.t)}
             {paused && <Span color="fg.muted"> · paused</Span>}
-            {running && run.runEta != null && <Span color="fg.muted"> · done ~{fmtClock(state.t + run.runEta).slice(0, 5)}</Span>}
+            {running && run.runEta != null && <Span color="fg.muted"> · done ~{fmtClock(state.t + run.runEta, state.dataset.startedAt).slice(0, 5)}</Span>}
           </Fact>
           <Fact label="Pages">
             {fmtNum(c.done)}
             {c.status === "running" && (
-              <Tooltip content={`Estimate: median of the last ${PREVIOUS_CRAWLS.length} crawls (${ESTIMATED_PAGES.toLocaleString("en-US")})`} showArrow>
-                <Span color="fg.muted" textDecoration="underline dotted" textUnderlineOffset="3px" cursor="help"> / ~{fmtNum(ESTIMATED_PAGES)}</Span>
+              <Tooltip content={"URLs in the saved replay inventory"} showArrow>
+                <Span color="fg.muted" textDecoration="underline dotted" textUnderlineOffset="3px" cursor="help"> / {fmtNum(run.target)}</Span>
               </Tooltip>
             )}
           </Fact>
@@ -287,7 +334,7 @@ function Sidebar({ run, steps, job, selected, onSelect, onFullLighthouse }: {
               <Stack gap="0" flex="1" minW="0">
                 <Text textStyle="sm" fontWeight="medium" color={lhDone ? undefined : "fg.muted"}>Lighthouse · full site</Text>
                 <Text textStyle="xs" color="fg.muted" truncate>
-                  {lhDone ? `Optional · ~${fmtDur(FULL_LH_SEC)}` : run.failed ? "Optional · needs a successful run" : "Optional · after the run finishes"}
+                  {lhDone ? `Optional · ~${fmtDur(fullAuditDuration(run.state.crawl.done))}` : run.failed ? "Optional · needs a successful run" : "Optional · after the run finishes"}
                 </Text>
               </Stack>
               {lhDone && <Button size="2xs" variant="outline" onClick={onFullLighthouse}>Run</Button>}
@@ -303,17 +350,20 @@ function Sidebar({ run, steps, job, selected, onSelect, onFullLighthouse }: {
 
 // Sparkline: this crawl vs the last 19. One number, one line; hover for each run.
 function CrawlTrend({ run }: { run: RunView }) {
-  const c = run.state.crawl;
-  const live = c.status === "running";
-  const current = c.endedAt ?? (run.crawlEta != null ? run.state.t + run.crawlEta : run.state.t);
+  const crawlId = useCrawlId();
+  const site = useSite();
+  const previous = useMemo(() => crawlsFor(site).filter((c) => c.status === "success" && Number(c.id) < Number(crawlId)).slice(0, 19).reverse(), [site, crawlId]);
+  const typical = median(previous.map((c) => c.durationSec), (value) => value);
+  const live = run.runStatus === "crawling" || run.runStatus === "processing" || run.runStatus === "paused";
+  const current = run.state.t + (run.runEta ?? 0);
   return (
     <Box px="2">
       {/* One font, one size; only the value is emphasised */}
       <HStack justify="space-between" textStyle="xs" color="fg.muted" fontVariantNumeric="tabular-nums">
-        <Text>Crawl duration</Text>
-        <Text><Span color="fg">{live ? "~" : ""}{fmtDur(current)}</Span> · median 21m</Text>
+        <Text>Run duration</Text>
+        <Text><Span color="fg">{live ? "~" : ""}{fmtDur(current)}</Span>{typeof typical === "number" ? ` · median ${fmtDur(typical)}` : ""}</Text>
       </HStack>
-      <HistoryChart compact h="12" current={current} live={live} />
+      <HistoryChart compact h="12" previous={previous} crawlId={crawlId} median={typeof typical === "number" ? typical : null} current={current} live={live} />
     </Box>
   );
 }
@@ -359,7 +409,14 @@ function StepPane({ run, step, onFullLighthouse }: { run: RunView; step: StepInf
     ...(step.kind === "crawl" ? [{ v: "pages", label: "Pages", count: c.done }] : []),
     ...(isLh ? [{ v: "scores", label: "Scores" }] : []),
   ];
-  const [tab, setTab] = useState("logs");
+  const [params, setParams] = useSearchParams();
+  const tab = tabs.find(({ v }) => v === params.get("tab"))?.v ?? "logs";
+  const setTab = (value: string) => {
+    const next = new URLSearchParams(params);
+    next.set("step", step.id);
+    if (value === "logs") next.delete("tab"); else next.set("tab", value);
+    setParams(next, { replace: true });
+  };
 
   return (
     <Box borderWidth="1px" rounded="l3" minW="0">
@@ -376,7 +433,7 @@ function StepPane({ run, step, onFullLighthouse }: { run: RunView; step: StepInf
           <Text textStyle="sm" color="fg.muted">{step.stage?.description ?? "Fetch and render every URL on the site"}</Text>
         </Stack>
         <HStack gap="5" textStyle="sm" color="fg.muted">
-          {step.startedAt != null && <HStack gap="1.5"><Text>Started</Text><Text color="fg" fontVariantNumeric="tabular-nums">{fmtClock(step.startedAt)}</Text></HStack>}
+          {step.startedAt != null && <HStack gap="1.5"><Text>Started</Text><Text color="fg" fontVariantNumeric="tabular-nums">{fmtClock(step.startedAt, run.state.dataset.startedAt)}</Text></HStack>}
           <HStack gap="1.5"><LuTimer /><Text color="fg" fontVariantNumeric="tabular-nums">{step.dur != null ? fmtDur(step.dur) : "—"}</Text><Text>/ usual ~{fmtDur(step.expected)}</Text></HStack>
         </HStack>
       </Flex>
@@ -399,7 +456,7 @@ function StepPane({ run, step, onFullLighthouse }: { run: RunView; step: StepInf
       {step.kind === "crawl" && c.backoffUntil && (
         <Alert.Root status="warning" rounded="0" borderTopWidth="1px">
           <Alert.Indicator />
-          <Alert.Title>Rate limited by shop.example.com. Concurrency dropped from 64 to 16 until the 429s stop.</Alert.Title>
+          <Alert.Title>Simulated rate limit on {hostOf(run.state.settings.url)}. Concurrency is reduced until the 429s stop.</Alert.Title>
         </Alert.Root>
       )}
 
@@ -414,14 +471,14 @@ function StepPane({ run, step, onFullLighthouse }: { run: RunView; step: StepInf
         </Tabs.List>
         <Box p="5">
           <Tabs.Content value="logs" p="0">
-            <LogViewer lines={step.logs} running={step.status === "running"} fileName={`crawl-${crawlId}-${step.id}.log`} />
+            <LogViewer startedAt={run.state.dataset.startedAt} lines={step.logs} running={step.status === "running"} fileName={`crawl-${crawlId}-${step.id}.log`} />
           </Tabs.Content>
           <Tabs.Content value="metrics" p="0">
             {step.kind === "crawl" ? <CrawlMetrics run={run} /> : <StepMetrics step={step} />}
           </Tabs.Content>
           {step.kind === "crawl" && (
             <Tabs.Content value="pages" p="0">
-              <PagesTable done={c.done} />
+              <PagesTable pages={run.state.dataset.pages} done={c.done} />
             </Tabs.Content>
           )}
           {isLh && (
@@ -444,11 +501,11 @@ function CrawlMetrics({ run }: { run: RunView }) {
         <Fact label="Rate">{c.status === "running" ? `${Math.round(run.rate)} pages/s` : `${(c.done / Math.max(1, (c.endedAt ?? 1))).toFixed(0)} pages/s avg`}</Fact>
         <Fact label="URLs discovered">{fmtNum(c.discovered)}</Fact>
         <Fact label="Queue">{fmtNum(queue)}</Fact>
-        <Fact label="Median render">2.1s</Fact>
+        <Fact label="Median fetch">{median(run.state.dataset.pages.slice(0, c.done).flatMap((p) => p.fetchMs == null ? [] : [p.fetchMs]), (ms) => `${Math.round(ms)}ms`)}</Fact>
       </DataList.Root>
       <Box>
         <Text textStyle="sm" fontWeight="medium" mb="2">Throughput and queue</Text>
-        <CrawlChart samples={c.samples} usualRate={run.usualRate} />
+        <CrawlChart startedAt={run.state.dataset.startedAt} samples={c.samples} usualRate={run.usualRate} expected={run.expectedCrawlSec} />
       </Box>
       <Box>
         <Text textStyle="sm" fontWeight="medium" mb="3">Responses</Text>
@@ -491,21 +548,21 @@ const COLS = "44px minmax(160px, 2.6fr) 56px 128px 60px 52px minmax(0, 1.6fr)";
 const PAGE_SIZE = 50;
 const SIDE_COLOR = { server: "blue", client: "purple", mixed: "orange" } as const;
 
-function PagesTable({ done }: { done: number }) {
+function PagesTable({ pages, done }: { pages: PageRow[]; done: number }) {
   const crawlId = useCrawlId();
+  const site = useSite();
+  const search = useSearchParams()[0].toString();
+  const from = `/${site}/crawls/${crawlId}${search ? `?${search}` : ""}`;
   const [filter, setFilter] = useState<PageFilter>("all");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<number | null>(null);
   const [page, setPage] = useState(1);
-  // Real backend: GET /api/crawls/{crawl_id}/pages?filter=…&q=…&cursor=…&limit=50 returns one page; counts come from a separate query.
-  // Here the rows are generated in the browser and sliced to the same page size.
-  const bucket = Math.floor(done / 500) * 500; // recompute every 500 pages, not every tick
-  const all = useMemo(() => Array.from({ length: Math.max(done, bucket) }, (_, i) => pageAt(i)), [bucket]); // eslint-disable-line react-hooks/exhaustive-deps
-  const counts = useMemo(() => Object.fromEntries(PAGE_FILTERS.map((f) => [f.v, all.filter((p) => matches(p, f.v)).length])), [all]);
-  const rows = useMemo(() => {
+  const searched = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return all.filter((p) => matches(p, filter) && (!q || p.path.toLowerCase().includes(q) || p.finalPath?.toLowerCase().includes(q)));
-  }, [all, filter, query]);
+    return pages.slice(0, done).filter((p) => !q || p.path.toLowerCase().includes(q) || p.finalPath?.toLowerCase().includes(q));
+  }, [pages, done, query]);
+  const counts = useMemo(() => Object.fromEntries(PAGE_FILTERS.map((f) => [f.v, searched.filter((p) => matches(p, f.v)).length])), [searched]);
+  const rows = useMemo(() => searched.filter((p) => matches(p, filter)), [searched, filter]);
 
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const changeFilter = (f: PageFilter) => { setFilter(f); setPage(1); setOpen(null); };
@@ -524,7 +581,7 @@ function PagesTable({ done }: { done: number }) {
         value={filter} onValue={changeFilter}
         count={query ? `${rows.length.toLocaleString("en-US")} matches` : ""}
         copyLabel="Copy visible URLs" onCopy={() => navigator.clipboard.writeText(rows.map((p) => p.path).join("\n"))}
-        downloadLabel="Download all pages (.csv)" onDownload={() => downloadText(toCsv(all), `crawl-${crawlId}-pages.csv`, "text/csv")}
+        downloadLabel="Download these pages (.csv)" onDownload={() => downloadText(toCsv(rows), `crawl-${crawlId}-pages.csv`, "text/csv")}
       />
       <Box overflowX="auto">
         <Box minW="760px">
@@ -532,10 +589,10 @@ function PagesTable({ done }: { done: number }) {
             <Text textAlign="right">#</Text><Text>URL</Text><Text>Status</Text><Text>Redirect</Text><Text textAlign="right">Fetch</Text><Text textAlign="right">Render</Text><Text>Final URL / note</Text>
           </Grid>
           {rows.length === 0 ? (
-            <Text p="4" textStyle="sm" color="fg.muted">{all.length ? "No pages match." : "No pages yet."}</Text>
+            <Text p="4" textStyle="sm" color="fg.muted">{done ? "No pages match." : "No pages yet."}</Text>
           ) : (
             pageRows.map((p) => (
-              <PageRowView key={p.n} p={p} open={open === p.n} onToggle={() => setOpen((o) => (o === p.n ? null : p.n))} />
+              <PageRowView key={p.n} p={p} href={`/${site}/pages/${p.id}${queryString({ crawl: p.crawl, vs: "none", from })}`} open={open === p.n} onToggle={() => setOpen((o) => (o === p.n ? null : p.n))} />
             ))
           )}
         </Box>
@@ -557,7 +614,7 @@ function statusBadge(p: PageRow) {
   return { t: "200", c: "green" };
 }
 
-function PageRowView({ p, open, onToggle }: { p: PageRow; open: boolean; onToggle: () => void }) {
+function PageRowView({ p, href, open, onToggle }: { p: PageRow; href: string; open: boolean; onToggle: () => void }) {
   const status = statusBadge(p);
   const side = redirectSide(p);
   const expandable = p.hops.length > 1; // a single hop is fully described by the row itself
@@ -569,7 +626,7 @@ function PageRowView({ p, open, onToggle }: { p: PageRow; open: boolean; onToggl
         onClick={expandable ? onToggle : undefined} aria-expanded={expandable ? open : undefined}
       >
         <Text textAlign="right" color="fg.muted" fontVariantNumeric="tabular-nums">{p.n}</Text>
-        <Text fontFamily="mono" truncate title={p.path}>{p.path}</Text>
+        <Text asChild fontFamily="mono" truncate title={p.path} _hover={{ textDecoration: "underline" }}><RouterLink to={href}>{p.path}</RouterLink></Text>
         <Box><Badge size="xs" variant="subtle" colorPalette={status.c}>{status.t}</Badge></Box>
         <HStack gap="1.5">
           {side ? (
@@ -606,22 +663,27 @@ function PageRowView({ p, open, onToggle }: { p: PageRow; open: boolean; onToggl
 
 // ───────────────────────── Lighthouse scores ─────────────────────────
 
-const SAMPLE = { performance: 72, accessibility: 91, "best practices": 96, seo: 98 };
-const FULL = { performance: 70, accessibility: 90, "best practices": 95, seo: 97 };
+function median<T>(values: number[], format: (value: number) => T) {
+  if (!values.length) return "—";
+  const sorted = [...values].sort((a, b) => a - b);
+  return format((sorted[Math.floor((sorted.length - 1) / 2)] + sorted[Math.floor(sorted.length / 2)]) / 2);
+}
 
 function Scores({ run, step, onFullLighthouse }: { run: RunView; step: StepInfo; onFullLighthouse: () => void }) {
   const full = step.kind === "job";
   const ready = step.status === "success";
-  const scores = full ? FULL : SAMPLE;
+  const scored = full ? run.state.dataset.pages.filter((p) => p.performance != null) : run.audited;
+  const performance = median(scored.map((p) => p.performance!), Math.round);
+  const scores = { performance: typeof performance === "number" ? performance : null, accessibility: null, "best practices": null, seo: null };
   return (
     <Stack gap="5">
       <Text textStyle="sm" color="fg.muted">
-        {full ? `Median scores across all ${fmtNum((step.stage as FullJob).pagesTotal)} pages.` : "Median scores across a sample of 200 pages."}
+        {`Median sample performance score across ${fmtNum(scored.length)} pages with stored results. Other scores are unavailable.`}
         {!ready && " Scores appear when the audit finishes."}
       </Text>
       <Grid templateColumns="repeat(4, minmax(0, 1fr))" gap="4">
         {Object.entries(scores).map(([k, v]) => {
-          const color = !ready ? "gray" : v >= 90 ? "green" : v >= 50 ? "orange" : "red";
+          const color = !ready || v == null ? "gray" : v >= 90 ? "green" : v >= 50 ? "orange" : "red";
           return (
             <Stack key={k} align="center" gap="2" borderWidth="1px" rounded="l2" py="4">
               <ProgressCircle.Root value={ready ? v : null} size="xl" colorPalette={color}>
@@ -629,7 +691,7 @@ function Scores({ run, step, onFullLighthouse }: { run: RunView; step: StepInfo;
                   <ProgressCircle.Track />
                   <ProgressCircle.Range strokeLinecap="round" />
                 </ProgressCircle.Circle>
-                {ready && <ProgressCircle.ValueText />}
+                {ready && (v == null ? <Text position="absolute" fontWeight="semibold">—</Text> : <ProgressCircle.ValueText />)}
               </ProgressCircle.Root>
               <Text textStyle="sm">{k === "seo" ? "SEO" : k[0].toUpperCase() + k.slice(1)}</Text>
             </Stack>
@@ -641,7 +703,7 @@ function Scores({ run, step, onFullLighthouse }: { run: RunView; step: StepInfo;
           <Alert.Indicator><LuGauge /></Alert.Indicator>
           <Alert.Content>
             <Alert.Title>Need every page?</Alert.Title>
-            <Alert.Description>A full audit of {fmtNum(run.state.crawl.done)} pages takes about {fmtDur(FULL_LH_SEC)}. It runs as a separate job and reuses this crawl.</Alert.Description>
+            <Alert.Description>A full audit of {fmtNum(run.state.crawl.done)} pages takes about {fmtDur(fullAuditDuration(run.state.crawl.done))}. It runs as a separate job and reuses this crawl.</Alert.Description>
           </Alert.Content>
           <Button size="xs" alignSelf="center" onClick={onFullLighthouse}>Run full audit</Button>
         </Alert.Root>
@@ -656,7 +718,7 @@ function PrototypeBar({ scenario, onScenario, onSkip, canSkip }: {
 }) {
   return (
     <HStack gap="1" px="4" py="1.5" borderBottomWidth="1px" bg="bg.muted" wrap="wrap">
-      <Text textStyle="xs" fontWeight="semibold" color="fg.subtle" textTransform="uppercase" letterSpacing="wider" me="2">Prototype</Text>
+      <Text textStyle="xs" fontWeight="semibold" color="fg.subtle" textTransform="uppercase" letterSpacing="wider" me="2">Simulation</Text>
       {SCENARIOS.map((x) => (
         <Button key={x.v} size="xs" variant={scenario === x.v ? "subtle" : "ghost"} onClick={() => onScenario(x.v)}>{x.label}</Button>
       ))}

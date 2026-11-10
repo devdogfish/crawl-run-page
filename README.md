@@ -1,8 +1,21 @@
 # Crawl run page
 
-[Live demo](https://crawl-run-page.vercel.app) · All audit results are simulated.
+[Live demo](https://rbc-analytics.demo.girke.dev) · Original UI, captured public pages, sample crawl history.
 
-A Chakra UI v3 prototype of the crawler UI (crawls, run page, pages, issues, settings, Cmd+K search, Ask AI): a React + Vite single-page app with React Router, ready to drop into the app. Audit results are simulated in the browser. Selected featured page titles and URLs come from the public sites; their source inventory is in `src/lib/public-pages.json`. The AI (Cmd+K's fallback, Ask AI's agent and the MCP server) runs in a small Python backend in `backend/`, built to be copied into the real FastAPI app.
+A Chakra UI v3 crawler dashboard built with React, Vite and React Router. Overview, Pages, Issues and Crawls read the same checked-in JSON records, with shareable filters and drilldowns. The static Vercel deployment needs no database. Ask AI uses scripted answers; the optional Python backend lives in `backend/`.
+
+## Demo data
+
+- `src/data/public-pages.json`: 72 real public page URLs and titles from RBC Capital Markets and RBC Investor Services.
+- `html-snapshots.json`, `html-stylesheets.json`: captured public HTML and deduplicated CSS, with source URLs, capture timestamps, HTTP status and response time. Preview and source use the captured document. Images and fonts load from the original public hosts. Scripts, embedded frames and active form behavior are stripped; the preview is sandboxed.
+- `captured-findings.json`: conservative static HTML checks tied to actual selectors/snippets. Performance findings are explicitly sample data, not measured Lighthouse audits.
+- `crawl-history.json`: simulated crawl membership, content changes, error states and lab measurements. Counts, trends, comparisons, response totals and Lighthouse coverage use these records.
+- `traffic.json`: simulated 30-day page views used by the legacy urgency view.
+- `sample-pages.json`, `legacy-audit-findings.json`: QA profiles reuse public captures; four compatibility records retain old demo links and explicitly show unavailable HTML.
+
+The JSON dataset is approximately **7.4 MB**. `pnpm check:data` enforces a **20,000,000-byte cap** across JSON under `src/` and `public/`, and runs before every build. Refresh public captures with `node scripts/capture-pages.mjs`; the script limits captures to an 18 MB budget, leaving room for history and fixtures.
+
+An issue means one failing rule on one page. Element counts represent individual failures. Shared/page-specific element charts partition those elements; a rule can occur in both. Crawl history and performance metrics are illustrative, not claims about the public sites' historical behavior.
 
 Docs, in the order to read them:
 
@@ -24,7 +37,7 @@ pnpm install
 pnpm dev
 ```
 
-Open http://localhost:5173 (`pnpm dev`; `pnpm build` writes a static `dist/`). It opens the original Overview at `/rbccm/analytics` (or the site you used last). Switch sites with the logo menu in the top-left. Crawl 812 is a live simulation; older crawls open finished; **New crawl** starts a new simulated crawl with your settings.
+Open http://localhost:5173 (`pnpm dev`; `pnpm build` writes a static `dist/`). It opens the original Overview at `/rbccm/analytics` (or the site you used last). Switch sites with the logo menu in the top-left. Crawl 812 is a sample active run; older crawls open their recorded state. **New crawl** starts a local simulation with your settings.
 
 **The AI** needs two more processes (Python via `uv`, and the Codex CLI signed in, which stands in for the corporate gateway):
 
@@ -40,7 +53,7 @@ The grey **Prototype** bar at the top only exists in this prototype:
 - **Restart** runs it again;
 - **Skip stage** jumps to the end of the current step.
 
-A simulated run takes about a minute; the full-site Lighthouse job takes about 11 seconds.
+Replay controls simulate processing the saved page inventory; they do not crawl the live sites.
 
 ## What's where
 
@@ -72,10 +85,17 @@ A simulated run takes about a minute; the full-site Lighthouse job takes about 1
 | `src/components/ui/*` | Chakra CLI snippets (provider, tooltip, color mode, toaster) | Use your app's own |
 | `src/lib/types.ts` | Shared types and formatters | Yes (align with the API models) |
 | `src/lib/crawl.ts` | **Simulator** for the crawl and steps (incl. pause/resume and the log format) | No, replaced by the API |
-| `src/lib/crawls-list.ts` | **Fake data** for the crawls list | No, replaced by `GET /api/crawls` |
-| `src/lib/pages.ts` | **Simulator** for per-page rows (redirect chains etc.) | No (keep the `PageRow` type) |
+| `src/lib/crawls-list.ts` | Stored demo crawl metadata and page coverage | No, replaced by `GET /api/crawls` |
+| `src/lib/pages.ts` | Crawl rows derived from the shared page inventory | No (keep the `PageRow` type) |
 
 ## Notes
 - Built with Vite, React 19, React Router, `@chakra-ui/react` 3.38, `@chakra-ui/charts` 3.38 (Recharts 3) and `react-virtuoso`.
 - Recharts 3 needs the `responsive` prop on every chart inside Chakra's `Chart.Root`, or nothing renders.
-- All times in the simulator are relative to 02:00 UTC on 2026-11-04.
+- Crawl dates, durations, outcomes and page coverage come from the same JSON history on every route.
+
+
+## Vercel hosting
+
+Production: https://rbc-analytics.demo.girke.dev (project `crawl-run-page`). The default https://crawl-run-page.vercel.app alias remains available. DNS is managed at Spaceship: `rbc-analytics.demo` is a CNAME to `d0857d0f6e65c5bb.vercel-dns-017.com`. Vercel verifies ownership using the `_vercel` TXT record and manages HTTPS.
+
+Deploy from this repository with `vercel --prod --yes --scope ydas-projects-3c771dde --build-env VITE_AI=scripted`. The build runs the JSON size guard, TypeScript, and Vite. Run `pnpm test` before deployment.

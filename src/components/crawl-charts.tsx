@@ -2,10 +2,11 @@
 import { useMemo } from "react";
 import { BarSegment, Chart, useChart } from "@chakra-ui/charts";
 import { Area, CartesianGrid, ComposedChart, Legend, Line, LineChart, ReferenceLine, Tooltip as RTooltip, XAxis, YAxis } from "recharts";
-import { USUAL_CRAWL_SEC, type CodeBucket } from "@/lib/crawl";
+import type { CodeBucket } from "@/lib/crawl";
+import type { CrawlRow } from "@/lib/crawls-list";
 import { fmtClock, fmtDur, fmtNum } from "@/lib/types";
 
-export function CrawlChart({ samples, usualRate }: { samples: { t: number; pagesPerSec: number; queue: number }[]; usualRate: number }) {
+export function CrawlChart({ samples, usualRate, expected, startedAt }: { samples: { t: number; pagesPerSec: number; queue: number }[]; usualRate: number; expected: number; startedAt: Date }) {
   const chart = useChart({
     data: samples,
     series: [
@@ -20,11 +21,11 @@ export function CrawlChart({ samples, usualRate }: { samples: { t: number; pages
           <Chart.Gradient id="crawl-rate" stops={[{ offset: "0%", color: "blue.solid", opacity: 0.4 }, { offset: "100%", color: "blue.solid", opacity: 0.02 }]} />
         </defs>
         <CartesianGrid stroke={chart.color("border.muted")} vertical={false} />
-        <XAxis dataKey="t" type="number" domain={[0, (d: number) => Math.max(d, USUAL_CRAWL_SEC)]} tickFormatter={(t) => fmtDur(t)} tickLine={false} fontSize={11} stroke={chart.color("border")} />
+        <XAxis dataKey="t" type="number" domain={[0, (d: number) => Math.max(d, expected)]} tickFormatter={(t) => fmtDur(t)} tickLine={false} fontSize={11} stroke={chart.color("border")} />
         <YAxis yAxisId="rate" width={36} tickLine={false} axisLine={false} fontSize={11} stroke={chart.color("border")} />
         <YAxis yAxisId="queue" orientation="right" tickFormatter={fmtNum} width={44} tickLine={false} axisLine={false} fontSize={11} stroke={chart.color("border")} />
         <ReferenceLine yAxisId="rate" y={Math.round(usualRate)} stroke={chart.color("fg.subtle")} strokeDasharray="4 4" label={{ value: "usual rate", position: "insideTopLeft", fontSize: 10, fill: chart.color("fg.muted") }} />
-        <RTooltip animationDuration={0} content={<Chart.Tooltip labelFormatter={(t) => (Number.isFinite(Number(t)) ? fmtClock(Number(t)) : "")} formatter={(v) => fmtNum(Number(v))} />} />
+        <RTooltip animationDuration={0} content={<Chart.Tooltip labelFormatter={(t) => (Number.isFinite(Number(t)) ? fmtClock(Number(t), startedAt) : "")} formatter={(v) => fmtNum(Number(v))} />} />
         <Legend verticalAlign="top" align="right" height={24} content={<Chart.Legend />} />
         <Area yAxisId="rate" isAnimationActive={false} type="monotone" dataKey={chart.key("pagesPerSec")} stroke={chart.color("blue.solid")} fill="url(#crawl-rate)" strokeWidth={2} />
         <Line yAxisId="queue" isAnimationActive={false} type="monotone" dataKey={chart.key("queue")} stroke={chart.color("orange.solid")} strokeDasharray="4 3" dot={false} strokeWidth={1.5} />
@@ -56,14 +57,11 @@ export function CodesBar({ codes }: { codes: Record<CodeBucket, number> }) {
 }
 
 // Past crawl durations; the last point is this run (projected and hollow while crawling)
-export function HistoryChart({ current, live, h = "32", compact = false }: { current: number; live: boolean; h?: string; compact?: boolean }) {
-  const data = useMemo(() => {
-    const past = Array.from({ length: 19 }, (_, i) => ({
-      run: `#${793 + i}`,
-      minutes: +(21 + 1.6 * Math.sin(i * 1.1) + (i === 12 ? 6.5 : 0)).toFixed(1),
-    }));
-    return [...past, { run: "#812", minutes: +(current / 60).toFixed(1) }];
-  }, [current]);
+export function HistoryChart({ previous, crawlId, median, current, live, h = "32", compact = false }: {
+  previous: CrawlRow[]; crawlId?: string; median: number | null; current: number; live: boolean; h?: string; compact?: boolean;
+}) {
+  const data = useMemo(() => [...previous.map(({ id, durationSec }) => ({ run: `#${id}`, minutes: durationSec / 60 })),
+    { run: `#${crawlId}`, minutes: current / 60 }], [previous, crawlId, current]);
   const chart = useChart({ data, series: [{ name: "minutes", color: "blue.solid", label: "Minutes" }] });
   return (
     <Chart.Root chart={chart} h={h}>
@@ -72,8 +70,8 @@ export function HistoryChart({ current, live, h = "32", compact = false }: { cur
         <XAxis dataKey="run" hide={compact} tickLine={false} axisLine={false} fontSize={11} stroke={chart.color("border")} interval="preserveStartEnd" minTickGap={40} />
         <YAxis hide={compact} tickFormatter={(v) => `${v}m`} width={36} tickLine={false} axisLine={false} fontSize={11} stroke={chart.color("border")}
           domain={compact ? [(min: number) => Math.floor(min - 2), (max: number) => Math.ceil(max + 2)] : [0, (max: number) => Math.ceil((max + 2) / 10) * 10]} />
-        <ReferenceLine y={21} stroke={chart.color("fg.subtle")} strokeDasharray="4 4" label={compact ? undefined : { value: "median", position: "insideTopLeft", fontSize: 10, fill: chart.color("fg.muted") }} />
-        <RTooltip animationDuration={0} cursor={compact ? false : undefined} content={<Chart.Tooltip formatter={(v) => `${v} min`} />} />
+        {median != null && <ReferenceLine y={median / 60} stroke={chart.color("fg.subtle")} strokeDasharray="4 4" label={compact ? undefined : { value: "median", position: "insideTopLeft", fontSize: 10, fill: chart.color("fg.muted") }} />}
+        <RTooltip animationDuration={0} cursor={compact ? false : undefined} content={<Chart.Tooltip formatter={(v) => fmtDur(Number(v) * 60)} />} />
         <Line
           isAnimationActive={false}
           type="monotone"

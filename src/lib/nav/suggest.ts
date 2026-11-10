@@ -8,7 +8,7 @@ import { loadRules } from "@/lib/custom-rules";
 import { crawlsFor } from "@/lib/crawls-list";
 import { RULE_CATALOG, sevRank } from "@/lib/page-issues";
 import { hitsFor } from "@/lib/site-issues";
-import { defaultCrawl } from "@/lib/site-pages";
+import { currentIssueCounts, defaultCrawl, pagesFor } from "@/lib/site-pages";
 import { issueId, resolveIssue } from "@/lib/refs";
 import { asSite, pageIndex } from "./index";
 import { FACETS, type TokenMode } from "./chips";
@@ -84,12 +84,9 @@ const pageCache = new Map<string, number[]>();
 function worstPages(site: SiteId) {
   let pages = pageCache.get(site);
   if (pages) return pages;
-  const score = new Map<number, number>();
-  for (const h of hitsFor(site, Number(defaultCrawl(site).id), null)) {
-    if (h.shared || !RULE_CATALOG[h.rule]) continue;
-    score.set(h.p.i, (score.get(h.p.i) ?? 0) + h.elements * (RULE_CATALOG[h.rule].severity === "critical" ? 1000 : 1));
-  }
-  pages = [...score.entries()].sort((a, b) => b[1] - a[1]).map(([i]) => i);
+  pages = pagesFor(site, Number(defaultCrawl(site).id), null)
+    .map((page) => ({ id: page.i, ...currentIssueCounts(page) })).filter(({ total }) => total > 0)
+    .sort((a, b) => b.critical - a.critical || b.total - a.total || a.id - b.id).map(({ id }) => id);
   pageCache.set(site, pages);
   return pages;
 }

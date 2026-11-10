@@ -10,7 +10,7 @@
 //   dashboard → (default) what the prior-art research recommends: report's single column, explorer's scope as a
 //               sticky bar, ranked "points at stake" fixes, trend with target and change markers, crawl diff
 // Data: src/lib/analytics.ts (always the latest finished crawl; the range only changes how far back trends look).
-import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { useSearchParams } from "react-router";
 import { Box, Button, Container, Flex, HStack, Heading, Icon, Menu, Portal, Text } from "@chakra-ui/react";
 
@@ -38,16 +38,16 @@ export default function AnalyticsPage() {
 
 function Analytics() {
   const site = useSite();
-  const sp = useSearchParams()[0];
-  const [v, setV] = useState<Variant>(() => (VARIANTS.some((x) => x.value === sp.get("v")) ? (sp.get("v") as Variant) : "summary"));
-  const [range, setRange] = useState<Range>(() => (RANGES.some((x) => x.value === sp.get("range")) ? (sp.get("range") as Range) : "30"));
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    if (v === "summary") p.delete("v"); else p.set("v", v);
-    if (range === "30") p.delete("range"); else p.set("range", range);
-    const q = p.toString();
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}${q ? `?${q}` : ""}`);
-  }, [v, range]);
+  const [sp, setSp] = useSearchParams();
+  const v = (VARIANTS.find((x) => x.value === sp.get("v"))?.value ?? "summary") as Variant;
+  const range = (RANGES.find((x) => x.value === sp.get("range"))?.value ?? "30") as Range;
+  const update = (key: string, value: string, fallback: string) => {
+    const next = new URLSearchParams(sp);
+    if (value === fallback) next.delete(key); else next.set(key, value);
+    setSp(next, { replace: true });
+  };
+  const setV = (value: Variant) => update("v", value, "summary");
+  const setRange = (value: Range) => update("range", value, "30");
 
   const header = (filters?: ReactNode) => (
       <Box borderBottomWidth="1px" bg="bg.subtle">
@@ -77,6 +77,7 @@ function Analytics() {
           </HStack>
           {filters && <Box minW="0">{filters}</Box>}
           </Flex>
+          <Text textStyle="xs" color="fg.muted" mt="3">Demo · Public page captures with sample audit results and crawl history</Text>
         </Container>
       </Box>
   );

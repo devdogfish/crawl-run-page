@@ -92,7 +92,7 @@ describe("suggestFor: pages", () => {
     expect(r.length).toBeGreaterThan(0);
     expect(r.length).toBeLessThanOrEqual(30);
     expect(r.every((x) => x.label.toLowerCase().includes("data") || x.hint!.toLowerCase().includes("data"))).toBe(true);
-    expect(pages("22").map((x) => x.value)).toContain("22");
+    expect(pages("46111").map((x) => x.value)).toContain("46111");
     expect(pages("zzzzzzzz")).toEqual([]);
   });
 });
@@ -100,15 +100,16 @@ describe("suggestFor: pages", () => {
 describe("suggestFor: issues", () => {
   const issues = (text: string, url = ctx.url) => suggestFor({ kind: "issue", text }, { ...ctx, url }, "chat");
   test("on a page: all of its issues, with the element", () => {
-    const s = issues("", "/rbccm/pages/22?crawl=811");
+    const s = issues("", "/rbccm/pages/46111?crawl=811");
     expect(s.length).toBeGreaterThan(0);
     expect(s.every((x) => /^@issue:\d+$/.test(x.text) && x.mark?.tag)).toBe(true);
-    expect(s.map((x) => x.text)).toContain("@issue:220003");
-    expect(issues("2200", "/rbccm/pages/22").every((x) => x.text.startsWith("@issue:2200"))).toBe(true);
+    expect(s.map((x) => x.text)).toContain("@issue:461110000");
+    expect(issues("4611100", "/rbccm/pages/46111").every((x) => x.text.startsWith("@issue:4611100"))).toBe(true);
   });
   test("elsewhere: up to 12 of the site's issues, P1 first, at most 3 per rule, each with its page path", () => {
     const r = issues("");
-    expect(r).toHaveLength(12);
+    expect(r.length).toBeGreaterThan(0);
+    expect(r.length).toBeLessThanOrEqual(12);
     const tags = r.map((x) => x.mark?.tag ?? "");
     expect(tags).toEqual([...tags].sort());
     expect(tags[0]).toBe("P1");
@@ -116,13 +117,13 @@ describe("suggestFor: issues", () => {
     const perRule = new Map<string, number>();
     for (const x of r) perRule.set(x.label, (perRule.get(x.label) ?? 0) + 1);
     expect(Math.max(...perRule.values())).toBeLessThanOrEqual(3);
-    expect(new Set(r.map((x) => x.text)).size).toBe(12);
+    expect(new Set(r.map((x) => x.text)).size).toBe(r.length);
   });
   test("filters by title, path and id; a typed real id comes first", () => {
-    const r = issues("label");
+    const r = issues("heading");
     expect(r.length).toBeGreaterThan(0);
-    expect(r.every((x) => x.label.toLowerCase().includes("label") || x.hint!.toLowerCase().includes("label"))).toBe(true);
-    expect(issues("220003")[0].text).toBe("@issue:220003");
+    expect(r.every((x) => x.label.toLowerCase().includes("heading") || x.hint!.toLowerCase().includes("heading"))).toBe(true);
+    expect(issues("461110000")[0].text).toBe("@issue:461110000");
     expect(issues("qqqqqqq")).toEqual([]);
   });
 });

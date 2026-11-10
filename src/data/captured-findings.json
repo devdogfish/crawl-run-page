@@ -1,0 +1,1719 @@
+{
+  "provenance": "Conservative static checks on stored public HTML. Sample entries illustrate the audit workflow on elements that exist in the capture.",
+  "rbccm": {
+    "0": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815793562 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "1": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1575500829941 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "2": [
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "3": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1464287393572 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "4": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1784426795146 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "5": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1738646705410 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "6": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1790952514725 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "7": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1775148349455 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "8": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1683841396400 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "18": [
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "130": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815833461 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "457": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1762813311224 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "2866": [
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(1)",
+        "snippet": "<a data-dcr=\"article story data 2026 09 investors-on-the-hunt-for-fintechs-next-big-winners\" href=\"https://www.rbccm.com/en/insights/2026/09/investors-on-the-hunt-for-fintechs-next-big-winners\" class=\"related-item featured-related\" style=\"padding: 5px;\">\n         <div class=\"img-stretch featured-image\"></div>\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(2)",
+        "snippet": "<a data-dcr=\"article story data 2026 07 how-chinas-ev-strategy-is-reshaping-the-global-auto-industry\" href=\"https://www.rbccm.com/en/insights/2026/07/how-chinas-ev-strategy-is-reshaping-the-global-auto-industry\" class=\"related-item\" style=\"padding: 5px;\">\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(3)",
+        "snippet": "<a data-dcr=\"article story data 2026 06 apa-corporation-is-poised-for-an-oil-market-shift\" href=\"https://www.rbccm.com/en/insights/2026/06/apa-corporation-is-poised-for-an-oil-market-shift\" class=\"related-item\" style=\"padding: 5px;\">\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1718650353136 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "4728": [
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#collapse17868077815619 > div > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > a:nth-of-type(2)",
+        "snippet": "<a href=\"https://www.rbccm.com/assets/rbccm/docs/legal/ssi/rbc-dominion-securities-inc.-ssi.pdf\" rel=\"noopener\" data-mce-href=\"/assets/rbccm/docs/legal/ssi/rbc-dominion-securities-inc.-ssi.pdf\"></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#collapse17868077815613 > div > h4:nth-of-type(1)",
+        "snippet": "<h4>Terms of business</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "4834": [
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h3",
+        "selector": "#w1783086119809 > div > div > div > div > h3:nth-of-type(1)",
+        "snippet": "<h3>What is a cookie?</h3>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "meta-description",
+        "pattern": "head without description",
+        "selector": "head",
+        "snippet": "<head>",
+        "onPage": false,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "7541": [
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(1)",
+        "snippet": "<a data-dcr=\"article story data 2026 04 the-future-of-consumer-staples-in-an-age\" href=\"https://www.rbccm.com/en/insights/2026/04/the-future-of-consumer-staples-in-an-age\" class=\"related-item featured-related\" style=\"padding: 5px;\">\n         <div class=\"img-stretch featured-image\"></div>\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(2)",
+        "snippet": "<a data-dcr=\"article story data 2025 12 five-themes-reshaping-consumer-markets-in-2026\" href=\"https://www.rbccm.com/en/insights/2025/12/five-themes-reshaping-consumer-markets-in-2026\" class=\"related-item\" style=\"padding: 5px;\">\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(3)",
+        "snippet": "<a data-dcr=\"article story data 2026 03 the-rise-of-the-8th-continent-why-retailers-must-adapt-now\" href=\"https://www.rbccm.com/en/insights/2026/03/the-rise-of-the-8th-continent-why-retailers-must-adapt-now\" class=\"related-item\" style=\"padding: 5px;\">\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1718650353136 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "9310": [
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003247 > div > div:nth-of-type(1) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#918501\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003247 > div > div:nth-of-type(2) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#894221\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1503199895346 > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#840601\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003283 > div > div:nth-of-type(1) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#597111\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003283 > div > div:nth-of-type(2) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#900101\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003305 > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#648741\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003312 > div > div:nth-of-type(2) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#759691\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003317 > div > div:nth-of-type(1) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#896021\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003317 > div > div:nth-of-type(2) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#840521\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003324 > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#938381\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003331 > div > div:nth-of-type(1) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#76071\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003331 > div > div:nth-of-type(2) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#946431\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1472675003331 > div > div:nth-of-type(3) > div > div > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" data-toggle=\"collapse\" href=\"#955651\">Learn More\n                        <div class=\"fa fa-chevron-down rotate pull-right\"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "meta-description",
+        "pattern": "head without description",
+        "selector": "head",
+        "snippet": "<head>",
+        "onPage": false,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "11995": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1756778806852 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "12540": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815787710 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "13432": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815839298 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "14108": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815816677 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "15052": [
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "23062": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#rbccm-fc-insights-prev-conf-1",
+        "snippet": "<button class=\"rbccm-featured-conferences__insights-btn\" type=\"button\" tabindex=\"0\" id=\"rbccm-fc-insights-prev-conf-1\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"24\" viewBox=\"0 0 14 24\" fill=\"none\" aria-hidden=\"true\">\n                              <path d=\"M12.3032 1L1.41422 11.889L12.3032 22.778\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#rbccm-fc-insights-next-conf-1",
+        "snippet": "<button class=\"rbccm-featured-conferences__insights-btn\" type=\"button\" tabindex=\"0\" id=\"rbccm-fc-insights-next-conf-1\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"24\" viewBox=\"0 0 14 24\" fill=\"none\" aria-hidden=\"true\">\n                              <path d=\"M1.69678 1L12.5858 11.889L1.69678 22.778\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#rbccm-fc-insights-prev-conf-2",
+        "snippet": "<button class=\"rbccm-featured-conferences__insights-btn\" type=\"button\" tabindex=\"0\" id=\"rbccm-fc-insights-prev-conf-2\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"24\" viewBox=\"0 0 14 24\" fill=\"none\" aria-hidden=\"true\">\n                              <path d=\"M12.3032 1L1.41422 11.889L12.3032 22.778\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#rbccm-fc-insights-next-conf-2",
+        "snippet": "<button class=\"rbccm-featured-conferences__insights-btn\" type=\"button\" tabindex=\"0\" id=\"rbccm-fc-insights-next-conf-2\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"24\" viewBox=\"0 0 14 24\" fill=\"none\" aria-hidden=\"true\">\n                              <path d=\"M1.69678 1L12.5858 11.889L1.69678 22.778\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#rbccm-fc-insights-prev-conf-3",
+        "snippet": "<button class=\"rbccm-featured-conferences__insights-btn\" type=\"button\" tabindex=\"0\" id=\"rbccm-fc-insights-prev-conf-3\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"24\" viewBox=\"0 0 14 24\" fill=\"none\" aria-hidden=\"true\">\n                              <path d=\"M12.3032 1L1.41422 11.889L12.3032 22.778\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#rbccm-fc-insights-next-conf-3",
+        "snippet": "<button class=\"rbccm-featured-conferences__insights-btn\" type=\"button\" tabindex=\"0\" id=\"rbccm-fc-insights-next-conf-3\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"24\" viewBox=\"0 0 14 24\" fill=\"none\" aria-hidden=\"true\">\n                              <path d=\"M1.69678 1L12.5858 11.889L1.69678 22.778\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"></path></svg></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#heading1 > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"accordion-toggle\" role=\"button\" data-toggle=\"collapse\" data-parent=\"#accordionfaq\" href=\"#collapse1\" aria-expanded=\"false\" aria-controls=\"collapse1\">How can I register and attend an RBC Capital Markets Conference?\n                           <div class=\"\n                              fa fa-chevron-down rotate pull-right\n                            \"></div></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1776722023267 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "26213": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815824072 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "27184": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815784982 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "27405": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1575500830967 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "28810": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1756778852973 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "29280": [
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h3",
+        "selector": "#rbccm-filtered-content-1 > div:nth-of-type(2) > ul > li:nth-of-type(1) > div > h3",
+        "snippet": "<h3 class=\"rbccm-filtered-content__card-title\"><a href=\"https://www.cnbc.com/video/2026/11/02/how-the-midterms-could-impact-the-iran-war.html\" rel=\"noopener\">RBC TV: Helima Croft on CNBC</a></h3>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#media-contacts-tab1 > div > div > div > div > div > h4",
+        "snippet": "<h4><a>Sanam Heidary</a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "35117": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1786807773701 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "36226": [
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#w1464287427545 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "39160": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815782561 > div > div > div > div > h4",
+        "snippet": "<h4>All disclosures and disclaimers specifically related to RBC Clear are in this box</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "40938": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1792272436328 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "42401": [
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(1)",
+        "snippet": "<a data-dcr=\"article story data 2026 06 seizing-opportunity-across-power-utilities-and-infrastructure\" href=\"https://www.rbccm.com/en/insights/2026/06/seizing-opportunity-across-power-utilities-and-infrastructure\" class=\"related-item featured-related\" style=\"padding: 5px;\">\n         <div class=\"img-stretch featured-image\"></div>\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(2)",
+        "snippet": "<a data-dcr=\"article story data 2026 06 complexity-multiplies-for-infrastructure-to-power-the-transition\" href=\"https://www.rbccm.com/en/insights/2026/06/complexity-multiplies-for-infrastructure-to-power-the-transition\" class=\"related-item\" style=\"padding: 5px;\">\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(3)",
+        "snippet": "<a data-dcr=\"article story data 2026 07 how-chinas-ev-strategy-is-reshaping-the-global-auto-industry\" href=\"https://www.rbccm.com/en/insights/2026/07/how-chinas-ev-strategy-is-reshaping-the-global-auto-industry\" class=\"related-item\" style=\"padding: 5px;\">\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1718650353136 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "43672": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815825304 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "45308": [
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(1)",
+        "snippet": "<a data-dcr=\"article story data 2026 03 introducing-aiden-vwap-to-australia\" href=\"https://www.rbccm.com/en/insights/2026/03/introducing-aiden-vwap-to-australia\" class=\"related-item featured-related\" style=\"padding: 5px;\">\n         <div class=\"img-stretch featured-image\"></div>\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(2)",
+        "snippet": "<a data-dcr=\"article story data 2025 12 risk-factors-abound-the-global-economy\" href=\"https://www.rbccm.com/en/insights/2025/12/risk-factors-abound-the-global-economy\" class=\"related-item\" style=\"padding: 5px;\">\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "link-name",
+        "pattern": "a[href] without name",
+        "selector": "#related-sidebar > a:nth-of-type(3)",
+        "snippet": "<a data-dcr=\"article story data 2025 12 the-infrastructure-revolution-understanding-data-center-securitisation\" href=\"https://www.rbccm.com/en/insights/2025/12/the-infrastructure-revolution-understanding-data-center-securitisation\" class=\"related-item\" style=\"padding: 5px;\">\n         <div class=\"tag\"></div>\n         <div class=\"related-title\"></div>\n         <div class=\"read-watch\" style=\"margin-bottom: 0px; \"></div></a>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1718650353136 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "45996": [
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1785254323211 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "46111": [
+      {
+        "rule": "image-alt",
+        "pattern": "img without alt",
+        "selector": "#w1789815782499 > div > div > div > div > div > div:nth-of-type(1) > div > a > img",
+        "snippet": "<img src=\"https://www.rbccm.com/assets/rbccm/images/expertise/elements/rbc-elements-video-still.webp\" style=\"max-width: 100%; min-width: 100%;\" data-mce-style=\"max-width: 100%; min-width: 100%;\" data-mce-src=\"/assets/rbccm/images/expertise/elements/rbc-elements-video-still.webp\">",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h4",
+        "selector": "#w1789815782497 > div > footer > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > h4",
+        "snippet": "<h4 class=\"heading\">Client Solutions</h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbccm.com/assets/rbccm/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ]
+  },
+  "rbcits": {
+    "2": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "3": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "4": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "5": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "6": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "7": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h3",
+        "selector": "#w1484172583166 > div > div > div > div > h3:nth-of-type(1)",
+        "snippet": "<h3 style=\"font-size: 21px;\"><br>General Inquiries</h3>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "8": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "9": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "18": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h3",
+        "selector": "#w1697679360483 > div > div > div > div > div:nth-of-type(1) > a > div:nth-of-type(1) > h3",
+        "snippet": "<h3>Our Insights</h3>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "130": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h5",
+        "selector": "#w1497042986448 > div > div > div > div > div:nth-of-type(4) > ul:nth-of-type(1) > li > h5",
+        "snippet": "<h5>Follow Us</h5>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "meta-description",
+        "pattern": "head without description",
+        "selector": "head",
+        "snippet": "<head>",
+        "onPage": false,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "457": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "846": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h3",
+        "selector": "#w1668550164328 > div > div > div > div > div > div:nth-of-type(1) > div > div > div > div:nth-of-type(2) > div > h3",
+        "snippet": "<h3>Our People</h3>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h2 followed by h5",
+        "selector": "#w1668550164329 > div > div > div > div > div:nth-of-type(4) > ul:nth-of-type(1) > li > h5",
+        "snippet": "<h5>Follow Us</h5>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "1495": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h5",
+        "selector": "#w1464287399218 > div > div > div > div > div:nth-of-type(4) > ul:nth-of-type(1) > li > h5",
+        "snippet": "<h5>Follow Us</h5>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "1540": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "1977": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "2257": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "2462": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "meta-description",
+        "pattern": "head without description",
+        "selector": "head",
+        "snippet": "<head>",
+        "onPage": false,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "2866": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h5",
+        "selector": "#w1497042986448 > div > div > div > div > div:nth-of-type(4) > ul:nth-of-type(1) > li > h5",
+        "snippet": "<h5>Follow Us</h5>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "meta-description",
+        "pattern": "head without description",
+        "selector": "head",
+        "snippet": "<head>",
+        "onPage": false,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "4728": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "4834": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "6534": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h3",
+        "selector": "#tab2 > div > div > div > h3",
+        "snippet": "<h3>Answers to your questions</h3>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "7000": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "7541": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h5",
+        "selector": "#w1497042986448 > div > div > div > div > div:nth-of-type(4) > ul:nth-of-type(1) > li > h5",
+        "snippet": "<h5>Follow Us</h5>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "meta-description",
+        "pattern": "head without description",
+        "selector": "head",
+        "snippet": "<head>",
+        "onPage": false,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "8744": [
+      {
+        "rule": "image-alt",
+        "pattern": "img without alt",
+        "selector": "#custody > div > div:nth-of-type(3) > div > img",
+        "snippet": "<img data:image=\"\" png;base64,ivborw0kggoaaaansuheugaaayaaaaaxcayaaaaies3laab=\"\" +eleqvr42ux9exxdvbx=\"\" d629z7kzojcpgyikkniwniwoogja91sgruzlbndc6aho8=\"\" mew1nkul1swphpu59dnxekfxchrzxee50hqtrs5skgjgxnoqfjzt1n77v+f5xz06rnbm4nkd+zpp=\"\" zgsa5556z917zwt9fgjsibw0gxakr=\"\" kcp9yjj2auvfoglitefqs9uyczujxnrpqcoygckfqbtaehvppqaem1qkvvc5j=\"\" 0dhd27=\"\" kkjbqtncgwpqdfbe3qbe3qpygtzd3tidbtciq9extvsiglj7pxxzlvo6ae0issnqajeojp1inzu5rpcrgkqtcr9nxercrekdjunfd9ezsamrdrjqga2df=\"\" ngmglygwxfps7ctk4hxvbyfhgwbqyjlpuzl0v3vogre1gkibweebaa6izizvqihhqh9rasl2eegnkvstlrvoarsrojhzaxt8xjzm0arn0d8s5xlk+twjh3xpfpifu2lkixwstyqjwlsyrr1fcmb1tgncameenj6gcxrijaqdergwl7ajzlafexczi+0pvuxibbwgxgpgnbjzrmhcppug=\"\" xfaslmdqt6jrc027zrqcgx+ndmeachuhfsdqib7+b6pl6uuoikkkor=\"\" fqocawsi+jne5pledig4og5uyf5ccd+kmjrszmiexzxbezrb=\"\" 5bkwizasnghee8bjqlxavgco8tqojkcmgmaoal6ynycvsxae=\"\" tzczqgmoj3dt4kvnn+es3nu476jbh9famnict7dzfpfbsl=\"\" gurextdjjbka5tcyfjvmgwqq0ls54mtvehfxeqllntaa2kzinl+grla3zzvwtfu8fynaiimail+scif3o+j8gmqfpcn600qnrjczx88dyig25a4yiy8bejetkl=\"\" 4gf1cnhajwi+ezrb=\"\" 4hakfa6agjhp21xwlihczpz8jiqh6qe6uyk=\"\" qisw7t=\"\" mxa372ajdfbkjj6iihuh5k96l6mbsygyu4qpphvoqvipra1reoumlrphg6mi8lyy3uq73b44jqmg3pywhgoag7qcs=\"\" e8a3gpyepz1bezrb=\"\" zcuz5mawj3vpflpbbk1c6y2hd1l4=\"\" kpqvrogza8zeuduksmhniqiayq9zuhkcmlky8kixiqyrqtmwqz9ybyqfweh5vuoz6owjkoczqgcdof30m9stewltxhgmhjqigllskgujoonfbzfxihgagq20vlg2goqn3mjpgeiqipfvdbgwrmj2icrndaeudj5ikxnkugb4mk4mwdya5l3lsftgbu=\"\" dzi=\"\" guq3yyyb9wyoqk8ozknntsz9xunk4tfqyxlyizzir4qfnjtiohiqbuqtkdyobedezrbe=\"\" sptmx8igfg0fratet6dxcgmcal8ecaj4iz3wpqsue9+2jglqssbrb+n0p1pt1=\"\" 0y0dk54bcnlnitaz3odacwgcaeg=\"\" c5czxzy0cakvqz1nnzyjmqajekp5h55santhj0lilyrjtk=\"\" 00padfymij+vuigoiyw4kmk9t9am7eappnrbeyp=\"\" eonxlddg9otxxp=\"\" pbj0+bqrqfduxxeznzajckoyl7ucbokeeaja1om+deedjz+y2oklr0xofkna8wkbst+bc+3nxbx4bdg5dn7jnmhyjsvf+opgc=\"\" b=\"\" b7zm5+tdl0lwl0qblhm9rfoxxcyigmdvmetdae=\"\" ambegqfsss3byx83eidrbdrlhknu4nnbibfcofvpz0yxl9eapobpazgpyaccjlesste4rx=\"\" hw3rl6k4ebcl0rmq3vql0asa1grn0mfyegalexov96wsca7c3fmdlxv=\"\" 0bs2nh7y2vwtv5hcovh0yeeeykpsymhtag5rxpa9g0qfjxmcf6q2w0=\"\" qu8obyqma2naxim0kdbflmh=\"\" dpgstgpxu91vsn85fz2emtjal4kib8kmb+b5ibwtkcg1rgcvc1at8fdbcv96tvp9lspklswlx1vtgbe3qbe3qpycrgoccaow8kazch8rx4hzjwunqy0w1dixabury3lzwircxlfsjmsq55aduoacetwupmf=\"\" kviffbfb85y2bzlpcf21y1+yikhdxrinfbe3qku+eoldq3h=\"\" 2ri98fad2ss8iga5udw1q5uikzaurwg3qmtgtazc5t1c4e8b87itzzrwbogxcczmgg3raie0tfy4me740zu7yfz0jaoqvrwdnjnblaxrxxkbxhk88ryimafltbbaneodmak9sbsl+m2xwyeizkamaoamaoamqsn3+ibomih4goumazazgdeaeksjnzdacoapp6iagv1ctatbbyxpmn9odv875=\"\" tm5ex8m6ut+zik6p3lxfjqcdd4t2y8jmqcdi1vpnmm1lq=\"\" o3xdrr9hagqcz0yez20byz8pbrmx=\"\" ahevkyylawyaq0hmtja7rvh4zoacc5eozh5dbi4bs6rrgizohojel=\"\" evgb3dqafmktgkwnataelnmfup61wsuqtus9e7tee14upfkalmiqrwj2xijhzn0arn0jhdk0ecoxhynqnqapff=\"\" cj3+rfuce7on9otuek8qaejdsyqsiboclo4kslrtk9kpp4f1vkijpjymt4nt16dtjalzk4hqa7r9xaldm1tdmvxhy+k+sugrusmzmwertxvxrtnz88ejvjovhgefwt=\"\" cvaqymqdcepbpw9eko02kbqd5p1=\"\" myk7qfqhryvhcoy2tu+oh52kmuwgnyubzft0egbnuhqkmjbd5hjzbqrtb1nqa7ohqlcmb7fhagszb72g2axbt8+hvxqzzqwrmtk6vbp4qjq1advi5yvo0mfdnq983q6t4hi+v4fmmypfd2tw6ij1plcehov87wfvpnvp5vtoi1u=\"\" ce+w+i2tnyuvu=\"\" fgshf6pi7tcmmplbbcmoowocxlc30le5ltunozas0d7h2qapgc8loc2bkt5hftnwrple9u67opz5i35dyemd=\"\" x+m4hukez5izuqjvtz=\"\" xdkvsa92xas7pmlnrcfjk0tjt2vs7q7tvcr1bgw9odow8hfe6xvpa=\"\" sjucifrkud1fmuz=\"\" ptfyqekefg9b0zx=\"\" 2vfizt6ultxvzvsgbw0hquspse2wr9yfgb2mrtxyu59cu2ce7q6fhun3qjbxpn9x9vxsu8uyc4jmxvcvlulv+3raoyglxtuz=\"\" tzvjvwf+=\"\" vwe21gseiawrifyro8v3xuzryz9xgxd=\"\" 2tc5fkzqrpfdrtnd=\"\" agw9rs829s+r8pjabibgkv3nds0ujbmw2a9l7=\"\" h9p=\"\" by29w9rm=\"\" 8=\"\" g40tdbdnyhqzdnzbzxv9jrccgnkdsw=\"\" 99di6v8zjctnxnfadmiob0pd=\"\" df1jumydxobhsgjbvo8brvcxyqp7wf5fq69zsdbb0wek7e01kdlctoful18ozs0hdtx8odg76ae2wdhiy2fcbuvku5fedfwc1dkonftttp6jnrmjmbpfzz7bauahgejh3=\"\" pbllmlbkqrx24gad+pzr9o9=\"\" xsbcz6pipryyascu2qucsrn1kuaau1zv=\"\" 2kzbbgsjxxcymvs9=\"\" ceu62y4fxyyjahpm69ig5+vuj+ljqqbgobkhft+y27lutg9wv2+ogbxob80+3xh0e9cazbk6ee+xbllfwd3bm=\"\" 8fudzr0qcu7l3=\"\" r837y31cpwyamn6ne6xzvwnuda1iv1osopesizmuyybrqucj3gxgm6mnfeabwfwoqjg8wwfg438lidoeep45=\"\" 8jfbiotyylp065pxblvtwxu4k1bum77wuui1ox4faq+4ngc+=\"\" zxzoyjgvylpo2au1t1gbqdzrrkfc6xdqaiiw6ev2khskwxza+q4j4c=\"\" 15kpfu2fgp9iw=\"\" eno08pnvpqyyzsxgcqg6wzikjhn33t3r+77fr9pya6lhpp3+mc0f2=\"\" 74jwums98uerls3amdmlmxnmeyxpidulz20h8y7ch4hfi95y3q2dxz2jhceitctyjam+zur5ckxqqmec2bnlx1flw=\"\" 1rcv8gabmzb3kkat+ggpem0n0jqucr9m68by=\"\" amdmu7inccj=\"\" dmd8xeqqggyy1vpdvxslgwdqpo=\"\" 8mxfktnkyejr8=\"\" gdputt+upex1yvpwanydmednq0vleh0ij0twakchj+wc3ctkzuagiaqjre1dy3zhil9syptjkzoinhdz8b85qh+tr348algi4y3pla2t8yu37eob=\"\" h1679twoz3swmnx7b5uyvn0lbcmrrgynolzkyo6lx2a8cqaahcoawz0r=\"\" jh6vzl3j47p9+ien9axcbdhpei0wn9yofmkwdl8vu+z+8evzjyov4tmhylpfjfd4vr7y+68um0zgvhuz3sozqksysrerkyybu+mn7t9u5h+hdes4hu863dfxhsbr53qffzintsm6vb737qln7dwgvlp3m0twfmpdxf4lgyja1ru88mawbvlx=\"\" 4om3fbjzseopyz7dkuvxx8tgnvs4enaneyqejghzne5zdwxlrdx0fftursnmyrxa4qhg7osfadbgn0pwp0f0rqoer9jqbnupohodacbs+j5ww47fk9b1mjshiog+vb6nviz3fdrn7t7jjixwmgmalr5+3yxg1b0lbrs9ovzsyivxnropd=\"\" x89vutgyvn8gcsz6pexqhjjwbqalm90zjdkm2a7yxcx5vmxfq9cslxic97gsa8tfoxtrpzmztylgcm20xw9xqvfp3cl7ueld=\"\" jqhwmkmgi29y74dbbdtaan80t+mqagkl1=\"\" 96jiscy++l25s2dnsvjo1uyzukydpieo8eqjezosn13nm=\"\" 4zn8vwz4bkirkpqbmp+3ip3psx0qemwiydd10tcedzuwkz9whezw1xlsngm1e9acadul4fv2i7r8xcqv9dhdfaqhptftezmhbsmtuo082xdbr=\"\" kuf7sku3puwcfgbpblyglyot+fzf53zctfpmc1iqhrqkhiz284owdpxfwwywzuy8esbs6ictr3ex98e8lmk4jmebm8aihe8jmld2idsck6oxbzhg2esczqygaofatrlr3wpvuqeah8doueb+kwjkndghswjzqvafwbqlq3bhr=\"\" rl4xc4hbbgmpqvel5y2al8ig9j7gbenkqwgndztme9u1aximjj2djpgcapve2lunqbb18aebkabvsh17onmhriq9z39qqxfogqnfg69zz87n=\"\" vklfgvrhlks=\"\" e6y4amc4o7hptdl9vav3skk7v2vw=\"\" 8+acnhkil5=\"\" nyafa4ce8xmn139o+ukkgquctqbe7goafwaayrsxqfvsab3j0h0jv95zvxpach6nuyxn3zsp6p4h+g7i=\"\" j0aflkrf9we6yxtljjo2ock8qbeygydqgshueb8wpvdqtsierainw2imxgevyegbsesluxvfxshmvh7wwqfx56qwa3lv3bp8pjm4aqxgvi=\"\" 4e=\"\" zc=\"\" 7y3v1qqil4453iyu8cdkslmsepv=\"\" 7eyas80tzncdq7wgnq9l8iuiw4cghjnjtigusbpbz3u0l1rj8n6ic1iiud2kyyrscrlwjbnwm+vlkdqv=\"\" ctnwtf7fc93zc12iha3nxspdl6qf9i4icttb+xbjqgnhqyjsu8tmao3plqflqd5y6qeddd9=\"\" tvch3bnaance+mlo9igycjv4dfzskql5t+vptbparsmdowtlxs4kgqz+tebaghiwu4d0a1wt9+h=\"\" qz4ao35zby9m5ngmsh94y1e89kuwjbczgq9gvcbbba8q7tzwa4nbrywidplagx8zdvfyj6xozpnmexlurlc80jjotbt0gaheh9q6a8mmimhne9hg2wfoitrsa+ggqpqz+vurdm35ghil7+19+ugin8va9brggen3qmplkv+5p36vwmyoh7x=\"\" 5trrhk4=\"\" 1ue8rns7aqhngpqa2vs7l=\"\" hjlgcqxzfxul4+vu=\"\" 3=\"\" 9imwetj8kil9bts=\"\" jshvg744dcmhwqmjqx4gurqokrs=\"\" c+dx6etfysbz4go1a5ki4gvhzt=\"\" vwzvxf=\"\" pna9dgmrqwubfzkb+6=\"\" vreyrtdazramefdz=\"\" +fqbxzpass5npgar2e+oqjx9ihglvuwh0v+y70ykxqf5nzl+2kni8nzy8gmwwjzhhalvj7ngh+5xbxmecac7a=\"\" wwajdhkg=\"\" rn5pb2=\"\" wvpofde=\"\" hhvn8gqqtd4r8yojzyz8d3nlvnb+5zu9yq3yhpksf+lqwvxmgblpr+sczdcbrq7swnvn0avfkh1kau514wuau6nr1nfeisng3akcaemhdusdkbkaeyupvvv8djx7eztpmlvjt39kxtzisfaxuelflwienlsdygne5s9h0816cn3eitbsylbmcb+grg5fiplb2ycdf+sgdlp9ptxfxtpdkbeisof1wheytr9ne64vzpnrcliefkynnggbfutzhiqsjqcpx9dorepzfjfo6tcmcfuismva5rshuj9fnfkfurwlmxiod0=\"\" s6k3yxmojvqalbefbeajiphfupkp7+v=\"\" 2nys=\"\" zi1pu891pkfqcz4fejpmu7fwymqsqlsoyxae=\"\" e1sbriqcqolr6scikixegigaxqggyr5gwqoicou4kn0wfpoics0h4ltna4gwylqi8k7coigs6mge1axkcbmhmrw9yt3sojsdspntogj6ocgo=\"\" po2qb7atu9sabj+b52bedatmzbdleobehfxmoq2xhitwo8wm8jb+vqtwnxpxf4lmguk55qfybavorrv3ffwzpuhzzlmsp5=\"\" mkf+ul+sywvyfyedw9vww7n=\"\" otqvtoaighf7vbg4atxdxnvt3xngyejutvugqg8hejuvzxot=\"\" hpj+qsslhhtfhpal3amgbgcmlaqidqtoianhgrqezsenkbdzgbh82tlu05lqud63ol=\"\" p4ykspzj9eibphxsgksneyw4xgtjqbnzngqmvdufsutw0luyi8xpcvduumans=\"\" nvkq3fs9fcoisyhoa7o5jtcw8nnjhghlgygxfywclr5x1b9ttvf9hysglw3dnwfn773r7typv6+cjteykqya7wbhyi4ac6pznzuvblzbg0h6ux1uzpqzop0=\"\" ouqbzs1+kxy=\"\" 3yszzwmhffsciwaeopkhqighmdbdjqzfozje4f0zcvyoqvacmvqn2=\"\" a4g9s9slvehwop=\"\" 7+ln973x8fokh995ewtdssra5ziq=\"\" eorjwq1z6auw2rsqdiknpmbarqafwksuhvjpv3vlkwleohhmsjajni=\"\" b3da2dpiibj7t7w+l96x9pmbi5k1mtipcxdayhcpxzdn9izxizdqoefhs0neouqdrber3sq4mkgord9dyav+7l2csebldwri2ogljesfz3jarkdagu2mwtgq4iazciegqobxwen9yqyywvt8ggcohbkir03hi2gcfygdjjlgduozftzc195lab1nycis0gc2lauikfqkakt1qcrwwyvrwpepmpprn0s8tpb5o1qfwpzg34dwi76eg9e30v3iu7odqhnpm89prjgjfjkgn9vfhc=\"\" pgr+sowvad8atzpzclzlnzkuiztvrzv48ofq=\"\" c8v+m0+cjw54fcnk8rfrxpilwbje+mldrxlqbgqpk4if4tkayryr1v5xeexcrcyydqr2zdzvb15t1t+o26ynirox8z5yxbomjz5t8yen2tcieoiry7yuk2ebcybianivvx3q3c=\"\" ebfdjc66sxz8y4g+siyiupjmiuzrdzfxh3kctikb+vxtqf9odwjqlelbhfkc9fh7vfeqgruawoosdsdhh9ohpv6ik=\"\" k5yrlr+jopc3kmzx7jirw5slz7h4c2mgchepn=\"\" 1pszb6faful9+w3io5uhzowxk9thb1hvtcmz6vh7ycm6eduqja0qf5sgwybmgmmmzmupblev2kulnppyqprstugnstb8+qh5f8xn1i43cl+t8iwicu4ker2kfp9qp2ugjalu9q7x0ru84pqh+6vsmj+dmpsgjgmdhwygygmadoco2vcaefmfdkdlaaj+vbi+6vqoeo61gqsuzrry5bvercvu+08puaxmm4qtq58zmjaa6ia4+d0al3lsut+oyvbhj9thr1h1hcn99onhizuh8ehdcy9qmdgo51eem0fhdk9v+rcoqsx7fq7czxc0svzkvl2ainmegqa7vol=\"\" vr9=\"\" rxz0gxhrterjoqpsixsgzehkj0rqvxwxv1f2ujlhwoz3ksbvtgxguwjwpg3yjvl7hbpwquuwlpwdxc7hp8q=\"\" absrpxo2tdnbwg+ajeyc7vdth74dajbg5d3vb=\"\" cgdescqdlvyqnebdczwbkbfh+vpleu7bqaongtaeydm2cne7=\"\" slwdfg0elrzczme1gkdlxw=\"\" uihnhgbs+zuhxnfhd9kcx8ipfndozyh+lydcakl0+w+3e8tur+ajmnaygtvm0+91q1rmayzqqsdxbuxxc1ndb9hqdl89unhgj+ob=\"\" 88nsckf4mliilciibm99rpsj0czmcuknp7g=\"\" k5qc0lbdmv85ppp=\"\" swtmj9=\"\" ty=\"\" 8t8xlpcfhsxctjbcihtfe1avtuzszhg2q9mp=\"\" 7x+u45broldu1v3lwu7bowij8e9vnchxpplu1qfxczgwhgxydj9k0jeauucjnlqjv5jddtefnz0xn=\"\" a+sm=\"\" rcxptsu7fjxqc+rumo6b0hd1aytyr9hf4ghd98vd+6+kr7cfzmr9=\"\" 9ext8w1e0kbngqalksruiijuq7fdy42xpz88lggv98zitdcslnzikkoq7j3xsxdr1fvyo2ra90thmw2qu0icqpilgh1bkhrpyfinolvqszswhqmdvjbbak8nb0eyrkgflerbhq1zl6qf+8wzvmlnqysigs2bzhm=\"\" 1ewanwsuvk0mqiftdrvek3klryo65p9betffxfvilebes=\"\" prtm8=\"\" zv4ujl4ujrveuemkfqq55jlg2gqkt6wszohhwdp659vyj4o1uyzur8nkpsqmju+j2c6hzdrz56f4qu6u2epqaaxoy=\"\" ijcl6v31cupjbq2u4z4e6dai=\"\" guid0llayj8dccoih2q2akwavb2fltjlocpxygufhplbfm1qp81s71uxym6yeneig1ahiqq+pa4d5u46hpios+qjwsisg6as+wxe1rk5fs9qiudsizezh6z4ouzmnjy5exyw=\"\" zhjkvusz0mgxvltyz4osqtaw5pv0php7=\"\" f=\"\" pknkbb3zazpa7pvm3+t6ppmdd=\"\" bcoclo4wehv9=\"\" wrv+bwdfaf6q=\"\" riz4n1v5ohoaig4ml=\"\" cypbozw5ajdnw6oml5t5zddtgz6n3z1xvx0qe88mgz1pxgcrgyx7ls5culdxpv+g=\"\" wfwhejo4coiimfr8qksgfsrq45vq+itbjm3zshed1=\"\" tw7fqr8t9d+t=\"\" jhi9u7zygpniffr=\"\" dosavk4c+1lky3gr8l4d=\"\" pbol+xun8lsm88wq2nxpggmlrzhr2=\"\" pbf1dl=\"\" yf+3dtd2j2m0w+dccofhzlatctbotta5+faikza6t0nw9bfctxex77lvu=\"\" dc+beacubwy66kzhyovywi1uijhhdolp+p8p8vybivyiifxdheuilaf5fxk5jlfylikkmelvx9akx92ycewkc=\"\" 515svylw+=\"\" l379xjkqbynu6qjeabgbfb5qf=\"\" r+2wduqzqxjqrrexz=\"\" fsv6wk4ylfe11wq0lg7j4d7eapu4ivnfxhoxsela+wcb8ypkdowgkhsdrlzxb1ftcvhrmhnkdzqszpdzbmo3rvcqjoy0vgerpoz6nxc1ij9vobfn2vwrzw=\"\" r6nfaxc7elfdkkpfizw++=\"\" y5+mw5z1tz0i4eea32puyt5ijriqjh4ld5arsfdsduuhhj1q+9mz0pishzyokdya55en56zrr9p5nc0nbgpz9hvjwzdipbgpoxdgbzfxcssq0ed7u295fo+ph92sbxbevqza29igzyzre9ghd1le6uknkv69gveiau9tuplhcgb5kmm=\"\" uflf0cksrprbachkiwhfpadwalj7itzglwzwvznb3qlvz4cwkze7de781ve3=\"\" hreidwpz=\"\" 91en1z6fubbikmu5s5pg3eudwzth1mzcfvkym+1pbtfyitixukjqbzh9xxnlo5o59bespgn7ajpi=\"\" klmrjgl8o2cizifyfv27vb065udyftsp68rfjnywmwrqtxtrqdzykeqmrivx5fwcrz3x37mf2i3mvh7+3pr=\"\" at9pr80twbhifzdr=\"\" ki4grttkj6haji9klmycpmegf9v1q9vb39www2nhkwe765ptfwxgv225p310mg98jmhmekdc3r33o4oj6kjf=\"\" qvqlq76woyne0dwczlqpk+ydmx6qzgiv4ai8caol2qoul0hfwndfi=\"\" elxd=\"\" dmk+2vjcuev3bka4l9c1lzldzxkbvcesn3jannjnichu3tu7kkzogaf6xnj+swiaq69s7qtqcwdlkus33hlkgpeotv4kidebi4sfhagx9b89+dhdv97qt3hzq0zf3skpb0ediykjuvx+nhp5gqnodxumpm0n7oaivyi+ybqbreers5dyenvftv22+4lhhv=\"\" uyamkyokmvzuj0fujjzpg7gwabeslvwpwowarm1qyp2aozq4+ufcfoddq=\"\" x9uwx=\"\" lr=\"\" drxfcv7gnwx6q7rmtqyx6a2f7rpjzilbykeidkguc2w1nuc=\"\" xo756efvoacwcjby4ie06rfyh2ojnfzx3agy96rlnsap5qak=\"\" dbecugs3zb5pqr0e8eux5p3bkays+uqmujt=\"\" t49lgy5p6isyapsd27bz9dfvtvbvpf4lpy8vsagerdypa5+0loaltflx4vkq9m4mpfleoqrqakmqsq8qdonjp9p6jf=\"\" jqq58u732hma2xnswsx6lafwzdwupfteaklh57ejp6ptxmsdx6jbmvzdmxrpnivuvysyciyatnktk5zf6ejvjwro8j9i6txxpvrte=\"\" thilskajq3cltdlj3w6v8oucy3a3rfdsb=\"\" 7d59s7d6alwuv5vb2hp23p+ne=\"\" oiturfj3jivvuwe8dobunhh2vrlx0qui+aay4ojad=\"\" oezvpm+dlpsg3ekt6s1ecyiw4igvagr4qu2bq+sgzeumuij2fr9s78zos5st+f1ejuigp=\"\" c68dljzlobrp2qynj3i8wohtmr=\"\" suzczk+hejwkllzginjtqol9sw3=\"\" r7za7g2iofe1ldnmswcptevvnyr=\"\" pponc80x92evsthhydlr9golhfpi4hzlggxjf=\"\" ldm7xzj7n8gupvushp5tmbycqpsb0fmbl+ld91txx7jb74z85tsj5nkfmi7v70bzf+iqwd1cuw2bcyt3ys2thejojrw3npwhp=\"\" wgflurvxpaxgrodhq=\"\" 2feouv3feedhngyde79w9yxpjx0nrqh1hjrrevlhowc36rydcjvafy2auh2lil6optdqk7imajarcvbv9=\"\" ucuh=\"\" mqdzvnwy6cgkigoh=\"\" qat99=\"\" rh7a2ohrnxsohb=\"\" e8u9fuzxkfvwdemxf51ordw+755gge3zwyp39krx+j9fj8s2y=\"\" bkabyqrpq2n6bqpymudf+hqydw+qucjmaua9stvw8ru9g279=\"\" ndzj4c=\"\" nq2pr8v3avgogo80t1z0nhd=\"\" f2aywxadkxfmnlj+by0ezfbhxrd=\"\" qb=\"\" ex4oghhx3=\"\" mlykplaxr9o+e1o9n6yvb2mz3zz8kp83g1lvnr9y9rnulzc5deqshe8deqmg+y=\"\" 965rfvz08svvce4=\"\" pk+l+yw+ykrxbilwbyuzvvfnky7+4l1fdsdnf3skbwyrqyrmh=\"\" w7sghaqspdywuf9qthlcxk5bgncxkavn1g7lcxx9c5kwiy9qm41cevkhlvlbb+kokhdnxo9dulbr78cxpsnw6pcfmruecs2zc3j0laelqtflctl3ctgz7rrfzxmwv5bx9gthljlebvw4jsrwf3bmrswuwqpnghl6xy92ob1p=\"\" i4tl4aywjtfza5uxy=\"\" x9lrrv3rtxxnpqtpddjjbjvlqe86rfou8w=\"\" axdavy25fsoxqd3kzxepmfqho0biyq+765rwjdmojehstxncwtzf2q5wvp384uvxfzponp6vuf92uruqsavh5wngzlhfhifvsquuafnfhrbummhmaqczn0hzedob4oa23jpbj2ntr4lmpp9w5d0eexwjjsaqrurmflo3loyxdxoffc5s=\"\" djqkiovpexv7z=\"\" ltxue6fyzymfgz3rdd+d2jtf+=\"\" jq4zfcwmwuntrnvo0my1lnn43c3h5gbdadbowuvnrips9vwhigwb6h4diczq96h2kipdzrlkyu2bjpxegyhoqyyehmmugurlsof0prw1wcepn6gymgjbuss5n8m4ie1vesucerfmcs0lgr6morodo4rj3wtgkh05sjoma2c2i+bylatk3q3zv=\"\" 2izbhrdudbgkde=\"\" +m8i25mdij+vyuhige9kre8axzi1ynk=\"\" ff5bsen5qilsgchrfi2ootsqtkegdmqqqjwjkc7d23fho1j02z7iqkbzw1s7v=\"\" aha8pklllkp4v6bbxir+sgdlfchtqpqecjo5m0bvtcdws+jjvzszzxkahkaqyu8ihninsscxspg3ze3dg9oasl+umnexuupff5rzwkfddjnwvasgn3ditfyfzg8rrob6c7eqf6iapc2hexcdvef6ywtffd7ptqsvdlnaguzeojucu=\"\" 6w75koi8s8rvibixauowq0dx5y27kihynucip4r15edspbacs9=\"\" 7cres71qd18mcovk2clfuo+epjfdralhif7vlxej=\"\" 6aaxzcj+bjbq3mes8ejce1fhvtutnlpgrimep81ebngih4ng5mkbr5chw++=\"\" oe5wpgc3thuilpo8n77kwu2dur+zl3zmdadlwbegsfapqek4tzj47m7rn2awzumznw633fe73iotvztat5ncxzm2glnzswhfm3dvrmqaz4qqonbxzyxkv2awqg1u6ypoastwia7trxgfhfbkvmtz4597tu77w4ah3ag21yebuiu6rljqsbdna1qc1ndjsvbhzelcncpkrozskytgl6xuc0t9aphp35db3kqr4jouht+=\"\" cjt086hh1k7cjfp1rnkkbl0c7v8a9xyvvukh8horvsoeyyjhpc5n5onmna3r9elsocgavimvex3=\"\" s2xdrf5l9tznhkulwch5mf9+77pbpkrqlaayafuiw9w8xzxobgnyezod++lkwbvkzvi=\"\" cwoxvuzxytknntkpn3mu5qxhqoepeeltaclbsawhi8xeo0vaxpsxjs=\"\" oecqbkqmtsjhqfyymdejv6b6294c=\"\" ept5vw=\"\" opnjp=\"\" yul+uuugwidubmkxfwiv8wv9g25nfaua1o=\"\" hzd2b7rhpwukcslgmrjutz2og=\"\" o5zrxpgpfk=\"\" ory3gh0o6xfpz+p4hmelfux=\"\" hkp8kcbvvt6kzirwgatgobu6kf9nzfzjnbu3wtp=\"\" z6w6qsoyznhkq9qwri2c+d=\"\" d8ptjk9o6t773k+t9k58rs4ch68ro=\"\" zualmzayoqslbtco7akb41zwtp2vlrbgf9rlrpack25guxs1esf5jmct5ijpzm7yxrjxzaor+elc0znu1lb9o=\"\" ci9qqoxtyvcuy+0ky+0k0=\"\" uq9sww2olyxf61r845v2u3p=\"\" hoh6k0x10pvle77iqcymazak72ccl0pjbbdr9v35dl64vdx+mwogvttwau=\"\" rkl2xffewcg7ytfwkh15iq0+duwviif=\"\" cuhz4yajrny0tidimg9jgm=\"\" rs8lmikyiiwzxsjpdtw2guwyiqjuwsranp6=\"\" x27vfg35jy1okwsjiodqitnnhlbcantw2mgszcxgfozzwfbvhwntwuthpkhhjfv0zkj7ijkjkhzjwa5jqzhu9wn1e8oaqdcqladfyya5rhih=\"\" v03bqht6vjfjx4ojkm+tdv9d2bfyy7gexmobrydqxrfj7ykoj=\"\" ytauox7fiwdnhmzxytht0zcvh7pnbu367qnbugpz9e6tzmkq351oqqfp4kamihiziikai4tc0n7fc4wj=\"\" put3rm7wf9rxpc9fdb87owztrvwhkednnqzcgcteycbv9vwwittn5yc2rwdqyecnsoczrpm+omvq9u8ofanh5vekep7waagkgzogl1tmpe9mg34fonllbqc7wtshqze3bhtw62=\"\" xexsmmwvymuybm2x6jbp1qd33a3xqit=\"\" mjotmrz5k+wabcova0fp6dzga6awch4gphoesqfuwmaixnsin=\"\" db9f189wd1xjvmimxkys7dmz=\"\" ccesurghrs9vwfbpvzdwzggpwpjvv2sddihfvloillr9ny7xulzu2brjl42htdvaojgdx0qqdmwo1gcuuehr2xpiddbd2fe8o9s5fg5e+zlvylyharv0h1wi2ittko9s3ff9vilbyxt9kbghmpznkdxqdmvesdy+feb2r2umsf9tsjvbt0kgoosozs2ec9eter2w4qqs48rmdfeoolbfgzrmdppcfgy3o=\"\" bafgsxhxfws6njofz5pujh2xosijdjq9xjphui4q=\"\" cwyqhk8yrq8xcxdejikpiqrgapeijiypv58ss=\"\" uq4rbywxrx7ymxbu5trqv4wysb4q+dwp8no3jytantefawcvbl8v1e9uvbvx6rkaj7jcph4evf+xzw0mk6zqwclckglmwvg+wqviwbzxdrzu8vhc1=\"\" +pfj6kbfnoww0l7erzy0f3x3pah71zv7jha6mseegjlyjnnxuvezbbyqrt5m=\"\" 54l2vcxumvdvq3xedclcx96skszlg9nfp+q=\"\" zp92bzw0mo99ywpw6mtrauxbzixywl6e23bq7+qp5748h+n4a1e3axwmpkpf2tsibtbnnwwkmlfxewugvyn6rb8utsw1f=\"\" vpdxdec8iszhfgg4ghsdoudkgzs80ei7kn2barytb9=\"\" xst7fuwr85ujccvrkkobdhg2lwq1rdvdtdd30bjonvxvkobcm2zeohxdwzevgvnpkdnb4+9mfjnfosohdmk1ssdnhh2prfrlmvfxz9nbmgx7klc7ot5hn6w3gdfmckwpchmdz5wqhkstr8=\"\" dr72riv8h=\"\" j49mr2kwm57llx+lg46e4kqpt24++vwonkxvzfgvgjbuazst0pnvicohnfu0v2b80t2cumzj9vwtr=\"\" optgoj9gkht8x=\"\" 7y9uea2n696q8k=\"\" n3ehnxsq8mofktp5auoicznk5irha35xshgii8fl7r+=\"\" wzynhb+18bmxwtecon8q3o3agi+cgyqjdmth73n5edi8sdibpq8eymuf9p53+rtqaxrzvgq7lbeyai6dlyhqmpqivu6zcith=\"\" pxan8+glfbjn65erdtkpwpaitopyd2kf13iuy2a7yetteqi=\"\" 6pjowqjvrthybxag934xevftfykfl1tspooungwnclwb2cafamuy44dkairmdf2witrufv1223io+=\"\" qsy0suqopgvsaugvepqbaaghijwoivlfrlbo90tvvg+zqzv0yykaji4i2isy=\"\" ottcgca964e1whpdjma4qogpyhyryuxnkw5ksjprwufdj+wet1rzsikeyz6k4kjkjsjkkwnilsapbx7gr1ayaoi9pxiymnexzvtqomev9jhg2lrgp9tcvw=\"\" a4rsx8hvctp3pehmssccvwdmqvpwni71uab+ymxnrohclmsrrs=\"\" ijeagsid8mkgqs8a7icvdsk4hkc6ak=\"\" a05hjc6mjkedfd93rjw0+5aebu=\"\" whldwjsaokbnx9nj5=\"\" n5zql+tm16cx8xio9ne4g3+7jqetged3xmuot5he54huenqgaq3on=\"\" vyi0uedusmm=\"\" yrznqd9iruiikggowh0vs2qigwob6cxdzspti9rfgp+6vzzpgf6uzi1qqui=\"\" ice=\"\" cvn3i1j49rqsx1k2y4v6fwz46g7ywaq2pj71cd=\"\" abpz53gz3qtk5ah5f8wc9axqhy3muixvdyd9zxqkhrtpovedjhljnroy4t+i3m1fmiudnqmcgcnmy9xffymthkatsrczqpwgxkrexdkt0mdgnk3gfi2kcenzs=\"\" a65tnzo1mdsiaxogzu1mznzm++oonuzs9poixbilyop=\"\" ypfed89gcidkc9w9ksavcq4+vsghmqmaekemilqbs2=\"\" e7uxel4+v04zawptjbtc99td6vk18kevifyozkihunzigkpghhkqiacci+n6=\"\" tegtbjcewvor8lmh3jldgpgqdtmdsb7e+0=\"\" ibxzjmjsfs+vlxru48mufpdhsls9prqkmwjj4cy9ck=\"\" 8txhmxcso63p1guvmdlywfpr2hpsmd57i7roar6lr1ofqoqtoujpggbybeyeytqatp8bsgadk+ohurhqzyfxgimszau4mims6pgzvgaiqktfrul5u1tujt3=\"\" hu6z56zycnorb9z4jqu3bvwzm8wtsmjy8eahai59oogaqipkibllvrmhrdyq7xk2vvgkc=\"\" l3njnqkras=\"\" gea8mb=\"\" 1uelmcvwhahe=\"\" v8tg2bttu+xgomehrrpl7vhw2wxl4quxcykh0dfgeouqojjqsahmldim5fk3q5eekin4aezurluhu+dpmpdjupzu7iyznz2rbx3hdn703ln5cyq+sfl4mfkmpda7n2glmu9mqxxnunvmtohqkqxywpb1zhvfsxjnd0xyqmudpoq=\"\" gkdizntu2fwklt7ttwa+8nrx3c=\"\" splbqwysa0+szlyau6fh7ovwnbnkw5te8sopdc3j5xicgt4zl3cpkhbajwzwhx7=\"\" q4wnbthwqvfz4kdhrhqpnkpb2to3z3ppaq+yvwxdawahwvpzzpog3ongkvkx8uxh4wcomegjoxdcehztqre=\"\" plk1e2zt6wxhpna5agcclyrtvnsfjnm+dru4gdhmtnphmvx2mjrfz501=\"\" 6jxj7zflai3eufbm9m84xs9upkf4qhkfn3lacklcjn0dhcez5vzvovvzicyixrqc5jgfhug4oxenoiezia4ghmsa15w0tswlej6omobk+85avuspxusxxvk=\"\" iymfgyxuu1dd91dhuihaanfxmnfbkzs1ikxngdw68rhmmznybjpbwg=\"\" aecpkbx=\"\" lgzbvoxpqxeeopaioerzbkrfs2+eb6=\"\" oe7ieiynl1dgcrnw+d7niifwft9f6nkj5kgbk9=\"\" bqu2j8k7p4nvi4hxi0lk9etzhnl=\"\" dozax3h82kxxrk=\"\" iyv75yoexpqldohxgu2cqj=\"\" scmlybxls0ah00av2icjegsze17zavx45ojlp+3pxuqzsnse7eihihz1dt78rxvzsyawt1rwzksqzynleetfxnl9+t8vux797xdfv66zmzjehwv8gdh8e5np=\"\" btbzetcpcdq4qeq81hhz1yav6v43wsdqoazqslqvzog+oirpr5xxuxnm=\"\" btz1iefh6qtt4jyccjisujfiazy=\"\" +emwk+j6=\"\" wsacldyzglypd9iw7t9b=\"\" dst1qdyynqnnr7cr2b79tipbxxgodduxzb691f8kbgbaoo=\"\" q2w5ztssvqk3ioallqvnnm5isp=\"\" l5=\"\" oyni0vgxhzqwsqwfsrt6ok4mwqiv1agqawwo22+3nuwpdcjnnppngne5ps93v+xjvhjn4fko0=\"\" khgwq7txk3yc83lxhlbvtu9eicdnfbeymtmzdzn=\"\" hmym=\"\" uwcfyyfz8upr2n5e7z=\"\" nbeha4kknegfhczjqiosil46=\"\" lyxjgncjg8avzyuiymp6bvt=\"\" p0keuqg3+h+qqrt9ehzjlonyqvdynj+jbh8ngl7stqo=\"\" 4h6oj1rnqysnmloqcsykcbrzvrrvpwu+rtnc7i3th7++tp39hwnzshowbtkj6m1n6mpyhahe=\"\" 9niljyeue2azavv3uts=\"\" mlkr7iqsazzjumrts0dvspm6lqvzihb0crh59qxtc+6uiwbpoo8xkoy0atzsdhsmghdlgs9j9yfpwlszdwdxgnzxeajpwcogwuixpu7rngnoosjwaruf8pwj9etwyfwbom5uhbowv3qbouymuotia2qzb2csd7h3vwtwhvvhjotorn1hsigid0jw3jhz0yy8lyw0hgcuth7rtu3jr8bw+lxzbn8vbowk4cfsvbxhibi0d4lnilky+sri3enhsjbyqymtddw99jxjsus2qwt8wkwmwlqtyrrqw+emkzinx8prkl+73mluxfu07pzhjqpalkqiyl2lz0hgz4frqxihfngymp9zltgbf1j5mw=\"\" jqt1p9mw4zttvd3hgi7q8ujlu1ylhrwlghdeiodbywkctobgnoxkt6xllomxd9pibzf9rzu0tpsqpzpfd6=\"\" bz9dzqwiqaqgijqwgydi5bjq3u7p=\"\" xdnscrmadj8dthma0j0ljve97w+vf0wovo1ejgq+kbucom6etvqmd5+inzpbesy2rjhwrtdaffd4shn2iofhk08umtl6qeet=\"\" i6e99uzc9ybbk1dhsncyaaskatj+6epznnwio32rpjqdqxngrmqcqzzr+vdg0oyinawuji7negufbo9ybg9ftpuvd8vmeegfnegio9m9ysapvexgrv9xfzldqajps6bgyssq1jvbeyommtrfcdppxovjsllu9kso7gaqrjmtej9mrm54+oxkkev2tw3gxzwpyitgmdiblkugnrr+7og9krtoeubb9zdkbvfksqisqs2o8xhojkl5uaczpr8ttshrsh1avkuafzcgvdhgyytecij85ozb4aypgwrnqdaoqfnukgt=\"\" pmp6rixhdfeimhl6xxmm71irpy=\"\" t=\"\" 3dnx8k7j4vqd1sg0tjbw3pk1phqjutqykjkp2yo7ylvfaccb87noeacee0dulgbwi=\"\" gv71khpoyesbptym98t584ujv4cizcmrzbtdvbo+vbfpdqnqxqgpb9tpfekdl5a=\"\" sdwlfvqcfwdgb0ujvsikcwceg0eoryi2emisss1ogrgisbfqce6dboqwuepxlrrxfksuxewiwsfkd6ebfkzymu7rekzrokzflrq6bw=\"\" fujzky+s4li0msmakdn99wr3xv1deg+ekrq=\"\" boqvgvbe6vhii4j6q8j7e7g6waaxzoz5xkyqdqk7qsv7y6wff71lxokln5eumdsbkc7a0leu9xkkfv5y9h8=\"\" etbwu3lsoogocnk3gil3mqcnkrzpu9a0ea=\"\" e0nzx1fm=\"\" g=\"\" vv+43ntllvm4zjxqvdlmiy+qpzpnjvq6r1mxyun5w6ct4flwz1uyapegds68od6kvwakaqy+3x4k7hownghatpjr0bhmjfdvkx7gnszvrd6kccmrsm1vlllh7cwtao3icvalw0igwzn1is23bcmb=\"\" ipuhutftmwi6k86kk88qn7ongtucsq9keapdnh+fn91b8sgpak9xaayilwo=\"\" yzhxuhigog28orusux0r6sxdlpkpsqfj7gn40htz5krjc9xlh0gemg5a5qyfqjioi6h66++6yqm8ndlafkiyg6sigkzxss4bbwkobzovlik1j5lwrfrexqnf3tjzxhrkcoexwcsxl5dpzxvdcmvykilhkuha6fmiossq4w+beqkbopdpgwmod25nh3+p6vpccaxkt3uzkhkthgsp3gkhfnrdswt=\"\" uctfnzi3injuurbioepuskbevnwem58g55zvh+n+vikzdy3dxfc+ld13hyzmxnptt+mwvilyebhgcofdvket8tnkscjdrnakrvveoywaez3x0x1hzxv7szrtqqi1nzomdsezs1=\"\" 3wy4xjkdjbsejqxyia5124jexwrvryk7emecvjwczo+769hcav9xizboslad765xdz2zomr+kxqnzjq5t=\"\" o=\"\" ivh+oa6=\"\" 3t0i0l=\"\" tubyweliejpr5sx+krsjodqtuxpb=\"\" m0njmqo8dkdyehq8owquno0vrv7wdwo9f+d3hdqudpfbc9jgtezrp53yemr5vmz5eaezn6ybmzo1cwdyev6y9hfbd0ebru14p4rvdskvj+szezi5jhx2yoijblacwzpvlnldl1ao4mwuqersjvksndh+tcvqlwxynnbru2bazi2iomhha8enhxho=\"\" lssnbfkfjhkmchhkaxea3cfy+h01qpz7wsti6kckumcd81lkf=\"\" r+1hsweo8a5g2nscflcn52jpv=\"\" +da8xv05snpkgigd3=\"\" +bu3km=\"\" b738nud7+qu7fl+=\"\" 4btb2pdvsy89rp1rkjajzyad9ojwwuua=\"\" tgdbhhodb0ih+e5dt+6zshfllx3778hjdo+fns39owvihixs1a3eblzu78e1x9oix611ibkmv2qswhjysdzxb9xdpprnytp8mujaoloc0j23ycvx9qw7r3inmdv3hxidkataztzdju9m0dagsyas1dzyr7j4uvxxrvutt45lvvfjqgbyjh3dxdodah9esqw5spxekiu65ctpkwb+crev27uwwh7zglkm9ffj1zuu8jnkyxiseiomvearkhpylsaz41v8feptnbd8ag75vxtn7xmhk2g4fv6dnrauig0uncdj45pxdoqe3wcggjvgjaehurpkm4y+udegvkpb3iiy4nbie1z1xmarczjhcsdkonnxcizfypv9+q3nldc9gsirc6l+eho9fk=\"\" o5huifrsvhmzgm0aus8n5ad9vye1llnzs7vqebtanvpnn=\"\" fxkph8qlwkojeqdeoagxqfhqagfdkdoham1jvjdupolxjk9ud+38edufkdmdpo9b5d9zlq3msapzffbkkpjoxjo380btzpicrygmw3oqaq2=\"\" lkajvowbhn5cuwiy+6iantemlun1b3a0qdbyekdbm9eiqak4fptficykctjyy7zun7u4q0zv=\"\" 2h2tcu9rhvsetgo1rf20jqvcddkutd7pdvgnirzzve+mcvxp1ahk0+sqqs9+jwu0jeps407p15ug8hkqfbyqxel3qvjy6t9poua0qb6thense+t0qqs5liiblibkvzfoh7qpzc9rxkfadwea3t3bdkfbg6+vbilf=\"\" pk2tqqojmutk=\"\" stuqzsmsxovme0hynmbfi6avhvwnubstty4w4joqtfbncud0b9dne8pi1fc859hq9p=\"\" xkwdyxrrcbrs5ip6ytpjwb4vgwhxw26nkqkhhaezhr2mqct913e91gya5rq4jerezczumjuacmixddqjwabfdex+d6bkfopawmzyif8xad86fm3ow2khaodcjldfc+rxf1=\"\" x9cqwcdqyagchpze65iniuhkfcxqnlvp8xed77sov+uioax7hojoonuxfaiqgjcw0cjzyn=\"\" zeewkc9mibaabndvmbb4yq2smy9mflxvveskhiqv7rgzf6sva95wkde=\"\" 906cf+0ityvzfz=\"\" qcr94=\"\" ow6qulrqyskextzgfh0kygg8aw6dt+uxtzqz1zlzfxfnr+47iqdhhtvobbtv44i3al0488ezwoyfujjyvl7ajn5ya2ukcjp7ykx1wvvb5b5swkglmgktoc95=\"\" itm0qmscuwf9u3ugaawravdks2zb4vu7mucv+zgxfvxfuaiul=\"\" eg3kk9ampgbiioxgnglyh63c0lsj8v5a9ufy6sqqhg0dzmk0mlqzggq4avrxhpowufhqc+bubrzquyj6rgz6nifki+ig3ykd4iiafhjbbzczeh8dtmnpl93nzc4f6dyhyasmvurfkt2ccumkra0wg6z6o8ki09qb1dcgs2eg=\"\" hnniodi+uq+jjzmyfgjn6bzspcsr95t+itcgcr6eqjfa75tnzoxhix0h0azuqu+xvpyhbbfl89i5hf3=\"\" 71kph5na0f4f=\"\" o8agvkbwzo+sljmjj4qfokxpi+vtbgd1ezvg2fvno8nlvy7hw=\"\" ny0zr=\"\" 06=\"\" yhi9khiuhlrrd4cnevcup1asihti0mjkw+mx=\"\" ni3irowl+sjozpu7nqbzvo2jldgsjl79rmvndy72j225p9vn4oez4d17g=\"\" rjr3cdu8ez0n3kuja3msxcpfezi1d0lqnrpy6osrv8wfkdijjuclcl66eec=\"\" z191xx9zwnfs7jleaogx+d3sq2bkjbt9yg0ccuzbgnbwoaqn5ojjzynvfrhnnwdp0yrjv8kniw348x9m64cj+izelzrrvv6yvrtvkbcjlosuihsitkjzdt=\"\" i13xehk=\"\" s8yqd1r3pwrteo2cwm3n2hddwdf3=\"\" ndu69q3zdndtsuqdv+af2k=\"\" usn1zyineaih0bnjrp59zxztgp4wihw8elvojdgjtfcu1juxhczqqzpj6xtnioxbzngwfhglgwidbtsniitabmlv08ufysoldmvgcwnox7sdliswbigcw8e8popu5+rborivwmwacbyboljh6b19=\"\" 90c6cmnjyij9z1obta6jmzwriv9+trwlhjoc8lohdd=\"\" znehpkhuzrgj1x1e0avh4o4s9o5y7volucky0riuw8ldqemedvzjop5zq=\"\" hxrrkb+wtfm4zcorsu96mawerm7z3j4cod0rqmk29xfmhadwe4h+mlbjw+mc7hqscc9u2sufmagmzljokqrzwr4sgqmtdgdw+asc=\"\" h2dmimuthiu2x0=\"\" scqxl4kgc0uxfxuna30je02p9dajkh9tmqnqo7uvf=\"\" v=\"\" seqgkohrm0=\"\" xlxwexqjvaqlayihwhaauzylr6gbhtfksk0ulgjrbmrvyulrtu=\"\" e6tbjt+y9mwhrvft=\"\" bhheoehrk4lnm3qve=\"\" ieygfe=\"\" 3b5itko1x40q0r9ulmgyae1zjopyzldkrthukp37yz5ocnj7wlltj62eutglb=\"\" dczzjrtq4x2zw0c+amanyy9ceo1ntoqj8v9qga91q7p9gmhfvairlvcraunbmnp6qixs7ggalx5wadb=\"\" cfo+ud6=\"\" y200=\"\" 2pe3lg+5u2n5+14p5jchyuk+8gabbhayk=\"\" q=\"\" ct95+2s1jc1yyk60jkvkjel02om41uoau4oh5qq1zquxtar9qwkiuhogu6fmu5enwi3sur7r0ickbclj520lh6o4huyqjgusb4+gtta=\"\" qf+gxbezann6f4+njbfmkmjtkpb+4qvqtswy4bh0h44mbkuoii1dsq81e2afw9zhel83ddvei1j3icnitjiclngkbxgwly2u9eo0h4oxkdfbfmmnvj+zs7v26eeur2jaiwptyfwbzq942h0rkawfyaju=\"\" 02yrn88qxgvhcawnysqxmfag47he+9pps=\"\" u8thujx8=\"\" wlv3dqci3eprhe+zssffjwbpgzyuypyc40t2rvlkc737aro7+t4otw0dj1ymdaqlhcocysc+r4r9dtf+ldv=\"\" h6z7rcmkp0po=\"\" dq9xhtyswmkj5vvydys+ammvovtxin+mafar6f6vekxhxflcefb+vhxkhb3zfxqqnzcko7nm=\"\" jufmat37flbh69jy17mnl2otet3b8lxewsiqtvcx+te1hwkm2dciynp18dlb1t=\"\" 6cwdc+thssh0cyz48ku6gedsn9ajz03nf4t7vuf1bpxq6=\"\" egus6uzjlrv4rid6nmg+yfn8y98fuwip6lryeyl+uvu8jg7xtg=\"\" aohkdc+lbieabieavvfo=\"\" aab7p92wdefaxrkdufb=\"\" pohjdsbxn31gkc0jt9uggxxbtimivex2gyajmgxkmtxilp0wfrpprccxbzut5ms4h0i1kudapuvp4o9ieulzcbwbt+ps7sen1wa0stqtfd=\"\" +rac2sprqfxcngxnvovqu78fd+7+yla3xqjjz=\"\" 4iyvzrvwsapi5o+exx8kkh3ddvk4171ic92lepx586fcjie6g+dcqphcydiczrfxrh=\"\" zeb7cvhpr2dcwlxwcrnob9hgj144tlhb3fhcvw9m5nhvq0zxtzzzfsx8cwplh892sconj+rj8suy7eoibct70xikngz0ad48qd6ojnnctbltywcijs1vetvu1bc4bc5qatsp+ja+wyp6q04urc7nshfyth17cwflxybzkcym+cve=\"\" usluw1tfmvujqzhlij=\"\" i0dvdyry90cox58xaf367rct3vx3xib2+auvz9t6cnkmyzp+q1lijoxigciz2qkdz4rdtudsnaigwrkwpbnmggbqwmtziinorg0l60zsuaholojuxbitctvfzt1uawucskvo=\"\" wxh6qogtvorvpuvvv3ifhlt=\"\" ddz+=\"\" dcnspeynxwvk4yjxmgwa8l4=\"\" avf4czj10gtlz=\"\" 73v3rtfqrjpjlz4au+jt8azxhmigezw1rktf7z8shbcqhljhxbyszdbkcsxwxdlha0mggcfirprcu3k23jr7oprw77rsru+e9rptvrprxzdbzguvnufdvppxgzov7kyx5qaqryoez9f6lpzdqmibxaxqzxuzbohcfzzu65esa455aemakqgqt7xvuf1keg7jmzawa4tgdjfjtgzhudnsvctbbeooxoxju5ilqdsg8y749kup7gts1qvh8jgpv3ebvufopu6e868+9oly7vlbwpqjkeewwwbribcuilhwdcldbqmzol6axw2fnkgjtv64ibabb1oocf4snksx0fwsxqvx40tz86a5gl4lhvnaeb+0rvp9j8ecbkd2jhux4bgzoryzoribml8jym7g2ljc457191yuctl94e4ihsmkkehhycbbo7elwm2wsmkfvuxrzc3admwajkkmh80mybrhg0yfbjs6jn+mhgym4kkox9z03pptx=\"\" uuffmd5blmadx14coj0zats2qemjrwfgjapymvnsvh4eava8sv1999hov5svexzn10c2i8meyouns9fuvekmpzsfl0oktmuaqquwms2wdeawinrlgizkr+hqj6csu4dm9xyulw7o6vovozngi83hkejr7edrkedquxyesxsm++paof5hmwafkoypotaegaguz2zbc+lv221=\"\" oxzwdqidsailtgupzom5igggiagdax5rxgldpquagh6kln8+tzlvn0kr3n=\"\" zxiftjm4104h7yk0tfrjvctjngzdvc4o6=\"\" m6coqxrrchox+rzj1owwflczfscneo83nn8ywz20=\"\" 9stxmzd+nk+hhbamy0lkh6tlbfgtmft2jzbyyvxldrzw04tk33drwpjkrnbuxu2fklylwmvhizglilt7i7qhe97xp8h3gbacenmsvchyizjml=\"\" kfmbjjoryrdz2tjndx06m1pzynsccjtc3krcii05nqqosw4jilniw7=\"\" ko1pegcmnhv0ado26is313qho9yf0umytajuhjp4esxg5snbklkn51k7e8pownmiqeojjx1dhpbygelzqqdfui5ssj+fb0fhiporbbimqp1eevfx=\"\" i3fld4kvf0be=\"\" rigtyywbxvu2yphto=\"\" 6wz4ckz8u4r8hyukkzxww4zhsscljw5zytl4d5musaiveg9ojayh0iybbdmhq94hm2xyjbs3vkha27qjwtj+=\"\" 7huw9atkw+dxr49kxyspu24ccdawqwi5=\"\" pjjnd=\"\" zmvyhr817tanh+rii+hjitin4gxtdktmxptm8clq1hqvip0dhjzpyoqdfcalwafxhzejvp6lonws2y8ggh6h6hohirrsef3kcetralhafrals0ytzcysrwc5=\"\" +bhovsn4nehbclkqf4lizfdxmhyo4f48qqnik6qhetnevchfd+cdzc=\"\" prlqfvxzcryw2p4cmhxioeoxcpzdotu04jzlqnwnb9wwtd74jwcfq1myrcl1hiiuiq0ra+jugplssnmcnhm=\"\" k89ldsdzc3j576zkr7r08dcbfjrt7mfsziejfedlmabn8nzvbefpm0sx4w=\"\" nadax5etnnmnbr2zsgdmr92x=\"\" +wdulvpb+eqz9v3fxiq5vqf2upxgpb4zshtvusb9mvgtjiq6nfdoxphlim9grdo1ry62xd181r3joiq6p1zxoee=\"\" uv92ltd+joubs45ilg6ad1l9j238hn78c1y8zy7lsjzyaiicp6rbxwelvsuvbwneasbal5yjrmalcf5hxxauvavni3r8+=\"\" 4bums7qv4kmzasksethumdyvpwqz3dc=\"\" b9gmns=\"\" vudyacgym0dmqymyci9lebjrhudvsdsgcrex6uo=\"\" wlv+iqcgc+wtkcnjqmwg6uztuuxre=\"\" 921ojl5kh8r8gez6mpq5ytyoy9ffsljrb1s1ntwyisa3dhjhnlxgjf5qdojrs2aqcbokvkxudcqm+bpufiz1oafkq27b1ycukj73j3q4vprzji5s+0ezzq2mq3d966aezj5=\"\" 4z1emunsgz1ztlsckbmt7oxouyzqba2nagdxajuucwa5zulnyzh8cxz85f9kcm86mqone6xvdah2vwjqkquojt0zazkoyddsfckypvszis907kzfq33pe9e4hcuuaw7mvk7hphhtydq7ynoo6zxg1+asxig5gdzda5ezo6eilmuw+p=\"\" r1qkag4qxn+hx9utj8fubcfpaq0xh4cg76paobkbrc3o78bkzhgb6hwoicpoq3tezn3hh0mubymok8g4uessvbvj+jicpc6i+nfvkjvk4eubfdji33y46w5cxugvvq3yqqzq0sisrumxsxzlgtir5ri=\"\" edqu3+weexx58kg6vdea9urqmsy+2jahznmnljbt+yl7z3myiur1tvewqfkbsl=\"\" yus3hcxq81y5fwjhhehlxdevvweqidg+s0zuiynukwis+bhjt6snsjn6yzsw81uapno4mtgbtjssq03pprxxmahzcpnpmo=\"\" kpbfqugcqjqz2+qb+6r8svw7dty5lyxhlvucgk=\"\" 5pxdvbijuyqvqmblbd5ppkjzydsfzyj65rjhzvl+9+bdjnoqzpz3x3aueds7ccwlf4xb3bgrrj=\"\" xmp9o=\"\" vk6iysje8czqgfi3zd2ix54hqhyoiebuuryirkdcwvfy3h+tcnzaglz50uu6chhq4yg4foyolpacrvwhilmlucf9lhlxuji5ghzw7ugyzedk5k8njjrkaegzsoztqkliks7jtq=\"\" 63ah47a+4rj1lunq3c+sno1ptegfgaekm6dsz1rggisiayyhbfxhvszxhm4to3nzzyitqdohtpjkvnz4y2nrv1=\"\" jv6jlhliv5xykmye+1csaea08ah2cyfddwbpbx5mza7g25df+tavv8ge5or=\"\" yc5hapqppzl=\"\" 9bcesmvmxdc8uumlmxnva6fqlvtkehcnwqiagidn2vbfc9ib0z=\"\" n7k5pezfoethnz6tb=\"\" ii4t+bnhhu9bknusgzmdc3tyx70zfdm=\"\" +ptdv4thf9bb9u779njmadueeeqgfov+gtza2x7ufralnnz0mamfxefprz7mgv8jac7rjiwcr90yzf1vu3r92yrvco3ohoua8v8rlfqckdifkulgmp+qqpbsjw8atqutmxxhjmouryr2wt++xnyxuajmf95b6tp3dl=\"\" h9c8f1wesvpsttjedkpwbf=\"\" tzzyd78ng4xq1f0y0cbob2zmp5fcsp5ceg2rtye4bxmcqusb9qb+6hqv7wgwepfbnnxepmhqlwhd9hch9dpeu=\"\" cvnkx9d9aw7x02qfso0wdvfoehzntozw25nzvm9mogq0hnb4iw84sgofpg9c4rc9xakkjjvvml+jilnuvdwwiurfmfbusfm9thy05btxmaxmua6pi+1poosxxxeacztdjgivlfrnnla9lcxmj3ycm35dtedfwpn3wda10myasqpcevz3yyr2jpinwfpo+jd=\"\" 56yq0bfr34q=\"\" c9l3lf5qktclgol8hmzwodhb8c+gmyavvprh+hw0aw6mmn7g=\"\" a48wccqpt07yhdaopygtalw+agvei=\"\" 6kqqrqxbckw=\"\" fq5fz+9qwxzz1n9+dveokuouhxbf3nvh73qwzn3zmppdorahur1zmznz8y7n=\"\" euk3y9t6twaqkalc5ddo++advhiano+kvofocpxhptal7gizw=\"\" uhdzuw65l14sors2bps3fk9hor8dw4ko4yckemqksj0j18061bedrxopadlmqgdujd2uyfpkh=\"\" 5uibm9ny09hyrjkp5zvjynkm4heimtyy+xedjbro05dc9mhkgkh2wq2roccvb3pymccrx1w213io9=\"\" samstbvhigaxafszyvdtncgunxkkmamp5jgmd0cgehtv=\"\" w7bi0crrx0eaejiixmyqk4g9mvtzmdndpwqvrdlkn1rbw0w3ywod0phf1u6ch=\"\" oxvc4tb20iktxqcj9zendzkr1sfes3zb1bv745efdr3afsbifu=\"\" oalj+tvmre4lvxzj37rqvnx=\"\" rj97b0d4vupow82or5v+vpg=\"\" dev1mhwmyqgriqimmcgkjfgoomkdoafyvodom8uxyunjmbcnhxcrwn7byms1wugz2dli5fihkoajlbaua3mfo5dxb6s0gk2y4opjzngaqtt8auunr+vrip5ol6ywb0oqj7ns1ha2brnwvqx8tfmlo254tprqiatkv1cxmgjxnnxsfarfhxqv1jvyncqybsds7yp4a8zpmaa5nzpbintohfxvf6kwz1fxsqpkbzokg7pcg0nm5cesqqtemfepehx0ka5mtjcqmghy=\"\" ptycofrd13f5=\"\" bzep7gmizpuxanq2ye7vif4pyjm6akoyxe0yp4tn5kw25nrsvhdkanedicadedjbxj5sduzlroaooe79fehxleslht3rcq=\"\" zytjbq5yr4r4foi+txvuq=\"\" zveuceqncjd+n+qiz0bu3bmy7lzhiyxhrifwpq8gjhv6qsnbsogeojgrwaos=\"\" 9d4s3mbv7vuxxmidqatuy2xewkc=\"\" iscwvrcz7acrpddfr+cptwgh5bblu6shdpotpkkqa9di7ugkvhuyoexlier7ldmjmeq2cf2hmvzlcw3qentbxp+2gu9aqappbufr+lsm+sq27ux55nukb5e=\"\" mvarzkitr0vkfchwb58c5tvpxmnmogohu4aig6s7qvj+4rz6xqvyipyqztmhm=\"\" cmnn6vsoa6hg93fgagzzcgtxb9ct1zzm7wlr714p4mhu6r0rc6tebdhpaibelhz5ijmxu65ct+njuulnukblf1ieunhwt7zvjwhiehebjd2a2exx8epcxgy71ibi++y99wwo61pcnccvmoewfoojgqyeqf2uuvgush5qgnrpswwsv8nyscajb2dcmw+blqyoxpwil+1qs=\"\" rqbtfg=\"\" tt=\"\" atotbfvkj2isf6sx9lmu4jzu8ykzny1x5hj851vnbcbgnyaou63qdegjdcb2mub6sfdjtyqlzy1qkhqzg5qwfoohtyjzhuk7p=\"\" ugriafzoogdvg4knkkqocjeiiegweaabshfio+=\"\" imzwzu1ahnbszpm8ymtedwwtbuzic8k+gmhgummmaqeq+yl=\"\" fyoenwxb7b7l+bzafr9pac97jjwpq1p1q+n0jd7g05ls2bb7761a2txx529xyxxspi88f4tipygm6ytolco6htew+kpidl4u1pnnzcteybdvuqqnl3ejdmd6o6kx3ouplfiepfeqav7y3qcdopnmxiztd78xedphstfaqf=\"\" qfz26dvuezpaz4nkinstkkb+=\"\" gzotfhvjrsuqwy4isw9bnz2xmfhxykmdg6l=\"\" a3imwaptdqfauizgkw5wgy4avls2np5omdxea+qodbqpx9gflo0tznt62=\"\" dbhgfjxny1zrqgv8vmptbmqsuobycmzchlz8strecwlat7wmq+kr48iukfu3mocecgkbwc44bdg4asrni0x3pkshjsnkbxwkedhdguiey=\"\" 0uxoni7rvd1sprfon7dmal5srxd9qmupdb8nqryhfepk9xlz6wf4ffzko=\"\" 7d3azsheci5qg3qmq1lhniqdggg8yqqyeklspuaju992otomr0cdor0alxv+pdpvlo78wlxz8rbz7c9tqmxy5skl6toiv5+y6j03kfwqtx6muqvi8sipgmdyaijwcn4ml+9kegdtjkcpxf+tymaa89sxlafbnih6ve934aaakpf=\"\" s3g+mfjcv9hjcz4ccoj3bnuxheooxuwl7e3lg5yvkjpc49kqg7xwbnkxt8scqssr3jujg1uqn2dq2nvpqq3exqfqnke2mn1etmmymuvgxlcwresfsfgoadktpyax5xnel3g9elibxyk8vvvukimqwt=\"\" mnuqp0izbbcc7xl67yw1x15z5b5qbzrnm8=\"\" uy=\"\" 967rejeifxma3rrnv8ywrdxuhdaaee82febo9asalkc2m1e4dckocwggmkoqeluhyxgqv932u2=\"\" tohzih8opu7sqabhz6aftk+ine3mww5srh5cjyfr+=\"\" zdn=\"\" tnhl6cab++ivf6z2ryv6mwmjtxkgjuz5wdwtuiaxg8jok7iqjucp5hhvwpe00af=\"\" kmuzfrhe5rnxm=\"\" s3yshk=\"\" 6u=\"\" vnnhaf5pci7tytq8akct1apfwxiqkkhkentxcjaqi7h3fmqokuiutnf8b7trhfschdoix99bmbrkvm8ibefshgslccqox9nswadail9grk7aw8ehduj8leqm1fmwnd+gt2fwq+bwmbbjats2nn5=\"\" r2ynb2okft3srfzvnxefe+kqncurpymztgb0niaevijgrlbtfpyis1ag5ptmzdg+plo3qrayj8wn3195+vzx78jyy3eaypqnqorxzv3kzsfn339vc1quscv+6gqzimmxdt40f1xt1y6v2+65ib1l5mw=\"\" mt+ijlrh2oogx2skx2xapivmpvrxwqofymqali0ba11gqb9y7xhvrjid1w7=\"\" 5zvqx7t6zh6ufi0i6han1+46xfmz=\"\" 0rjte9rz+6rvbbogx4mlbap0vrord7mogquffa=\"\" o6eh2mlbfgfsdgfdviaibfzy=\"\" ymzz7b3jrlldiqv93pmccuescmmejtddyavaoslldd2jdcp93npcetbmdjpmm+vhkeekm1yyujgqsq8y3b73=\"\" jr4jhdfwh6caqe=\"\" xrrua1a5lv6v5dnasql6wtlovdgtks9wubhbrasenbwyxegf3drfdur6wtnlb9nvefndozmgcncxbrxmcrl3kyytnn7vc9lmhcegh28sbztkq4wzcm8e8axtjohkcax0hald2cuh9vcouslltmzoj8pz0e2i093isc9uawcusxhaq1uxikk7a5r1ht2sbd01gkwvse9c+hy=\"\" hu7ol21spk8imvsjgudgyqaibwzj4ufu5zsnfqxd37tb0awiwczs1mrou1wahyxhmk9rwju8pmktrnas2nkqlphpw6pnzlviniyb0pyan59ghojvcmsap7npevymyvex=\"\" j=\"\" fqqq1it8jxnz0xwlsddbciuvkcyowdrvmqkarfbb35s=\"\" kjjgmyzqmlciwpccszjakmvjqiysacwccaqlxsneo=\"\" w91xtw7w8edvyd1kaxw8xhcl+zzblwqnu6ekd0m00yqasdgxuz77hq9khs=\"\" +gotqvfyeoc23xjbwpnvj0q4erjozhssudcg8mthg19z0rgtxucqmkji2r8kkywecozlbpvbzr5ri=\"\" edqls9hpz0=\"\" coom24mbskfalltjcvm5u6g4wyqn48lr8lfjyewhlty4yxorawuhwr6yzxaysibicbabafhel8rcwxljhuneflev90njj3tpiakzj5qbldbdkbqvj=\"\" wix+4r25oy+t7om=\"\" 8ilz8mzehjzqsbgxceok8babyufark8xraedzrkuz0kalnsgmphkputfwrequppzng1kawc=\"\" 8nhyjh6+x70yqrf3qxirs12d6uwt3q3t3ewciyn1ubsql0ifcx2hyb8k3n87pfomreyxv39iqcoag9cqbicym=\"\" njea91ykkssw1cd=\"\" dk3pdgd0hks+kmuxd09nfaq+ef4fbyabnqo+9jrao3ah4iecb1mhr4kv=\"\" 5jsyks0pzlek7ftdsaxeq+9mw5sdxocxkldojohp+ri6m2olu4m5arsit6o2dlwmjdbczgks=\"\" s407p1svtwdhk9egcg0oqt93+llzuud18psrhokcvx1ulbvqq+6kqdif89yqig5v9ogrkyaeh=\"\" 6tbepnq04kjl2iznqi+ftizoiix9qgtd5zc=\"\" op+fytglqexa+fceeysrz=\"\" qnpdrzmdgjkkrgadrus=\"\" g7m5ozdqgbuwtscic2t3miz8qmellzla4y2nmzqfdfktwjh=\"\" win+1qc9fvcz5ehtix1myo1ohwkmkhxp6fewkovt27qybarktjzcpszudjsjme8cx8ijfe1bnytbgacu9=\"\" 9k5v=\"\" y6tohkdxkwdpqibnkcxmlee+by05dbuybdwc1q1qxoa+idtakdyhkhs95zqsm=\"\" 2jmgyge3=\"\" xux929igvluuq4b9yowu++ntk6obnb+zdwp3lxda3kushi3hwovnkm9lg9zylrf=\"\" orps21qotpukxjd08dshpjv9novmzudj1plcude5yfvy01nc7xzpibqpolpf5lgczqa2lumfjjglqpdbruqc2utgl43n5uqjlqn8r3vxdawhdm8fzugjdeb4ybai8xjfpds7cyrre1weqmw2fav3nsh+ulll2yvqutiezjfvrrnmjuiqigdathfali330ijxmdmsurina1=\"\" lzbrfni248kujgld2ocpvmx+hocw0tyx7ebg5xh0k+zshk3mwiyv+4lhovqnpw=\"\" dy9dqh0ltsvtxa58p4+innnqikpqhi0jkl1yrvwqp6bhw=\"\" g9im3zxaicabe0fzy0x=\"\" nzrrsppdadxns6flj+uel+awi7jnc9olx7qubdjhcumbhrzldvxryxgt7phyxxky4xobasknxm5rdc5l1qctjygcl5fkrjbbmyhoa2xuyoxsp5olmx24bziiu5tqldprfjegsgiqmztzbdnzm922=\"\" 0id6f8filf0io6hh2wpdgopzpx74cke=\"\" kzko7w=\"\" p5frhzmywb81z88ut9pqnfihgicftihluskvqdpcyrmtqw9jaggh4gyld2=\"\" yrqfuq4vi7hr4zhysygcsmxwedsanjlqne0yklrcrmssxlelskvw=\"\" qzuwytyopm7ebe0gyngbfdzyxzy4yco6lbfwie=\"\" y917z6rb+6kk+gvq0vpxu7b6ksfvzd29iddo+46mbhvajjbogkgrsa3m55bthedtvq=\"\" rnkpt54iiolcvn3qi5czr+c3c+t5itgfdfvearh8fvseedj+ug7c9pluyxoyf=\"\" g3fxbjawx4jkjiitlxb5oh7yxutu2pcryn6ry1ccr=\"\" hwozfjbieadjai5pmki29yf+krp=\"\" yhwtn=\"\" uamovuh1wnj5zrbv3bpumjpjc7o33obcev=\"\" lrk6yu9a=\"\" +fapblag7uy6bkqm1lwjpzk1tdtktgthvu0mmkamigt0cc67ah5r5k1fcwdartpwi+71uv=\"\" jtajtw0nail9zwra93drt8ngf7s12yrniiyujbm8e+iftwxgcpbeqazk7pi+4pwz0lkyrvr51bzj6knk+lmfboyovfawk0i821u+1yjqkf8xdr4qfztb2r8pwke2ruv4falai8meoedjdb9pbwqhidkntwfn85ytbzmvacgknfe03pomkaglnb68ecv6w7+dbnbsqskbayie5qcydlgmlv1xrul87h6mcekwri4o9qbhduka52xphkhvetfu9x4c4yyvqnzswvd4shnehzeosavabcey+oruiqmudmsd=\"\" 2he0h6uuf33x4uf3mghxezjpvyclbsa9kjt2uekw=\"\" ui8bo2avxc98ypp7zqftvv+9aovkakkbzzrnlekoxsmrfsag7sl9wv41gl=\"\" qicehw8v6kl+=\"\" iwzsj=\"\" a52otlhfv7mtfcdvuqsawy66kti+u5mybcebbhinrtyy4dz1yd7la1bwoyzuinsav6=\"\" qsucirktfs1mztdcxpmn+slvzzpapk1ebkm7qnffixno882=\"\" furz9ger1ntloyiiva7czam9ndpb2704yy3pfjcprkz3v6agdf=\"\" hah6q2wwjsmyf1hnuq76s8socyrcxu3b8enxfq++ms2kfem8fn0vhjqo882tdxfgr7s9nf795c=\"\" f7ymtmsqu8pjbxxcac7cdn0wyrfof32n+4p=\"\" siktyvm4qitgs1=\"\" dycoc9u2fk2zle3qumiojuyz6p2o9b4ekjkaetfjap0imzyekrkjcy=\"\" syw9qntth+scz1jigsykatymm2tent+45bw3lrakd4twfl5kjubvi2rpjcxevupesfl717mxuy1jiz42qgtedagrt9pa513w9o9m4bwxsx+lngoozaeh97jdtio11ph4c2gdvkhghfwkbksi3dc7gvu6fjqyasco+5w+h015jm7perapumqhglqd82ddl1n=\"\" lvw+=\"\" q73109lcr1jit494=\"\" 9bl7wk6iekln9z3farq5vp4uajeucvxhldi4ojx5dze+6p8no1tutw2mf80zm370idha0=\"\" 99jkrupzmgqzdgvxv8mr8qm51pk+szaopxexdz+c7xxxwnd4bbutcqnpgicheg30+rjv83qu3bpovde5814=\"\" yl9qgpabvqptedxfocov2j3xecimw=\"\" pib75tp4pcr86u20wdft+2ol33onlf+zpnyvisgvabctvm3fkn9yaomtf7dyucdti23xgpardl7hgbfqssux+jzyrbkwxldhldzyl+k4gavro7aejio9xklzi+4knupb9e0vavcsplutaxic3qz9qadvnluqihhqt1bbqdhq+z8a7xaniw6eirqy4zbflr6bid7n3a5kf+bbdzeorap2uztbfbvxukpax7228t2=\"\" xayfdk6gtmii7y0yodtw5ywffsblz1o2jrrsketz7ekzqzofwyqsrenkvkq+nqdbfb3mfortmox6i47pvs=\"\" wmznie2l6qpuntiamzrekl6izuyr4u+oasn+2+zc4ct7ffskkdtcx2a7ct09hn0neyor4+awc+ad7bnq3z7b46qobsbw8ebn2zslf7vi5jgofh5uafwiu2m4jbo8hr17tfoc9qjcv68wp3dsemjn+u=\"\" vapk6d2pgma2xnkxizydvnxdrbckd+oengqpvr0fdid76ldh6nwe5rmhvtfeo0fqyqwc+9nrbictbzfuzvzftgaxc24ycpc5r40vobr342et8w5xwtgkceytvxyv4tlxz3ujtp5w578il2dgcgztr7xyi7ogzpcitdv=\"\" lvxtpc0v2vw0fhce7vv2xsyzg6a3zzxipf5pqxel1hdi2vbffybsooq=\"\" cr8ocjxgg+zzc4svnlreexuf9u7jbckbwlnnsvjww2082z29=\"\" gqtw4=\"\" z78hvt5tt91mrwgkvmqcpvxkzdjraoctkw0djq1klt31mbaedwohu6ozmfkyw7byefxdt62usgoiorhzvzixpuvudrjbj+zhdnjmja94mpzyhiuqfjpqmjlvxejmhq2jtaw1tf0lksxvs2jcdnvogurmtltmqt1kneywmnqagbmxgr5wd5vytpl0pttf1zgyyqcmpoamvotjjwonq2npstivfumgpjn+wetrqdidnbzdu0xh7abttze8s3asm1oaqnabfcbkt1pyw91i3l0zczx4pndnteo25chj1qxvzznvutppgpaou182hs5rlxv0fa42bd14jboqb52y+zn9=\"\" ukxx38+hspsslu63gy0smtx0sqaorupjsg0b89o7holdtgtt4upt2yxaac1limzktgxpmrb8iu9dgotkuuq21viiyudiy=\"\" kzstuozqwfo2q7lwqblejjkclidagbioz384nldremmbixviigwd49xq7a4hl5sxpbtujnvtwy3c1aswx7utx7g3u+s4pwduk+=\"\" plfuxyx83b6oura9wivcu69qrf+z4itlrlu3jgiccl40shpmken7zcnqzhksf+tzsnjfus8gmcbjhj8teyypbsseds9cuml9oauuph9alxlllcddfcswwavvoy+td+tjjpeciybdeubm0pchsz+47hefa1u6wi+=\"\" j6iucyuoxwkpflv+hnmw1ysmmaib+qb+cho0=\"\" matrfzcbxo5bgedshwsjgxy18f=\"\" ksb7h+pceuo9a4shaobivuojptxd671zrm=\"\" 2hlpudfp60ztkphgqdqtabovdvmwfsplifq49iannzjec98n+ttyjemlr+s8nkzmtfjtb2ixcti2huyptvaxaihsaup63sdtt5=\"\" a+bdqvpi6rvkmrif42fd3ufwgzuwm6wkbz9+4boel+y7m8dxiyhbxoi4c2kgnfpshq7rzzqysbgjz+4hduuerb+l8lgdzilmnxnb6z72f3wzdm5tnwvv2r7zldr6ezka+jly0gdiavtx1xont0bpqg57wazw8qtcpbfi6cz2fulnloiyxebnkkcween5m+76j5md=\"\" tllq+n1qcklq8jvmdcf8g3z8nhen6wppjrcq0s1=\"\" vw=\"\" 19mr6zeqyzxozaeprnwkabudho9jdgux1z1qhfxo9r8vmp+ikvav0lgvgabdhghrm69ig5xuxlmtylbodm6z5ojfeutmnlsljkgnadcrms80t2utb+fjvlj6fjgqzfobp7pnzf3jgwwzkaaonc1vhxgbiokct8xigx9q8f9m3yasvaghqxeqiki9qccwplpmgkjbuyqjqzll9owipa9gnhqlucoaykj5ahmxi4a4rch2pwzw6pgwzef++k5l41ykjmzbi1telljzekx+l2b5yftzeogouh1lsjydzcfghcc9km5t0zci=\"\" uakvzhm0qi+qzmag13z7sqfrh1=\"\" wu+6wm0anmkc=\"\" a55=\"\" 4yuv7u2g7qnio6qbflsx9koebayxhfh4n4b1phi=\"\" qjtbkqqyafasqj8d4dlsgwzaos72idzklms7r26z2np50pycfv1xanj03ondmxij3+cgflm4qq8fjw64qzajwb1zah6hkn9b+y8m7ffajci9gzrob9glyvijlnialgwmghd=\"\" jngxb95q+fpkjduzo02t7aes4byaz0yjmjxgbehibazxtxlj3=\"\" jy53e2jjrxcvm3z1t2hqwzq9vfvwbmdnttcd=\"\" plphgv3cxto22hs2tfz8bxm4m5lm1qdhhszqsssurwu+ebg9x4aed0rozx3tuzoop30nm140r2ni1uzuvuszxph0h+01hzxtno+fyh5jnv1zxstiscqgg3qpcsmvdx11j3xp6arc=\"\" 3tq5idgspbgevfb0vjxxsu8hccabsdhl0zhpurepnnji2zmhhrq73hrk+0tnjiiki5cajmcm4mvhfkg+3qbqtvd8nkddapcqizjhooy8k4hfcgazgxu8+ij5=\"\" kqwetsmezf40s3rbv3pg3m+rtj51933dgfwnmbzfhen0oqnuaovgzawrow7mpnqowy71j8r9culr7=\"\" vqmb+poqvs1h=\"\" 9ahy5fl8vppyq930awvvfkzp779zmrunawhwlrkz68rh+7yzqojnnlk4+p9i=\"\" dvvvgrej2tiytcwl9ffh910fhtsikim72mdzyhwvr=\"\" uttzusl999dxzcol46tclbc=\"\" 7smk0vdse3o1pbwqjvwutqak7xft3bp7lr2=\"\" uxpmwmifkl7lh4zu2yhwwjvrhnewvkszmgcqpxm5ddpfv838zpohz9ofwh2evp2gc+oviwt7zu+rhar9kgk1clt0bg=\"\" ff9f5t=\"\" q8wr7pqtn7jb+9dboonrfbxoioqhtxus4ze=\"\" yct6oqfxfocv40vkkpkx87o39swzoq=\"\" bsk64+obnaqa0cg6u1w9saexyt3iul8fgc5vuz8ipsbwqmwa0deqeikitwzqghuggniw3znbyzmncffpzevg7cssz2tplmrpivwnwpjbipgz4upr9zcqkrgk3u8kpg+q+l8repceo5bixc8imnoi+eukospitkjose9iluzmvvsja4kwx7dqa6f+ppvtmgm50icg+xe06fz5jhgpmv+i3itovlx0so+qukuvvxl1t2=\"\" e8l2eg3mmptb2u8nrbsb6ri26xswtimffpjzem7kg+1pw+gjim2k5he3z=\"\" ndtan7z29fxgyfulo+sbmhl0=\"\" ylfslw=\"\" po6iqdgqewsevrm9yxfjsxle=\"\" 3mv0lsxzqofkt0jtfoec7pvbfjh6mzwny0psd=\"\" rmw+pv7awbarx5diyws=\"\" q9umkgursbkhxsg=\"\" a8olqprsnuzzuiv6t9czqhahrd7u7f1=\"\" 62kv+7vpfrzgwrqljbqiaji9bfdngs2bgspuzcmupyxipup4mflkry+yacbjrpwkaocss9ekaqgqixnyuekn9a=\"\" oxxfrr5dnggkappb2xut6hoawevtahfs9qskdqwxeq4zaei5vecyik2fdw++ojn3byarxbrhv+rxznhyifkbvp7rlxwffagduzcamh6v5fvb1xhyjqn8hszk2rbyhetznbju13zu7lbyucjl0qlprd5lckw2m+vj1yzogw4zgysefp7oupvgqgd4enqq+bhquxcnhg6okhydzejlr7d5nn80rvb2ya+ya4t1fixp174bcn4a52frf=\"\" vbmzobnit5fbn6sjkdipdqukrrnszzloecyemsb+liu4jhmcgoh3v3yi75h2=\"\" rcizvmcyuaaj6=\"\" 7d=\"\" b5hyop4pihloni6zvhsihrn49cmn=\"\" d=\"\" wf7+0q3j1+pwi5mnlsvypxh5tafbzghkyeluimkv4qel+2df2trbs2wnr2xk0tf72zywzv3blkzoqazhonu1b9yp6nirtly=\"\" rbvo6zjgraz86=\"\" 8l3mzifetyfjn54wbe3rciutshi3lqhdjfjxe9nvskclxy6pql6omrfshwrte0t8qcz2hnt5ge8xvsbla6q=\"\" ucg9rna9f=\"\" ogh=\"\" cdqnoccy8mbk+dyunepgmyto0h4fe=\"\" 3imozqotrqe6o9301uwu4+q6ynm5sc2ooec8jcb7mgosvwiseidoqw3ud2vniitbckl6+cthj1difiuk6dvb1heut40tpabyhcri0cuf2xg0xe6=\"\" apnmhc4n6honu8e+ru2dewsfqg0b2cclvdunnmz8k4tkn7rrqlpwhbpdjzhcxv7uhzag04=\"\" 6mdh4itnouxgiek1bjksj69lhpydmwn=\"\" ps+ubv197ynpaafen61cyzlzm1j7brqmcudpxlbcpqjdbxqgkmm29eg3eserq+r=\"\" cm5b8nco6wxta2=\"\" 05kzqxhxvtb3hlfgemwgvtbwas8axspauuoexmc66=\"\" 9+wbbfwymc+lowfpo05rjlivzwojtqgcd7u4=\"\" zorr2r5fc6nthd2izvtmiworcy9fv1szjrcqt4+q8sl7zvuhpoqilezvlakuv76xr9oecvz1z=\"\" qxdrwwslzmpupnxyp7vajia+jisoj6iyzvx4ynghmt75c=\"\" p=\"\" vv8+7jzvtgdotvheyfq=\"\" o+mzyop2kqh+hi6krwwcjsmbs9qoxxm+r5ocmcekuv7fzcobdzpwgtihc4g4aqfgtww0luvvly4wj6pdw6wirdnexjb5ubrwbg9hmi1xu+ppg7prv18z7fqce3hjcpi+lr++62pi6l3kfnwfsepq4ngyprktfpt9mpqbumlr8ipog=\"\" z6nbyggpoapskgi1kocmyiswyjglzzedggb0bmnxhacg3s1qy8f8byatizjkqzoqkb7qcqykqnornsv2ers=\"\" w7vf9s7=\"\" pav1jgznjpall1nzp4z4l9ebiiadd1vdgqrt5ni=\"\" h6iv9rbdettakh5fvyyshkhkz6axohktpslcffmnlca3q8ip+xd3=\"\" tuooigdo6w7kvs7lfvxq5qimnzvltny=\"\" pbxjhslqq2amtfrym2l6p3lybjz+geag8dx2ccupwakr=\"\" qjfkd6c5em15wwxecmrsjwebs5qh4hx9=\"\" e+ckbnjjovk1h9rtcj59jyuxb8a0ypwus3f9lc+v6k0z85a9gi35gbofmfyvwxcwt2irjutkigllsasaid7jovs+qliy4onezydjucybdlx3d4mpxrvtvu=\"\" 9plj5wgboy7qou3q7cv9e0bejjz+tqg8tw+igtgrdk0rskluguu1mmvxbvffvnloohnh5oiaog3i+iihsanigfkdje=\"\" cnr=\"\" r8lesk1w1jinmnfjarludsuhcwgaapeia5uu5evowc+ji5uoexdpky6invsrmizhb0eyd5+xjigywcb7km7w+3b+3tkvwloc8w724fkk6s4z6dqajn31peq49j8vg5cqkvr5pe=\"\" 0amjljhandd3sdxlsnd0luh8i10gnx42mwaobsq9a4rvnw76fxv=\"\" 3syazpnggllezyl9kcp7v08kfhypc5yqh5kqzymeyrwj3xx23q7ol5ro=\"\" mx3nr6ddu6nodcxb+tzs+zu=\"\" zqy21ydx5ex5josqqognlu2nr=\"\" hx2iujlyepb0r455mrv1zrenn0hk8wdoczsdcwakej4fda8a0eqazxranm5wockc1l8csmsnkz1r1attxmec+sxe=\"\" pt0pni453rpmnghjp5jpu5larxjpi9nhjt7+2r9pldhwqs4aliiiu9qcqax1=\"\" b9ywgzvzantmfqvwjohgabnmxc+suezejnzpch41eatlxx6krjckc3dxz2bll=\"\" 67858a0q7lmahietmgehjq7semxieaiitnyc8p+lielty6mpivxlccogyy2nvkmirxg+bcv6wvxidg30pkba6qosaicmowyyfqmtazjdgdvzde4gkseylojnobcts2ufdssi1mbm101top9eng9u0kuokipvn2lsi0bvd+omnay+2r82loi5yvnzimb2uqlsghprjjdflijndpgb4hw2rvhzcblfcmw06v0ybkwrf0n8dfs35vqfxjtez0whpzlv8yorw291pv3fdbun20rfjlxxajbykmcxqyp7qthpxjwxdthmnmoso9geyqyyqosdhimzatohgi6gntuzo0sguog21u1uosp7anj7jrvhybowufjz2hcgvwnqnn1nyf3ui9ge01y5x9lym=\"\" pemlgxyxbdaf1mulobqp4zgfy7h8xlc30222hidl3xlxy9gnrnsmtl8pvlbk6oscemmf=\"\" kstkoc=\"\" dvp=\"\" auvnlog+egz=\"\" tr4g3eng4bptkg02gswa6quneu0ktfxdw4emcdo8uvkyrtjfyptwff0dcvgrpjaygfigf7p9bx2nzq6mvmfatsboblyzxd28vcsdpbicgu78amiglgwlxfxhkbejd2qiv3w8flydcg4sfdgg=\"\" svb+venoh2y56l2imtqrch7gkk0wgcnccctjviro+ktienmru4hpl=\"\" b59bk0+r2smmwdnmqd+egvdwqtes63v17otawntukour0xxm+goe9ytheivq=\"\" cjpyedzklp7+ly9woyoynhoiw2jynw5uookwdpybiagjbkq8rfvwrmenlis0t0nybgdt=\"\" b0w+7lil6s4m4ot9qsvugdcbb8awlfsuqjvb8nbnkxkns5ytoba37qkyabijvxe2lm12il32cydswgzcpzgeznkcavgmaini24dbfbunqeam8xad1pwbrmyomirumtiilqxsfqncvgzfsevfrl8npy5g62ieizallqwijeldi=\"\" n91kbxw233f+03syj5klyzsxmuuctltvfg1gf8fd3r2fyp97jswvjqizwa6b9bjiw2yppvgemb7bw0qvewv3kobqm5vcv0c=\"\" ic9v733vtsehlgfv5161jx7veuufeapzr=\"\" xmincqybxfupggllqqxmhorl2hotmnpi9cryfc8fzgm4n4iyw816uq5kggramkr6sig8d8s8fudpk0k+s2sppeuxzfj9mbgkyvhvd4u4aq5pbl70cytpvty2gzyk2zusevp5nedlga4phxlvfmhabitzr213yveev9qfugx5vfx0phspg928vfsxxmyvo+z4oyc7hw=\"\" p5bzfnx3yzsx0x1hutatfkgfnxtkr9agbmrtpx7vfx7smbndwcohvlqvuu7x3wq+ly8spenrntul9mrmiluugjenxkpts2d6r9eg=\"\" 2qfj95yecwscc6habaftdxmuteh9hpjoammwc8m7prdlrjxnnqnawqz4owokgmk5kgqat0b5ncyhpfep9rcipk3sner6zpavjz=\"\" shv2o73t6o3ccoxzrk3egbvpx9d2te1ek5jnzvn8q081bxdjswry8d=\"\" cue3d0zgeax2p9nfbff0e7txnbshrbyj7ionc0jdqvxcd+jb=\"\" sa4jgadn7lcz2gbn26d8qdo1vyzj4lvqw6igsmr94zvortu7czhuzbdubezfzdmohcplibovql=\"\" 2+ps319bfjrsfuzfkqqdy6gybs7quylnbsanqckf7egchkcl3yxavtr+ejftgm=\"\" fm9l=\"\" 9ibnlwm3q0gkfdxphvqqvrjseed7gqblf8otpukzwauv4p+cecxiz943=\"\" mi7tufif6u0hlkgpnwhfsxkttvktqssy=\"\" eq1x5ufz8r1x5jyncwz=\"\" p+2nh3s8qvtjg+fykitdqmpgrqltrkcseja0dpzn28sahr6d3zgoqyctveikrw1j2xy7lioo7oibwmr0kolb5rpbkkrhegwzv=\"\" sr1jeardvfzauahs3=\"\" pilhezqbr1mgvcfvux7sbeludn2cikgqu9zgkfq=\"\" yu1slhb6mlou+oktvuckfk2+3juhinrq=\"\" shverx6ofimv9bes9o8vhw0cl4xkuxtk0drbeuhvpo75lbbljr0yqwctihlp+o7badze1hlhc8tryxxyz1cab9knm3emcwpsg3fffja0zo=\"\" ldoxfof7uyil39kz=\"\" p+hmkrdqipon1kibpflrjlr8+zsjg6gz4r3z4xqiqo6hithknl=\"\" a+7aezsigva3ezn7ck4c7mtedqaooihwaojkqkfaaiheo7icio5faapisaajhoagij9aauukbfiqbukiohdeizwcuaassatgxj47pt9jhyij4mqydh6irfdmzmfmdj7tzsz2mhenafoi2cocb1czgswrtwhko4bfspcez8dhz2rtlgxubrwmkqd6wfiisphvhwa=\"\" 6n5fanznjtprixlmnak0k5m3a3irk4gchazdabgiegvingjzrhfictzbpiadzv7q0f=\"\" pketsojrihtvd6enc+gzldijel5jdihqasefczkysidkk8ktjqk8kezfzs+rp+yxq2d4zrnhqcow21fav7o=\"\" 8+o1cvsvorpkozjica46+bneulpv+9o61+h18jxkdqfpq5ao7c7ppfnu5w2d9zpn0viqfmxj93ix=\"\" xayzqwmq3avhwvvumu8pfv708bbhrvwg2vn=\"\" amlxd2w+gp02nxekinc0aak9zperkb2gchedbvgc0rfamyl+b1bed1vkk5mfucte2ck1ooyg48zn9lq9nf2vrwhzkoljocvc7k7izusnt1rtbf41vzyk6sjstjz29c0cjxs7tvdy3vnaody1fg+nhfrbbvsvnw1dpsrtnp=\"\" ojhtsgrzwzf0vyjehxfloqa0zxjzkgyfnnttppx6etzjgyn2po=\"\" aex9zfznlu2ehso1mhk893adeervs=\"\" eyttjdvm9l3=\"\" lhzw9pjm2m1d0urfmndi0rqturfexd251vsx+pxx0jrdrjexk3+ned4zfbl25dghbbqh6dbimgy=\"\" gfk2slrrxnexdvpczhevjcgseqy3euegotfzausnawm90r4yzm7mo8u0y+++1mp2x5doudxe0fn0jv0ihsmblrxtzxcria=\"\" fzwdu36kuua0dtmqd=\"\" qjdrg6hbggad3jk4k22r5ytsytecgu4o6+fse6pad3teavbmwkaojvpx2srt1elj6xt5vgtzqr491ajnwzu3oyekli1odxbti1f=\"\" 9pzsowbosvbcofbph5m83xkusadzlggmgiyb8m8yeib33pe5mbgj1egj+xzqn8bfstxur+hue6aaaaaelftksuqmcc\"=\"\">",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "9310": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "11594": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "12540": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "13432": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h5",
+        "selector": "#w1497042986448 > div > div > div > div > div:nth-of-type(4) > ul:nth-of-type(1) > li > h5",
+        "snippet": "<h5>Follow Us</h5>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "meta-description",
+        "pattern": "head without description",
+        "selector": "head",
+        "snippet": "<head>",
+        "onPage": false,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "14108": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "15052": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "15367": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h3",
+        "selector": "#joel-kornblum > div:nth-of-type(2) > h3",
+        "snippet": "<h3>Joel Kornblum</h3>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "16462": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "17209": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h3",
+        "selector": "#w1776721978713 > div > div > h3",
+        "snippet": "<h3>Media Inquiries</h3>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "18256": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ],
+    "19370": [
+      {
+        "rule": "button-name",
+        "pattern": "button without name",
+        "selector": "#search-btn",
+        "snippet": "<button id=\"search-btn\" class=\"input-group-btn btn btn-default go inline search-btn\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i></button>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "heading-order",
+        "pattern": "h1 followed by h4",
+        "selector": "#headingOne > h4",
+        "snippet": "<h4 class=\"panel-title\"><a class=\"collapsed\" href=\"#general\" data-toggle=\"collapse\" data-parent=\"#accordion\">GENERAL<span style=\"color: #002888;\">&nbsp;</span></a></h4>",
+        "onPage": true,
+        "origin": "static-html"
+      },
+      {
+        "rule": "render-blocking-resources",
+        "pattern": "head link[rel=\"stylesheet\"]",
+        "selector": "head > link:nth-of-type(2)",
+        "snippet": "<link rel=\"stylesheet\" href=\"https://www.rbcis.com/assets/rbcits/css/bootstrap.min.css\" type=\"text/css\">",
+        "onPage": false,
+        "origin": "sample"
+      }
+    ]
+  }
+}

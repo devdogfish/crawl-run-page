@@ -6,17 +6,18 @@
 //   @page:123         a page of the current site (title and path come from the page data)
 //   @crawl:812        a crawl (status and link come from the crawl list)
 //
-// PROTOTYPE: the issue id packs site, page and the element's position on the page, resolved against the latest
-// crawl. In the real backend it's the element's own id, and `resolveIssue` becomes one API call.
-import { RULE_CATALOG, pageIssues, type Instance, type Rule } from "@/lib/page-issues";
+// The issue ID packs site, page and stable element position. Without explicit scope, resolve the newest observation.
+import { RULE_CATALOG, issueSlots, type Instance, type Rule } from "@/lib/page-issues";
 import { PRIORITY, type Priority } from "@/lib/priority";
-import { baselinesFor, defaultCrawl, pageView, siteSize, type PageView } from "@/lib/site-pages";
+import { baselinesFor, crawlChoices, hasPage, pageView, type PageView } from "@/lib/site-pages";
 import { SITE_IDS, type SiteId } from "@/lib/sites";
 
 export type IssueView = "issues" | "preview" | "source";
 export type ResolvedIssue = {
   id: string;
   site: SiteId;
+  crawl: number;
+  baseline: number | null;
   page: PageView;
   it: Instance;
   rule: Rule;
@@ -27,28 +28,40 @@ export type ResolvedIssue = {
 export const issueId = (site: SiteId, pageId: number, k: number) => String(SITE_IDS.indexOf(site) * 1e9 + pageId * 1e4 + k);
 
 const cache = new Map<string, ResolvedIssue | null>();
-export function resolveIssue(id: string): ResolvedIssue | null {
-  if (cache.has(id)) return cache.get(id)!;
+type ResolveScope = { crawl?: number; baseline?: number | null };
+
+export function resolveIssue(id: string, scope: ResolveScope = {}): ResolvedIssue | null {
+  if (!/^\d+$/.test(id)) return null;
+  const key = `${id}:${scope.crawl ?? ""}:${scope.baseline === undefined ? "" : scope.baseline ?? "none"}`;
+  if (cache.has(key)) return cache.get(key)!;
   const n = Number(id);
   let out: ResolvedIssue | null = null;
   const site = SITE_IDS[Math.floor(n / 1e9)];
   if (Number.isInteger(n) && n >= 0 && site) {
     const pageId = Math.floor((n % 1e9) / 1e4), k = n % 1e4;
-    const a = Number(defaultCrawl(site).id);
-    const b = Number(baselinesFor(site, String(a))[0]?.id ?? NaN);
-    const page = pageView(site, pageId, a, Number.isNaN(b) ? null : b);
-    const it = page ? pageIssues(page, a, Number.isNaN(b) ? null : b, siteSize(site)).instances.find((x) => x.k === k) : undefined;
-    if (page && it) {
+    if (!hasPage(site, pageId)) return null;
+    const choices = crawlChoices(site);
+    const candidates = scope.crawl !== undefined ? choices.filter(({ id }) => Number(id) === scope.crawl) :
+      scope.baseline !== undefined ? choices.slice(0, 1) : choices;
+    for (const [index, { id: crawlId }] of candidates.entries()) {
+      const crawl = Number(crawlId);
+      const defaultBaseline = index === 0 && scope.crawl === undefined ? baselinesFor(site, crawlId)[0]?.id : undefined;
+      const baseline = scope.baseline !== undefined ? scope.baseline : defaultBaseline == null ? null : Number(defaultBaseline);
+      if (baseline !== null && !choices.some(({ id }) => Number(id) === baseline && baseline < crawl)) continue;
+      const page = pageView(site, pageId, crawl, baseline);
+      const it = page ? issueSlots(page, crawl, baseline).find((element) => element.k === k) : undefined;
+      if (!page || !it) continue;
       const rule = RULE_CATALOG[it.rule];
+      const vs = baseline !== null && (it.status !== "existing" || scope.baseline !== undefined) ? `&vs=${baseline}` : "";
       out = {
-        id, site, page, it, rule, priority: PRIORITY[rule.severity],
+        id, site, crawl, baseline, page, it, rule, priority: PRIORITY[rule.severity],
         href: (view = "issues") =>
-          // the baseline only matters for a fixed element (it's gone from the latest crawl)
-          `/${site}/pages/${pageId}?crawl=${a}${it.status === "fixed" ? `&vs=${b}` : ""}&issue=${k + 1}${view !== "issues" ? `&tab=${view}` : ""}`,
+          `/${site}/pages/${pageId}?crawl=${crawl}${vs}&issue=${k + 1}${view !== "issues" ? `&tab=${view}` : ""}`,
       };
+      break;
     }
   }
-  cache.set(id, out);
+  cache.set(key, out);
   return out;
 }
 

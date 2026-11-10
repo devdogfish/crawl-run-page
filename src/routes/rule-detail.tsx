@@ -3,9 +3,9 @@
 //   Pages: every page this rule fails on, linking to the page detail with the issue selected.
 //   Side: why it matters, how to fix, references, and handoff (prompt, API request).
 // State in the URL: ?crawl=&vs=&el=&type=&seg=&q=
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router";
-import { useParams, useSearchParams } from "react-router";
+import { useParams } from "react-router";
 import { NotFound } from "@/routes/not-found";
 import { Box, Button, Container, Flex, Grid, HStack, Stack, Text } from "@chakra-ui/react";
 import { LuCheck, LuCopy, LuTerminal } from "react-icons/lu";
@@ -17,17 +17,17 @@ import { useSite } from "@/components/site-context";
 import { TablePagination } from "@/components/table-pagination";
 import { BackLink, RuleGuide, RuleMeta, RuleTitle } from "@/components/rule-ui";
 import { RULE_CATALOG } from "@/lib/page-issues";
-import { byRule, countOf, hitsFor, rulesPrompt, type Seg } from "@/lib/site-issues";
-import { defaultScope, LH_SAMPLE, PAGE_TYPES, fullLighthouse, type PageView } from "@/lib/site-pages";
+import { folderLabel, inPageScope, issueScopeDefaults, matchesIssueScope, pageScopeDefaults, queryString, returnPath, useRouteQuery } from "@/lib/route-query";
+import { byRule, countOf, elementOf, hitsFor, rulesPrompt, type Seg } from "@/lib/site-issues";
+import { defaultScope, lighthouseCoverage, PAGE_TYPES, type PageView } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
 
-type State = { crawl: string; vs: string; q: string; el: string; type: string; seg: Seg };
 const PAGE_SIZE = 50;
 const n = (x: number) => x.toLocaleString("en-US");
 
 export default function RulePage() {
   const { ruleId = "" } = useParams();
-  if (!RULE_CATALOG[ruleId]) return <NotFound />;
+  if (!Object.hasOwn(RULE_CATALOG, ruleId)) return <NotFound />;
   return <Suspense><RuleView key={ruleId} /></Suspense>;
 }
 
@@ -35,58 +35,58 @@ function RuleView() {
   const site = useSite();
   const { ruleId = "" } = useParams();
   const rule = RULE_CATALOG[ruleId]; // RulePage only renders this for a known rule
-  const sp = useSearchParams()[0];
-
-  const defaults: State = { ...defaultScope(site), q: "", el: "all", type: "all", seg: "all" };
-  const [s, setS] = useState<State>(() => {
-    const init = { ...defaults };
-    for (const k of Object.keys(defaults) as (keyof State)[]) { const v = sp.get(k); if (v != null) (init as Record<string, string>)[k] = v; }
-    return init;
-  });
-  const [page, setPage] = useState(1);
-  const set = (patch: Partial<State>) => { setS((x) => ({ ...x, ...patch })); setPage(1); };
-  useEffect(() => {
-    const p = new URLSearchParams();
-    for (const k of Object.keys(s) as (keyof State)[]) if (s[k] !== defaults[k]) p.set(k, s[k]);
-    const qs = p.toString();
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-  }, [s]); // eslint-disable-line react-hooks/exhaustive-deps
+  const defaults = { ...defaultScope(site), ...pageScopeDefaults, ...issueScopeDefaults, q: "", from: "" };
+  const [s, set, query] = useRouteQuery(site, defaults);
+  const paginationKey = `${site}:${query}`;
+  const [pagination, setPagination] = useState({ key: paginationKey, page: 1 });
+  const page = pagination.key === paginationKey ? pagination.page : 1;
+  const setPage = (next: number) => setPagination({ key: paginationKey, page: next });
 
   const a = Number(s.crawl);
   const b = s.vs === "none" ? null : Number(s.vs);
   const comparing = b != null;
-  const seg: Seg = comparing ? s.seg : "all";
+  const coverage = lighthouseCoverage(site, a);
+  const seg = (comparing ? s.seg : "all") as Seg;
 
   // This rule's hits, narrowed by page type (the element pattern is applied to the page list, not to "Elements")
-  const hits = useMemo(() => hitsFor(site, a, b).filter((h) => h.rule === ruleId && (s.type === "all" || h.p.type === s.type)), [site, a, b, ruleId, s.type]);
-  const row = useMemo(() => byRule(hits, seg)[0] ?? null, [hits, seg]);
+  const { type, year, sub, pri, cat, markup, el } = s;
+  const hits = useMemo(() => {
+    const q = s.q.trim().toLowerCase();
+    return hitsFor(site, a, b).filter((h) => inPageScope(h.p, { type, year, sub }) &&
+      matchesIssueScope(h, { auditRule: ruleId, pri, cat, markup, el: "all" }) &&
+      (!q || h.p.path.toLowerCase().includes(q) || h.p.title.toLowerCase().includes(q)));
+  }, [site, a, b, ruleId, type, year, sub, pri, cat, markup, s.q]);
+  const scopedHits = useMemo(() => el === "all" ? hits : hits.filter((h) => h.pattern === el), [hits, el]);
+  const row = useMemo(() => byRule(scopedHits, seg)[0] ?? null, [scopedHits, seg]);
+  const patterns = useMemo(() => byRule(hits, seg)[0]?.patterns ?? [], [hits, seg]);
   const counts = useMemo(() => {
-    const pages = (g: Seg) => new Set(hits.filter((h) => countOf(h, g) > 0 && (s.el === "all" || h.pattern === s.el)).map((h) => h.p.i)).size;
+    const pages = (g: Seg) => new Set(scopedHits.filter((h) => countOf(h, g) > 0).map((h) => h.p.i)).size;
     return { all: pages("all"), new: pages("new"), fixed: pages("fixed") };
-  }, [hits, s.el]);
+  }, [scopedHits]);
 
   // One row per page: its elements of this rule (in the segment), and where they come from
   const pages = useMemo(() => {
-    const q = s.q.trim().toLowerCase();
     const by = new Map<number, { p: PageView; elements: number; added: number; fixed: number; pats: string[]; k: number }>();
-    for (const h of hits) {
+    for (const h of scopedHits) {
       const c = countOf(h, seg);
-      if (!c || (s.el !== "all" && h.pattern !== s.el)) continue;
-      if (q && !h.p.path.toLowerCase().includes(q) && !h.p.title.toLowerCase().includes(q)) continue;
-      const r = by.get(h.p.i) ?? { p: h.p, elements: 0, added: 0, fixed: 0, pats: [], k: h.k };
-      r.elements += c; r.added += h.added; r.fixed += h.fixed; r.pats.push(h.pattern); r.k = Math.min(r.k, h.k);
+      if (!c) continue;
+      const k = elementOf(h, seg);
+      const r = by.get(h.p.i) ?? { p: h.p, elements: 0, added: 0, fixed: 0, pats: [], k };
+      r.elements += c; r.added += h.added; r.fixed += h.fixed; r.pats.push(h.pattern); r.k = Math.min(r.k, k);
       by.set(h.p.i, r);
     }
     return [...by.values()].sort((x, y) => y.elements - x.elements || x.p.path.localeCompare(y.p.path));
-  }, [hits, seg, s.el, s.q]);
+  }, [scopedHits, seg]);
   const pageRows = pages.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const multi = (row?.patterns.length ?? 0) > 1; // with one element pattern, a filter and a column would say nothing
+  const multi = patterns.length > 1; // with one element pattern, a column would say nothing
   const tpl = multi ? "minmax(0, 1fr) minmax(0, 220px) 80px" : "minmax(0, 1fr) 80px";
-  const markup = !row ? "" : row.sharedPages === row.pages ? "shared markup" : row.sharedPages === 0 ? "page-specific" : "partly shared markup";
-  const backQs = ["crawl", "vs", "type", "seg"].map((k) => s[k as keyof State] !== defaults[k as keyof State] ? `${k}=${s[k as keyof State]}` : "").filter(Boolean).join("&");
+  const markupLabel = !row ? "" : row.sharedPages === 0 ? "page-specific" : row.patterns.some((pattern) => pattern.specific) ? "partly shared markup" : "shared markup";
+  const scope = { crawl: s.crawl, vs: s.vs, type, year, sub, pri, cat, markup, el, seg };
+  const back = returnPath(s.from, site, `/${site}/issues${queryString(scope)}`);
+  const from = `/${site}/issues/${ruleId}${queryString({ ...scope, q: s.q, from: s.from })}`;
   const pageHref = (r: (typeof pages)[number]) =>
-    `/${site}/pages/${r.p.i}?crawl=${s.crawl}${comparing ? `&vs=${s.vs}` : ""}&issue=${r.k + 1}${seg === "fixed" ? "&seg=fixed" : ""}`;
+    `/${site}/pages/${r.p.i}${queryString({ crawl: s.crawl, vs: s.vs, auditRule: ruleId, pri, cat, markup, el, seg, issue: r.k + 1, from })}`;
   const api = () => `curl -s "${window.location.origin}/api/issues?crawl=${s.crawl}&rule=${ruleId}${s.el !== "all" ? `&selector=${encodeURIComponent(s.el)}` : ""}${s.type !== "all" ? `&type=${s.type}` : ""}"`;
   const toCsv = () => ["url,title,elements,selectors" + (comparing ? ",new,fixed" : ""),
     ...pages.map((r) => [r.p.path, r.p.title, r.elements, r.pats.join("; "), ...(comparing ? [r.added, r.fixed] : [])]
@@ -96,12 +96,12 @@ function RuleView() {
     <Box bg="bg" minH="100vh">
       <Box borderBottomWidth="1px" bg="bg.subtle">
         <Container maxW="7xl" pt="5" pb="5">
-          <BackLink href={`/${site}/issues${backQs ? `?${backQs}` : ""}`}>Issues</BackLink>
+          <BackLink href={back}>Issues</BackLink>
           <Flex justify="space-between" align={{ base: "start", md: "end" }} direction={{ base: "column", md: "row" }} gap="4">
             <Stack gap="1" minW="0">
               <RuleTitle rule={rule} size="lg" />
               <RuleMeta rule={rule}>
-                {row && <Text truncate>· {n(row.pages)} pages · {n(row.elements)} elements · {markup}</Text>}
+                {row && <Text truncate>· {n(row.pages)} pages · {n(row.elements)} elements · {markupLabel}</Text>}
               </RuleMeta>
             </Stack>
             <CrawlScope crawl={s.crawl} vs={s.vs} onChange={(crawl, vs) => set({ crawl, vs, ...(vs === "none" ? { seg: "all" as Seg } : {}) })} />
@@ -127,15 +127,18 @@ function RuleView() {
                 downloadLabel="Download these pages (.csv)" onDownload={() => downloadText(toCsv(), `${ruleId}-${site}-${s.crawl}.csv`, "text/csv")}
               />
               <HStack gap="2" px="2" py="1.5" borderBottomWidth="1px" bg="bg.subtle" wrap="wrap">
-                <FilterSelect value={s.type} onChange={(type) => set({ type })} w="36" items={[
+                <FilterSelect value={s.type} onChange={(type) => set({ type, year: "all", sub: "" })} w="36" items={[
                   { value: "all", label: "All page types" }, ...PAGE_TYPES.map((t) => ({ value: t.id, label: t.label, hint: t.prefix ?? "No match" })),
                 ]} />
-                {multi && row && (
+                {(multi || el !== "all") && (
                   <FilterSelect value={s.el} onChange={(el) => set({ el })} w="64" items={[
                     { value: "all", label: "All elements" },
-                    ...row.patterns.map((x) => ({ value: x.pattern, label: x.pattern, mono: true, hint: `${n(x.pages)} pages · ${x.shared ? "shared markup" : "page-specific"}` })),
+                    ...patterns.map((x) => ({ value: x.pattern, label: x.pattern, mono: true, hint: `${n(x.pages)} pages · ${x.shared ? x.specific ? "partly shared markup" : "shared markup" : "page-specific"}` })),
+                    ...(el !== "all" && !patterns.some((x) => x.pattern === el) ? [{ value: el, label: el, mono: true }] : []),
                   ]} />
                 )}
+                {(year !== "all" || sub) && <Button size="xs" variant="ghost" onClick={() => set({ year: "all", sub: "" })}>{folderLabel(sub) || (year === "none" ? "No year" : year)} ×</Button>}
+                {markup !== "all" && <Button size="xs" variant="ghost" onClick={() => set({ markup: "all" })}>{markup === "shared" ? "Shared markup" : "Page-specific markup"} ×</Button>}
               </HStack>
               <Box overflowX="auto">
                 <Box minW="560px">
@@ -166,8 +169,8 @@ function RuleView() {
               </Box>
               {pages.length > 0 && <TablePagination count={pages.length} pageSize={PAGE_SIZE} page={page} onPageChange={setPage} />}
             </Flex>
-            {rule.category === "performance" && !fullLighthouse(a) && (
-              <Text textStyle="xs" color="fg.muted">Lighthouse audited a sample of {LH_SAMPLE} pages in this crawl. Every 10th crawl audits the whole site.</Text>
+            {rule.category === "performance" && coverage.audited < coverage.pages && (
+              <Text textStyle="xs" color="fg.muted">This sample includes Lighthouse results for {coverage.audited} of {coverage.pages} pages in this crawl.</Text>
             )}
           </Stack>
 
@@ -175,7 +178,7 @@ function RuleView() {
           <Stack gap="5" position={{ lg: "sticky" }} top={{ lg: "calc(var(--sticky-top, 3.5rem) + 1.5rem)" }}>
             <RuleGuide rule={rule} actions={
               <Stack gap="2">
-                <CopyButton icon={<LuCopy />} label="Copy as prompt" text={() => row ? rulesPrompt(site, a, [s.el === "all" ? row : { ...row, patterns: row.patterns.filter((x) => x.pattern === s.el) }]) : ""} />
+                <CopyButton icon={<LuCopy />} label="Copy as prompt" text={() => row ? rulesPrompt(site, a, [row]) : ""} />
                 <CopyButton icon={<LuTerminal />} label="Copy API request" text={api} />
               </Stack>
             } />

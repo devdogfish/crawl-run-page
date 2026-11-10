@@ -41,8 +41,8 @@ export const fmtDur = (s: number) => {
 };
 export const fmtNum = (n: number) =>
   n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : `${n}`;
-export const fmtClock = (t: number) => {
-  const base = Date.UTC(2026, 10, 4, 2, 0, 0) + t * 1000;
+export const fmtClock = (t: number, startedAt?: Date) => {
+  const base = (startedAt?.getTime() ?? Date.UTC(2026, 10, 4, 2, 0, 0)) + t * 1000;
   return new Date(base).toISOString().slice(11, 19);
 };
 export const stageDuration = (s: Stage, now: number) =>

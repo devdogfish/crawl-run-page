@@ -8,9 +8,9 @@
 // ?issue= and ?tab= select the element and the view, so the assistant's links land on the right thing.
 //
 // PROTOTYPE: data from src/lib/page-issues.ts.
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router";
-import { useLocation, useParams, useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import {
   Box, Button, Code, Collapsible, Container, EmptyState, Flex, Grid, HStack, Heading, Icon, IconButton, Input, InputGroup, Link, Menu, Portal,
   SegmentGroup, Span, Stack, Tabs, Text,
@@ -30,9 +30,11 @@ import {
 } from "@/lib/page-issues";
 import { PRIORITIES, PRIORITY, type Priority } from "@/lib/priority";
 import { explainMessage, fixMessage, issueId, summarizeMessage } from "@/lib/refs";
+import { issueScopeDefaults, matchesIssueScope, queryString, readCrawlScope, returnPath, useRouteQuery } from "@/lib/route-query";
 import { downloadText } from "@/components/data-toolbar";
-import { CATEGORIES, defaultCrawl, pageView, siteSize } from "@/lib/site-pages";
+import { CATEGORIES, defaultCrawl, pageView } from "@/lib/site-pages";
 import { SITES, type SiteId } from "@/lib/sites";
+import { getStoredSnapshot } from "@/lib/stored-html";
 
 type Seg = "all" | "new" | "fixed";
 type PageV = NonNullable<ReturnType<typeof pageView>>;
@@ -50,8 +52,9 @@ function PageDetail() {
   const site = useSite();
   const { pageId } = useParams<{ pageId: string }>();
   const sp = useSearchParams()[0];
-  const a = Number(sp.get("crawl") ?? defaultCrawl(site).id);
-  const b = sp.get("vs") ? Number(sp.get("vs")) : null;
+  const { crawl, vs } = readCrawlScope(site, sp.get("crawl") ?? "", sp.get("vs") ?? "", false);
+  const a = Number(crawl);
+  const b = vs === "none" ? null : Number(vs);
   const p = useMemo(() => pageView(site, Number(pageId), a, b), [site, pageId, a, b]);
   if (!p) {
     return (
@@ -59,29 +62,27 @@ function PageDetail() {
         <EmptyState.Root><EmptyState.Content>
           <EmptyState.Indicator><LuFileQuestion /></EmptyState.Indicator>
           <EmptyState.Title>This page isn&apos;t in crawl #{a}</EmptyState.Title>
-          <EmptyState.Description><Link asChild><RouterLink to={`/${site}/pages`}>Back to Pages</RouterLink></Link></EmptyState.Description>
+          <EmptyState.Description><Link asChild><RouterLink to={returnPath(sp.get("from") ?? "", site, `/${site}/pages${queryString({ crawl, vs })}`)}>Back to Pages</RouterLink></Link></EmptyState.Description>
         </EmptyState.Content></EmptyState.Root>
       </Container>
     );
   }
-  return <Detail key={`${pageId}-${a}-${b}`} p={p} a={a} b={b} site={site} />;
+  return <Detail key={`${site}-${pageId}-${a}-${b}`} p={p} a={a} b={b} site={site} />;
 }
 
 function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site: SiteId }) {
-  // Assets aren't stored: the preview streams them from the site that was crawled
+  // The stored snapshot uses the crawled site as the base for original asset URLs.
   const origin = SITES[site].url;
-  const { instances, html } = useMemo(() => pageIssues(p, a, b, siteSize(site)), [p, a, b, site]);
+  const { instances, html } = useMemo(() => pageIssues(p, a, b), [p, a, b]);
   // Shareable state lives in the URL: ?issue=18&tab=preview&pri=P1&cat=accessibility&q=…&seg=new
-  const sp = useSearchParams()[0];
-  const tabOf = (v: string | null) => (v === "preview" || v === "source" ? v : "issues");
-  const [tab, setTab] = useState<"issues" | "preview" | "source">(tabOf(sp.get("tab")));
-  const list = (k: string) => (sp.get(k) ? sp.get(k)!.split(",") : []);
-  const [q, setQ] = useState(sp.get("q") ?? "");
-  const [seg, setSeg] = useState<Seg>((sp.get("seg") as Seg) ?? "all");
-  const [pri, setPri] = useState<Priority[]>(list("pri") as Priority[]);
-  const [cats, setCats] = useState<string[]>(list("cat"));
+  const [s, set] = useRouteQuery(site, { crawl: defaultCrawl(site).id, vs: "none", ...issueScopeDefaults, q: "", tab: "issues", issue: "", from: "" }, false);
+  const { tab, q, markup, auditRule, el } = s;
+  const selected = s.issue ? Math.max(0, Number(s.issue) - 1) : null;
+  const pri = s.pri === "all" ? [] : s.pri.split(",") as Priority[];
+  const cats = s.cat === "all" ? [] : s.cat.split(",");
+  const setTab = (tab: string) => set({ tab });
+  const setSelected = (k: number) => set({ issue: String(k + 1) });
   const [sharedOpen, setSharedOpen] = useState(false);
-  const [selected, setSelected] = useState<number | null>(sp.get("issue") ? Number(sp.get("issue")) - 1 : null);
   const prio = (sev: string) => PRIORITY[sev as keyof typeof PRIORITY];
   const [highlightRule, setHighlightRule] = useState<string | null>(null);
   const [viewport, setViewport] = useState(1280);
@@ -89,14 +90,16 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   const [layers, setLayers] = useState<Layer[]>(["issues"]);
   const comparing = b != null;
 
-  const visible = useMemo(() => {
+  const seg = !comparing ? "all" : s.seg === "all" && instances.some((it) => it.k === selected && it.status === "fixed") ? "fixed" : s.seg as Seg;
+  const scoped = useMemo(() => {
     const t = q.trim().toLowerCase();
     return instances.filter((it) => {
       const r = RULE_CATALOG[it.rule];
-      return (seg === "all" ? it.status !== "fixed" : it.status === seg) && (!pri.length || pri.includes(PRIORITY[r.severity])) && (!cats.length || cats.includes(r.category)) &&
+      return matchesIssueScope({ rule: it.rule, shared: it.shared != null, pattern: it.group }, { pri: s.pri, cat: s.cat, markup, auditRule, el }) &&
         (!t || [it.rule, r.title, it.selector, it.snippet].some((x) => x.toLowerCase().includes(t)));
     });
-  }, [instances, q, seg, pri, cats]);
+  }, [instances, q, s.pri, s.cat, markup, auditRule, el]);
+  const visible = useMemo(() => scoped.filter((it) => seg === "all" ? it.status !== "fixed" : it.status === seg), [scoped, seg]);
 
   // One row per rule, worst first; split into "this page" and "shared"
   const byRule = (list: Instance[]) => {
@@ -113,36 +116,17 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
   useEffect(() => { if (current?.shared != null) setSharedOpen(true); }, [current?.k]); // eslint-disable-line react-hooks/exhaustive-deps
   const siblings = current ? visible.filter((it) => it.rule === current.rule && (it.shared == null) === (current.shared == null)) : [];
 
-  const now = instances.filter((it) => it.status !== "fixed");
-  const counts = { all: now.length, new: instances.filter((it) => it.status === "new").length, fixed: instances.filter((it) => it.status === "fixed").length };
-  const pagesHref = `/${site}/pages?crawl=${a}${b != null ? `&vs=${b}` : ""}`;
-
-  // A link to this page (from the assistant) selects its element and view without reloading the page
-  const location = useLocation();
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    const k = sp.get("issue") ? Number(sp.get("issue")) - 1 : null;
-    if (k != null) {
-      setSelected(k);
-      setSeg((x) => (instances.find((i) => i.k === k)?.status === "fixed" ? "fixed" : x === "fixed" ? "all" : x));
-      setQ(""); setPri([]); setCats([]);
-    }
-    setTab(tabOf(sp.get("tab")));
-  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Mirror the view into the URL (no navigation), so any issue or filtered list can be linked to
-  useEffect(() => {
-    const u = new URLSearchParams({ crawl: String(a), ...(b != null ? { vs: String(b) } : {}) });
-    if (current) u.set("issue", String(current.k + 1));
-    if (tab !== "issues") u.set("tab", tab);
-    if (q) u.set("q", q);
-    if (seg !== "all") u.set("seg", seg);
-    if (pri.length) u.set("pri", pri.join(","));
-    if (cats.length) u.set("cat", cats.join(","));
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}?${u}`);
-  }, [current?.k, tab, q, seg, pri, cats, a, b]); // eslint-disable-line react-hooks/exhaustive-deps
-  const linkTo = (it: Instance) => typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}?crawl=${a}${b != null ? `&vs=${b}` : ""}&issue=${it.k + 1}`;
+  const countRules = (items: Instance[]) => new Set(items.map((it) => it.rule)).size;
+  const counts = {
+    all: countRules(scoped.filter((it) => it.status !== "fixed")),
+    new: countRules(scoped.filter((it) => it.status === "new")),
+    fixed: countRules(scoped.filter((it) => it.status === "fixed")),
+  };
+  const capture = p.status >= 400 ? getStoredSnapshot(p) : undefined;
+  const currentVisible = visible.filter((it) => it.status !== "fixed");
+  const inheritedScope = { pri: s.pri, cat: s.cat, markup, auditRule, el, seg };
+  const pagesHref = returnPath(s.from, site, `/${site}/pages${queryString({ crawl: a, vs: b == null ? "none" : b, ...inheritedScope })}`);
+  const linkTo = (it: Instance) => `${window.location.origin}${window.location.pathname}${queryString({ ...s, seg, issue: it.k + 1 })}`;
 
   // Ask AI: the buttons write a short message with the issue or page as a reference; the model looks it up
   const { send } = useAssistant();
@@ -153,18 +137,18 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
     <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value as typeof tab)} variant="line" size="sm">
       <Box borderBottomWidth="1px">
         <Container maxW="7xl" pt="5" pb="0">
-          <BackLink href={pagesHref}>Pages</BackLink>
+          <BackLink href={pagesHref}>{pagesHref.startsWith(`/${site}/issues/`) ? "Issue" : pagesHref.startsWith(`/${site}/crawls/`) ? "Crawl" : "Pages"}</BackLink>
           <Flex justify="space-between" align="start" gap="4">
             {/* The title is the link to the live page: icon on it, underline on hover, full URL in the tooltip */}
-            <Tooltip content={`${SITES[site].url}${p.path}`} positioning={{ placement: "bottom-start" }} openDelay={300}>
-              <Link href={`${SITES[site].url}${p.path}`} target="_blank" rel="noopener noreferrer" color="fg" minW="0" maxW="full" gap="2" _hover={{ textDecoration: "underline" }}>
+            <Tooltip content={p.url} positioning={{ placement: "bottom-start" }} openDelay={300}>
+              <Link href={p.url} target="_blank" rel="noopener noreferrer" color="fg" minW="0" maxW="full" gap="2" _hover={{ textDecoration: "underline" }}>
                 <Heading as="span" size="lg" fontWeight="semibold" truncate>{p.title}</Heading>
                 <Icon as={LuExternalLink} boxSize="4" color="fg.muted" flexShrink={0} />
               </Link>
             </Tooltip>
           </Flex>
           <Tabs.List mt="3" borderBottomWidth="0">
-            <Tabs.Trigger value="issues">Issues <Span color="fg.muted" fontVariantNumeric="tabular-nums">{now.length}</Span></Tabs.Trigger>
+            <Tabs.Trigger value="issues">Issues <Span color="fg.muted" fontVariantNumeric="tabular-nums">{counts[seg]}</Span></Tabs.Trigger>
             <Tabs.Trigger value="preview">Preview</Tabs.Trigger>
             <Tabs.Trigger value="source">Source</Tabs.Trigger>
           </Tabs.List>
@@ -172,6 +156,7 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
       </Box>
 
       <Container maxW="7xl" pb="10">
+        {capture && tab !== "issues" && <Text textStyle="xs" color="fg.muted" pt="3">This sample run returned HTTP {p.status}. The saved HTML is from the public source capture on {capture.capturedAt.slice(0, 10)}.</Text>}
           {/* ───────── Issues ───────── */}
           <Tabs.Content value="issues" pt="5">
             <Grid templateColumns={{ base: "1fr", md: "300px 1fr" }} gap={{ base: "6", md: "8" }} alignItems="start">
@@ -179,18 +164,18 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                 <Stack gap="2">
                   <HStack gap="1.5">
                     <InputGroup startElement={<LuSearch />} flex="1" minW="0">
-                      <Input size="sm" h="9" colorPalette="gray" bg="bg" borderColor="border" rounded="l2" _focusVisible={{ borderColor: "border.emphasized", outline: "2px solid", outlineColor: "border.emphasized", outlineOffset: "1px" }} placeholder="Search issues" value={q} onChange={(e) => setQ(e.target.value)} />
+                      <Input size="sm" h="9" colorPalette="gray" bg="bg" borderColor="border" rounded="l2" _focusVisible={{ borderColor: "border.emphasized", outline: "2px solid", outlineColor: "border.emphasized", outlineOffset: "1px" }} placeholder="Search issues" value={q} onChange={(e) => set({ q: e.target.value })} />
                     </InputGroup>
-                    <FilterMenu pri={pri} setPri={setPri} cats={cats} setCats={setCats} />
-                    <ExportMenu count={visible.filter((it) => it.status !== "fixed").length}
+                    <FilterMenu pri={pri} setPri={(value) => set({ pri: value.join(",") || "all" })} cats={cats} setCats={(value) => set({ cat: value.join(",") || "all" })} onClear={() => set({ ...issueScopeDefaults, seg, issue: "" })} inherited={markup !== "all" || el !== "all" || !!auditRule} />
+                    <ExportMenu count={counts[seg]} canSummarize={currentVisible.length > 0}
                       onAsk={() => send(summarizeMessage(p.i, { status: seg, priorities: pri, categories: cats, query: q }))}
-                      onPrompt={() => navigator.clipboard.writeText(batchPrompt(p, visible.filter((it) => it.status !== "fixed"), prio))}
+                      onPrompt={() => navigator.clipboard.writeText(batchPrompt(p, currentVisible, prio))}
                       onJson={() => downloadText(issuesJson(p, a, visible, prio), `issues-${p.i}-${a}.json`, "application/json")}
                       onApi={() => navigator.clipboard.writeText(apiRequest(p.i, a, { priority: pri, category: cats, ...(seg !== "all" ? { status: [seg] } : {}) }))}
                       onLink={() => navigator.clipboard.writeText(window.location.href)} />
                   </HStack>
                   {comparing && (
-                    <SegmentGroup.Root size="xs" value={seg} onValueChange={(e) => setSeg(e.value as Seg)} w="full">
+                    <SegmentGroup.Root size="xs" value={seg} onValueChange={(e) => e.value && set({ seg: e.value, issue: "" })} w="full">
                       <SegmentGroup.Indicator />
                       <SegmentGroup.Items flex="1" items={[{ value: "all", label: `All (${counts.all})` }, { value: "new", label: `New (${counts.new})` }, { value: "fixed", label: `Fixed (${counts.fixed})` }]} />
                     </SegmentGroup.Root>
@@ -243,10 +228,10 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                 {current
                   ? <IssueView it={current} siblings={siblings} html={html} origin={origin} page={p} link={linkTo(current)} onSelect={setSelected}
                       onShow={() => {
-                        setSelected(current.k);
+                        set({ issue: String(current.k + 1), tab: "preview" });
                         setLayers((value) => value.includes("issues") ? value : [...value, "issues"]);
                         setPreviewReveal((value) => value + 1);
-                        setTab("preview"); setHighlightRule(current.rule);
+                        setHighlightRule(current.rule);
                       }} onFix={() => fixAi(current)} onExplain={() => explainAi(current)} />
                   : <Text textStyle="sm" color="fg.muted">No issues match.</Text>}
               </Box>
@@ -274,22 +259,23 @@ function Detail({ p, a, b, site }: { p: PageV; a: number; b: number | null; site
                 <SegmentGroup.Items items={VIEWPORTS} />
               </SegmentGroup.Root>
             </HStack>
-            <Box maxW={viewport < 1280 ? `${viewport + 2}px` : "full"} mx="auto">
+            {html ? <Box maxW={viewport < 1280 ? `${viewport + 2}px` : "full"} mx="auto">
               <PagePreview html={html} origin={origin} instances={visible.filter((it) => it.onPage)} selected={current?.k ?? null} highlightRule={highlightRule}
                 onSelect={setSelected} viewport={viewport} layers={layers} revealRequest={previewReveal}
                 card={current && (
                   <ElementCard it={current} siblings={siblings} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)}
                     onFix={() => fixAi(current)} onExplain={() => explainAi(current)} onDetails={() => setTab("issues")}
-                    onShowCode={() => { setSelected(current.k); setTab("source"); }} />
+                    onShowCode={() => set({ issue: String(current.k + 1), tab: "source" })} />
                 )} />
-            </Box>
+            </Box> : <Text textStyle="sm" color="fg.muted">No captured HTML is available for this page.</Text>}
           </Tabs.Content>
 
           {/* ───────── Source ───────── */}
           <Tabs.Content value="source" pt="4">
-            <SourceView html={html} instances={visible} selected={current?.k ?? null} onSelect={setSelected} active={tab === "source"}
+            {html ? <SourceView html={html} instances={visible} selected={current?.k ?? null} onSelect={setSelected} active={tab === "source"}
               card={current && <ElementCard it={current} siblings={siblings} page={p} onSelect={setSelected} prio={prio} link={linkTo(current)} showExplanation
                 onFix={() => fixAi(current)} onExplain={() => explainAi(current)} onDetails={() => setTab("issues")} />} />
+              : <Text textStyle="sm" color="fg.muted">No captured HTML is available for this page.</Text>}
           </Tabs.Content>
       </Container>
     </Tabs.Root>
@@ -328,11 +314,12 @@ function RuleList({ title, groups, selected, onSelect, prio, empty }: {
 
 // ───────── Selected issue ─────────
 function IssueView({ it, siblings, html, origin, page, onSelect, onShow, onFix, onExplain, link }: {
-  it: Instance; siblings: Instance[]; html: string; origin: string; page: PageV;
+  it: Instance; siblings: Instance[]; html: string | null; origin: string; page: PageV;
   onSelect: (k: number) => void; onShow: () => void; onFix: () => void; onExplain: () => void; link: string;
 }) {
   const r = RULE_CATALOG[it.rule];
   const idx = siblings.findIndex((x) => x.k === it.k);
+  const preview = it.onPage && html;
   return (
     <Stack gap="5" maxW="3xl" minW="0" css={{ containerType: "inline-size", containerName: "issue-detail" }}>
       <HStack gap="3" align="center" wrap="wrap" justify="space-between" css={{
@@ -357,7 +344,7 @@ function IssueView({ it, siblings, html, origin, page, onSelect, onShow, onFix, 
             "@container issue-detail (max-width: 420px)": { "& > .preview-label": { flexBasis: "100%" } },
           }}>
             <Stack className="preview-label" gap="0" flex="1" minW="24">
-              <Text textStyle="sm" fontWeight="medium">{it.onPage ? "Element preview" : "Element HTML"}</Text>
+              <Text textStyle="sm" fontWeight="medium">{preview ? "Element preview" : "Element HTML"}</Text>
             </Stack>
             {siblings.length > 1 && (
               <HStack gap="0" flexShrink={0} color="fg.muted">
@@ -366,12 +353,12 @@ function IssueView({ it, siblings, html, origin, page, onSelect, onShow, onFix, 
                 <IconButton size="2xs" variant="ghost" aria-label="Next element" disabled={idx >= siblings.length - 1} onClick={() => onSelect(siblings[idx + 1].k)}><LuChevronRight /></IconButton>
               </HStack>
             )}
-            {it.onPage && <Button size="xs" variant="outline" color="fg.muted" onClick={onShow} flexShrink={0}>Show on page</Button>}
+            {preview && <Button size="xs" variant="outline" color="fg.muted" onClick={onShow} flexShrink={0}>Show on page</Button>}
           </HStack>
-          {it.onPage && <PagePreview html={html} origin={origin} instances={[it]} selected={it.k} crop={it.k} height={180} />}
-          <Collapsible.Root defaultOpen={!it.onPage}>
+          {preview && <PagePreview html={preview} origin={origin} instances={[it]} selected={it.k} crop={it.k} height={180} />}
+          <Collapsible.Root defaultOpen={!preview}>
             <Collapsible.Trigger asChild>
-              <HStack as="button" w="full" px="3" py="2.5" gap="2" textAlign="start" borderTopWidth={it.onPage ? "1px" : "0"} bg="bg.subtle" color="fg.muted" _hover={{ color: "fg" }}>
+              <HStack as="button" w="full" px="3" py="2.5" gap="2" textAlign="start" borderTopWidth={preview ? "1px" : "0"} bg="bg.subtle" color="fg.muted" _hover={{ color: "fg" }}>
                 <Text textStyle="xs" fontWeight="medium" flexShrink={0}>HTML</Text>
                 <Text textStyle="xs" fontFamily="mono" truncate flex="1" title={it.selector}>{it.selector}</Text>
                 <Collapsible.Indicator _open={{ transform: "rotate(180deg)" }}><LuChevronDown size={14} /></Collapsible.Indicator>
@@ -404,7 +391,7 @@ function CopySnippet({ text }: { text: string }) {
 }
 
 // Filter: priority and category, as checkboxes in one menu (empty = everything)
-function FilterMenu({ pri, setPri, cats, setCats }: { pri: Priority[]; setPri: (v: Priority[]) => void; cats: string[]; setCats: (v: string[]) => void }) {
+function FilterMenu({ pri, setPri, cats, setCats, onClear, inherited }: { pri: Priority[]; setPri: (v: Priority[]) => void; cats: string[]; setCats: (v: string[]) => void; onClear: () => void; inherited: boolean }) {
   const n = pri.length + cats.length;
   const toggle = <T,>(list: T[], v: T, set: (x: T[]) => void) => set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   return (
@@ -429,22 +416,22 @@ function FilterMenu({ pri, setPri, cats, setCats }: { pri: Priority[]; setPri: (
             <Menu.CheckboxItem key={c.id} value={c.id} checked={cats.includes(c.id)} onCheckedChange={() => toggle(cats, c.id, setCats)}>{c.label}<Menu.ItemIndicator /></Menu.CheckboxItem>
           ))}
         </Menu.ItemGroup>
-        {n > 0 && <><Menu.Separator /><Menu.Item value="clear" onClick={() => { setPri([]); setCats([]); }}>Clear filters</Menu.Item></>}
+        {(n > 0 || inherited) && <><Menu.Separator /><Menu.Item value="clear" onClick={onClear}>Clear filters</Menu.Item></>}
       </Menu.Content></Menu.Positioner></Portal>
     </Menu.Root>
   );
 }
 
 // Export: the issues currently in the list, for handing off to a person, an AI tool or a script
-function ExportMenu({ count, onAsk, onPrompt, onJson, onApi, onLink }: { count: number; onAsk: () => void; onPrompt: () => void; onJson: () => void; onApi: () => void; onLink: () => void }) {
+function ExportMenu({ count, canSummarize, onAsk, onPrompt, onJson, onApi, onLink }: { count: number; canSummarize: boolean; onAsk: () => void; onPrompt: () => void; onJson: () => void; onApi: () => void; onLink: () => void }) {
   return (
     <Menu.Root positioning={{ placement: "bottom-end" }}>
       <Menu.Trigger asChild><NavAction w="9" minW="9" px="0" aria-label="Export these issues"><LuDownload /></NavAction></Menu.Trigger>
       <Portal><Menu.Positioner><Menu.Content minW="52" colorPalette="gray" p="1" shadow="md">
         <Menu.ItemGroup>
           <Menu.ItemGroupLabel textStyle="xs" fontWeight="medium" color="fg.muted">{count} issue{count === 1 ? "" : "s"}</Menu.ItemGroupLabel>
-          <Menu.Item value="ask" onClick={onAsk} disabled={!count}><LuSparkles />Summarize with AI</Menu.Item>
-          <Menu.Item value="prompt" onClick={onPrompt}><LuCopy />Copy prompt</Menu.Item>
+          <Menu.Item value="ask" onClick={onAsk} disabled={!canSummarize}><LuSparkles />Summarize with AI</Menu.Item>
+          <Menu.Item value="prompt" onClick={onPrompt} disabled={!canSummarize}><LuCopy />Copy prompt</Menu.Item>
           <Menu.Item value="json" onClick={onJson}><LuDownload />Download JSON</Menu.Item>
           <Menu.Item value="api" onClick={onApi}><LuTerminal />Copy API request</Menu.Item>
           <Menu.Item value="link" onClick={onLink}><LuLink />Copy view link</Menu.Item>

@@ -15,7 +15,7 @@ type Row = LogLine & { n: number };
 // Severity is colour only (no level column): errors red, warnings yellow, lifecycle events muted.
 const LEVEL_COLOR: Record<LogLine["level"], string> = { info: "gray.300", cmd: "white", event: "gray.500", warn: "orange.300", error: "red.300" };
 
-export function LogViewer({ lines, running, fileName, h = "560px" }: { lines: LogLine[]; running: boolean; fileName: string; h?: string }) {
+export function LogViewer({ lines, running, fileName, startedAt, h = "560px" }: { lines: LogLine[]; running: boolean; fileName: string; startedAt?: Date; h?: string }) {
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState<"all" | "problems">("all");
   const [sel, setSel] = useState<{ a: number; b: number } | null>(null);
@@ -34,7 +34,7 @@ export function LogViewer({ lines, running, fileName, h = "560px" }: { lines: Lo
   const unseen = Math.max(0, rows.length - seenAt);
 
   const selected = sel ? lines.slice(Math.min(sel.a, sel.b) - 1, Math.max(sel.a, sel.b)) : [];
-  const asText = (ls: LogLine[]) => ls.map((l) => `${fmtClock(l.t)}  ${l.msg}`).join("\n");
+  const asText = (ls: LogLine[]) => ls.map((l) => `${fmtClock(l.t, startedAt)}  ${l.msg}`).join("\n");
 
   const copy = () => navigator.clipboard.writeText(asText(selected.length ? selected : rows));
   const pick = (n: number, shift: boolean) =>
@@ -85,7 +85,7 @@ export function LogViewer({ lines, running, fileName, h = "560px" }: { lines: Lo
                 >
                   {l.n}
                 </Box>
-                <Box as="span" color="gray.500" flexShrink={0} pe="3" userSelect="none">{fmtClock(l.t)}</Box>
+                <Box as="span" color="gray.500" flexShrink={0} pe="3" userSelect="none">{fmtClock(l.t, startedAt)}</Box>
                 <Box as="span" whiteSpace="pre-wrap" wordBreak="break-word" minW="0">
                   {query ? <Highlight query={query} ignoreCase styles={{ bg: "yellow.500/40", color: "inherit" }}>{l.msg}</Highlight> : l.msg}
                 </Box>

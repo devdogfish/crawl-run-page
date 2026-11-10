@@ -6,7 +6,6 @@
 // Filters live in the URL like the Pages page. Rows open the rule: /[site]/issues/[ruleId].
 // PROTOTYPE: data from src/lib/site-issues.ts.
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
 import { Link as RouterLink } from "react-router";
 import { Box, Button, CloseButton, Container, Flex, Grid, HStack, Heading, Stack, Text } from "@chakra-ui/react";
 
@@ -16,12 +15,12 @@ import { CrawlScope } from "@/components/scope-select";
 import { useSite } from "@/components/site-context";
 import { SCOPES, loadRules, saveRules, type CustomRule } from "@/lib/custom-rules";
 import { PRIORITIES, PRIORITY, PRIORITY_COLOR } from "@/lib/priority";
+import { folderLabel, inPageScope, issueScopeDefaults, matchesIssueScope, pageScopeDefaults, queryString, useRouteQuery } from "@/lib/route-query";
 import { byRule, hitsFor, rulesPrompt, type RuleRow, type Seg } from "@/lib/site-issues";
-import { CATEGORIES, defaultScope, LH_SAMPLE, PAGE_TYPES, fullLighthouse } from "@/lib/site-pages";
+import { CATEGORIES, defaultScope, lighthouseCoverage, PAGE_TYPES } from "@/lib/site-pages";
 import { fmtNum } from "@/lib/types";
 
 type Sort = "priority" | "pages" | "elements" | "new";
-type State = { crawl: string; vs: string; q: string; cat: string; pri: string; markup: string; type: string; sort: Sort; seg: Seg };
 
 const n = (x: number) => x.toLocaleString("en-US");
 
@@ -39,44 +38,31 @@ function Issues() {
     return () => window.removeEventListener("crawler:rules-changed", refresh);
   }, [site]);
   const updateCustom = (next: CustomRule[]) => { setCustom(next); saveRules(site, next); };
-  const sp = useSearchParams()[0];
-
-  const defaults: State = { ...defaultScope(site), q: "", cat: "all", pri: "all", markup: "all", type: "all", sort: "priority", seg: "all" };
-  const [s, setS] = useState<State>(() => {
-    const init = { ...defaults };
-    for (const k of Object.keys(defaults) as (keyof State)[]) { const v = sp.get(k); if (v != null) (init as Record<string, string>)[k] = v; }
-    return init;
-  });
-  const set = (patch: Partial<State>) => setS((x) => ({ ...x, ...patch }));
-  useEffect(() => {
-    const p = new URLSearchParams();
-    for (const k of Object.keys(s) as (keyof State)[]) if (s[k] !== defaults[k]) p.set(k, s[k]);
-    const qs = p.toString();
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-  }, [s]); // eslint-disable-line react-hooks/exhaustive-deps
+  const defaults = { ...defaultScope(site), ...pageScopeDefaults, ...issueScopeDefaults, q: "", sort: "priority" };
+  const [s, set] = useRouteQuery(site, defaults);
 
   const a = Number(s.crawl);
   const b = s.vs === "none" ? null : Number(s.vs);
   const comparing = b != null;
-  const seg: Seg = comparing ? s.seg : "all";
+  const coverage = lighthouseCoverage(site, a);
+  const seg: Seg = comparing ? s.seg as Seg : "all";
   const all = useMemo(() => hitsFor(site, a, b), [site, a, b]);
 
   // Page type and markup narrow the hits before grouping, so every number follows them
-  const hits = useMemo(() => all.filter((h) =>
-    (s.type === "all" || h.p.type === s.type) && (s.markup === "all" || h.shared === (s.markup === "shared"))),
-  [all, s.type, s.markup]);
+  const { type, year, sub, cat, pri, markup, auditRule, el } = s;
+  const hits = useMemo(() => all.filter((h) => inPageScope(h.p, { type, year, sub }) && matchesIssueScope(h, { cat, pri, markup, auditRule, el })),
+    [all, type, year, sub, cat, pri, markup, auditRule, el]);
 
   const ruleFilter = (r: RuleRow) => {
     const q = s.q.trim().toLowerCase();
-    return (s.cat === "all" || r.rule.category === s.cat) && (s.pri === "all" || r.priority === s.pri) &&
-      (!q || r.rule.title.toLowerCase().includes(q) || r.rule.id.includes(q) || r.patterns.some((x) => x.pattern.toLowerCase().includes(q)));
+    return !q || r.rule.title.toLowerCase().includes(q) || r.rule.id.includes(q) || r.patterns.some((x) => x.pattern.toLowerCase().includes(q));
   };
   const segCount = (g: Seg) => byRule(hits, g).filter(ruleFilter).reduce((t, r) => t + r.pages, 0); // issues = rule × page
   const counts = useMemo(() => comparing ? { all: segCount("all"), new: segCount("new"), fixed: segCount("fixed") } : null,
     [hits, comparing, s.q, s.cat, s.pri]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rows = useMemo(() => {
-    const sort = s.sort === "new" && !comparing ? "priority" : s.sort;
+    const sort = (s.sort === "new" && !comparing ? "priority" : s.sort) as Sort;
     const by: Record<Sort, (x: RuleRow, y: RuleRow) => number> = {
       priority: (x, y) => x.priority.localeCompare(y.priority) || y.pages - x.pages,
       pages: (x, y) => y.pages - x.pages,
@@ -86,13 +72,14 @@ function Issues() {
     return byRule(hits, seg).filter(ruleFilter).sort(by[sort]);
   }, [hits, seg, s.q, s.cat, s.pri, s.sort, comparing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const active = (["q", "cat", "pri", "markup", "type"] as const).some((k) => s[k] !== defaults[k]);
+  const active = (["q", "cat", "pri", "markup", "type", "year", "sub", "auditRule", "el"] as const).some((k) => s[k] !== defaults[k]);
   const issues = rows.reduce((t, r) => t + r.pages, 0);
-  const keep = ["crawl", "vs", "type", "seg"].map((k) => s[k as keyof State] !== defaults[k as keyof State] ? `${k}=${encodeURIComponent(s[k as keyof State])}` : "").filter(Boolean);
-  const hrefOf = (id: string) => `/${site}/issues/${id}?${[`crawl=${s.crawl}`, `vs=${s.vs}`, ...keep.filter((x) => !/^(crawl|vs)=/.test(x))].join("&")}`;
+  const scope = { crawl: s.crawl, vs: s.vs, type, year, sub, seg, cat, pri, markup, el };
+  const from = `/${site}/issues${queryString({ ...scope, q: s.q, sort: s.sort })}`;
+  const hrefOf = (id: string) => `/${site}/issues/${id}${queryString({ ...scope, from })}`;
 
   const toCsv = () => ["rule,priority,category,pages,elements,top_element,top_element_pages,shared" + (comparing ? ",pages_with_new,pages_with_fixed" : ""),
-    ...rows.map((r) => [r.rule.id, r.priority, r.rule.category, r.pages, r.elements, r.patterns[0]?.pattern ?? "", r.patterns[0]?.pages ?? "", r.patterns[0]?.shared ? "yes" : "no", ...(comparing ? [r.added, r.fixed] : [])]
+    ...rows.map((r) => [r.rule.id, r.priority, r.rule.category, r.pages, r.elements, r.patterns[0]?.pattern ?? "", r.patterns[0]?.pages ?? "", r.patterns[0]?.shared ? r.patterns[0].specific ? "partly" : "yes" : "no", ...(comparing ? [r.added, r.fixed] : [])]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
 
   const showChange = comparing && seg === "all";
@@ -142,18 +129,20 @@ function Issues() {
           <HStack gap="2" px="2" py="1.5" borderBottomWidth="1px" bg="bg.subtle" wrap="wrap">
             <FilterSelect value={s.pri} onChange={(pri) => set({ pri })} w="28" items={[
               { value: "all", label: "Any priority" },
+              ...(s.pri.includes(",") ? [{ value: s.pri, label: s.pri.replaceAll(",", ", ") }] : []),
               ...PRIORITIES.map((p) => ({ value: p, label: p, hint: Object.entries(PRIORITY).find(([, v]) => v === p)![0].replace(/^\w/, (c) => c.toUpperCase()) })),
             ]} />
-            <FilterSelect value={s.cat} onChange={(cat) => set({ cat })} w="36" items={[{ value: "all", label: "All categories" }, ...CATEGORIES.map((c) => ({ value: c.id, label: c.label }))]} />
+            <FilterSelect value={s.cat} onChange={(cat) => set({ cat })} w="36" items={[{ value: "all", label: "All categories" }, ...(s.cat.includes(",") ? [{ value: s.cat, label: "Selected categories" }] : []), ...CATEGORIES.map((c) => ({ value: c.id, label: c.label }))]} />
             <FilterSelect value={s.markup} onChange={(markup) => set({ markup })} w="40" items={[
               { value: "all", label: "Any markup" },
               { value: "shared", label: "Shared markup", hint: "Identical on many pages: one fix covers all" },
               { value: "page", label: "Page-specific markup", hint: "Different on each page" },
             ]} />
-            <FilterSelect value={s.type} onChange={(type) => set({ type })} w="32" items={[
+            <FilterSelect value={s.type} onChange={(type) => set({ type, year: "all", sub: "" })} w="32" items={[
               { value: "all", label: "All page types" }, ...PAGE_TYPES.map((t) => ({ value: t.id, label: t.label, hint: t.prefix ?? "No match" })),
             ]} />
-            {active && <Button size="xs" variant="ghost" onClick={() => set({ q: "", cat: "all", pri: "all", markup: "all", type: "all" })}>Clear filters</Button>}
+            {(s.year !== "all" || s.sub) && <Button size="xs" variant="ghost" onClick={() => set({ year: "all", sub: "" })}>{folderLabel(s.sub) || (s.year === "none" ? "No year" : s.year)} ×</Button>}
+            {active && <Button size="xs" variant="ghost" onClick={() => set({ ...pageScopeDefaults, ...issueScopeDefaults, q: "", seg })}>Clear filters</Button>}
             <HStack gap="2" ms="auto">
               <Text textStyle="xs" color="fg.muted">Sort</Text>
               <FilterSelect value={s.sort === "new" && !comparing ? "priority" : s.sort} onChange={(v) => set({ sort: v as Sort })} w="36" items={[
@@ -182,9 +171,9 @@ function Issues() {
             </Box>
           </Box>
         </Flex>
-        {!fullLighthouse(a) && (s.cat === "all" || s.cat === "performance") && (
+        {coverage.audited < coverage.pages && (s.cat === "all" || s.cat.split(",").includes("performance")) && (
           <Text mt="3" textStyle="xs" color="fg.muted">
-            Performance issues come from Lighthouse, which audited a sample of {LH_SAMPLE} pages in this crawl. Every 10th crawl audits the whole site.
+            This sample includes Lighthouse results for {coverage.audited} of {coverage.pages} pages in this crawl.
           </Text>
         )}
       </Container>
@@ -210,7 +199,7 @@ function RuleRowView({ r, cols, showChange, href }: { r: RuleRow; cols: string; 
         <Stack gap="0" minW="0">
           <Text fontFamily="mono" truncate title={top.pattern}>{top.pattern}</Text>
           <Text color="fg.muted" truncate>
-            {top.shared ? "Shared markup" : "Page-specific"}{share < 100 ? ` · ${share}% of pages` : ""}{r.patterns.length > 1 ? ` · +${r.patterns.length - 1} more` : ""}
+            {top.shared ? top.specific ? "Partly shared markup" : "Shared markup" : "Page-specific"}{share < 100 ? ` · ${share}% of pages` : ""}{r.patterns.length > 1 ? ` · +${r.patterns.length - 1} more` : ""}
           </Text>
         </Stack>
         <Text textAlign="right" fontWeight="medium">{n(r.pages)}</Text>

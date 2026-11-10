@@ -1,6 +1,6 @@
 // Variation S · Summary: assembled from the parts picked across the other layouts.
 // What changed since the last crawl (strip) → executive donuts → priority × category heatmap → biggest wins → worst pages.
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { LuArrowRight, LuCircleAlert, LuCircleCheck, LuPencil, LuPlus } from "react-icons/lu";
 import { Link as RouterLink } from "react-router";
 import { Badge, Box, Button, Container, Flex, Grid, HStack, Icon, Select, Portal, Stack, Text } from "@chakra-ui/react";
@@ -12,8 +12,9 @@ import { Heatmap } from "@/components/analytics/board";
 import { useHealth } from "@/components/analytics/use-health";
 import { PRI_COLOR, PRI_LABEL, diff, fmtInt, attention, pageChanges, pct, snapshot, vitals, VITALS, type VitalStat, type Filter, type Range } from "@/lib/analytics";
 import { PRIORITIES, PRIORITY_COLOR, type Priority } from "@/lib/priority";
-import { PAGE_TYPES, baselinesFor, defaultCrawl, type PageType } from "@/lib/site-pages";
+import { PAGE_TYPES, baselinesFor, crawlChoices, defaultCrawl, type PageType } from "@/lib/site-pages";
 import type { SiteId } from "@/lib/sites";
+import { useRouteQuery, pageScopeDefaults } from "@/lib/route-query";
 
 const DAY = 86_400_000;
 const fmtDay = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -29,22 +30,19 @@ function templateComponent(pattern: string) {
 
 export function HealthSummary({ site, range, header }: { site: SiteId; range: Range; header: (filters: ReactNode) => ReactNode }) {
   // Filters live in the URL, so a view can be shared and the tiles can link into Issues and Pages with the same scope
-  const sp = new URLSearchParams(window.location.search);
-  const [vs, setVs] = useState(sp.get("vs") ?? "prev");
-  const [type, setType] = useState(sp.get("type") ?? "all");
-  const [year, setYear] = useState(sp.get("year") ?? "all");
-  const [where, setWhere] = useState<Where>((sp.get("markup") as Where) ?? "all");
-  const [pris, setPris] = useState<Priority[]>((sp.get("pri")?.split(",").filter((x): x is Priority => (PRIORITIES as string[]).includes(x))) ?? []);
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    const put = (k: string, v: string, def: string) => (v === def ? p.delete(k) : p.set(k, v));
-    put("vs", vs, "prev"); put("type", type, "all"); put("year", type === "all" ? "all" : year, "all"); put("markup", where, "all"); put("pri", pris.join(","), "");
-    const q = p.toString();
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}${q ? `?${q}` : ""}`);
-  }, [vs, type, year, where, pris]);
-
-  // Baselines: every earlier finished crawl; the previous one first, with the ones nearest a week and a month back named
-  const latest = defaultCrawl(site);
+  const [query, setQuery] = useRouteQuery(site, {
+    crawl: defaultCrawl(site).id, vs: "prev", ...pageScopeDefaults,
+    markup: "all", pri: "all", v: "summary", range: "30",
+  });
+  const { vs, type, year } = query;
+  const where = query.markup as Where;
+  const pris = useMemo(() => PRIORITIES.filter((p) => query.pri.split(",").includes(p)), [query.pri]);
+  const setVs = (value: string) => setQuery({ vs: value });
+  const setYear = (value: string) => setQuery({ year: value });
+  const setWhere = (value: Where) => setQuery({ markup: value });
+  const setPris = (value: Priority[]) => setQuery({ pri: value.join(",") || "all" });
+  const latest = crawlChoices(site).find((c) => c.id === query.crawl) ?? defaultCrawl(site);
+  const crawl = Number(latest.id);
   const baselines = useMemo(() => {
     const list = baselinesFor(site, latest.id);
     const near = (days: number) => list.reduce<(typeof list)[number] | null>((best, c) => {
@@ -52,53 +50,53 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
       return !best || d < Math.abs((latest.startedAt.getTime() - best.startedAt.getTime()) / DAY - days) ? c : best;
     }, null);
     const week = near(7)?.id, month = near(30)?.id;
-    return list.map((c, i) => ({ value: i === 0 ? "prev" : c.id, id: c.id, label: `${fmtDay(c.startedAt)}${i === 0 ? " · previous crawl" : c.id === week ? " · a week ago" : c.id === month ? " · a month ago" : ""}`, date: c.startedAt }));
+    return list.map((c, i) => ({ value: c.id, id: c.id, label: `${fmtDay(c.startedAt)}${i === 0 ? " · previous crawl" : c.id === week ? " · a week ago" : c.id === month ? " · a month ago" : ""}`, date: c.startedAt }));
   }, [site, latest.id, latest.startedAt]);
-  const base = baselines.find((b) => b.value === vs) ?? baselines[0];
+  const base = vs === "none" ? undefined : baselines.find((b) => b.value === vs) ?? baselines[0];
   const vsNum = base ? Number(base.id) : null;
 
   const typeItems = useMemo(() => [{ value: "all", label: "All page types" }, ...PAGE_TYPES.map((t) => ({ value: t.id, label: t.label }))], []);
   // The year filter exists only for page types that have year folders
-  const years = useMemo(() => type === "all" ? [] : snapshot(site, { type: type as PageType }).groups.map((g) => g.filter.sub).filter((x): x is string => !!x && /^\d{4}$/.test(x)), [site, type]);
+  const years = useMemo(() => type === "all" ? [] : snapshot(site, { type: type as PageType }, {}, crawl).groups.map((g) => g.filter.sub).filter((x): x is string => !!x && /^\d{4}$/.test(x)), [site, type, crawl]);
   const yearValue = years.includes(year) ? year : "all";
-  const scope: Filter = useMemo(() => type === "all" ? {} : { type: type as PageType, sub: yearValue === "all" ? undefined : yearValue }, [type, yearValue]);
+  const scope: Filter = useMemo(() => ({ type: type === "all" ? undefined : type as PageType, sub: yearValue === "all" ? query.sub || undefined : yearValue }), [type, yearValue, query.sub]);
   const markup = where === "all" ? undefined : where;
 
-  const h = useHealth(site, range, scope, { pri: pris, markup });
+  const h = useHealth(site, range, scope, { pri: pris, markup }, crawl, vsNum);
   const { snap, L } = h;
-  const d = useMemo(() => diff(site, scope, { vs: vsNum, pri: pris, markup }), [site, scope, vsNum, pris, markup]);
-  const pc = useMemo(() => pageChanges(site, scope, vsNum), [site, scope, vsNum]);
+  const d = useMemo(() => diff(site, scope, { vs: vsNum, pri: pris, markup, crawl }), [site, scope, vsNum, pris, markup, crawl]);
+  const pc = useMemo(() => pageChanges(site, scope, vsNum, crawl), [site, scope, vsNum, crawl]);
 
   const date = base ? fmtDay(base.date) : null;
   const since = date ? `since ${date}` : "no earlier crawl";
   const net = d.added - d.fixed;
   const share = (n: number) => (snap.issues ? `${((n / snap.issues) * 100).toFixed(1)}% of current issues` : "");
-  const vsParam = vs === "prev" || !base ? undefined : base.id;
+  const vsParam = base?.id ?? "none";
   // Most serious first, then the most pages.
   const fixes = [...snap.fixes]
     .sort((x, y) => x.priority.localeCompare(y.priority) || y.pages - x.pages).slice(0, 5);
-  const worstPages = useMemo(() => attention(site, scope, { pri: pris, markup }), [site, scope, pris, markup]);
+  const worstPages = useMemo(() => attention(site, scope, { pri: pris, markup }, 8, crawl), [site, scope, pris, markup, crawl]);
   // Where the pages with a critical (P1) issue are: by page type, or by year or folder once a type is picked
   const SECTION_COLORS = ["cyan.500", "blue.500", "purple.500", "teal.500", "pink.500", "green.500", "gray.400"];
   const p1Groups = snap.groups.filter((g) => g.p1Pages > 0).sort((x, y) => y.p1Pages - x.p1Pages);
-  const p1Parts: Part[] = p1Groups.slice(0, 6).map((g, i) => ({ name: g.label, value: g.p1Pages, color: SECTION_COLORS[i], to: L.pages(g.filter, "worst") }));
+  const p1Parts: Part[] = p1Groups.slice(0, 6).map((g, i) => ({ name: g.label, value: g.p1Pages, color: SECTION_COLORS[i], to: L.pages(g.filter, "worst", { pri: "P1" }) }));
   const p1Rest = p1Groups.slice(6).reduce((t, g) => t + g.p1Pages, 0);
-  if (p1Rest > 0) p1Parts.push({ name: "Other", value: p1Rest, color: SECTION_COLORS[6], to: L.pages(scope, "worst") });
-  const vt = useMemo(() => vitals(site, scope), [site, scope]);
+  if (p1Rest > 0) p1Parts.push({ name: "Other", value: p1Rest, color: SECTION_COLORS[6] });
+  const vt = useMemo(() => vitals(site, scope, crawl), [site, scope, crawl]);
   const passed = vt.stats.every((x) => x.rating === "good");
   const priorityItems = useItems([
     { value: "all", label: "All priorities" },
     ...PRIORITIES.map((p) => ({ value: p, label: `${p} · ${PRI_LABEL[p]}` })),
   ]);
   const filtered = type !== "all" || pris.length > 0 || where !== "all";
-  const reset = () => { setType("all"); setYear("all"); setWhere("all"); setPris([]); setVs("prev"); };
+  const reset = () => setQuery({ type: "all", year: "all", sub: "", markup: "all", pri: "all", vs: "prev" });
 
   return (
     <>
       {header(
           <HStack gap="2" wrap="wrap" align="center">
             <HStack gap="2"><Text textStyle="sm" color="fg.muted">Compare</Text>
-              <ScopeSelect label="Comparison crawl" value={base?.value ?? "prev"} onChange={setVs} items={baselines.length ? baselines.map((b) => ({ value: b.value, label: b.label })) : [{ value: "prev", label: "No earlier crawl" }]} /></HStack>
+              <ScopeSelect label="Comparison crawl" value={base?.value ?? "none"} onChange={setVs} items={[{ value: "none", label: "No comparison" }, ...baselines.map((b) => ({ value: b.value, label: b.label }))]} /></HStack>
             <Select.Root collection={priorityItems} multiple closeOnSelect={false} size="sm" w="32" aria-label="Filter by priority"
               value={pris.length ? pris : ["all"]}
               onValueChange={({ value }) => {
@@ -127,7 +125,7 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
               </Portal>
             </Select.Root>
             <ScopeSelect label="Markup" value={where} onChange={(v) => setWhere(v as Where)} items={[{ value: "all", label: "Template and page" }, { value: "shared", label: "Shared template" }, { value: "page", label: "Page-specific" }]} />
-            <ScopeSelect label="Page type" value={type} onChange={(v) => { setType(v); setYear("all"); }} items={typeItems} />
+            <ScopeSelect label="Page type" value={type} onChange={(v) => setQuery({ type: v, year: "all", sub: "" })} items={typeItems} />
             {years.length > 0 && <ScopeSelect label="Year" value={yearValue} onChange={setYear} items={[{ value: "all", label: "All years" }, ...years.map((y) => ({ value: y, label: y }))]} />}
             {filtered && <Button size="sm" variant="ghost" onClick={reset}>Reset</Button>}
           </HStack>
@@ -147,8 +145,8 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
             {[
               { label: "New issues", icon: LuCircleAlert, value: `+${fmtInt(d.added)}`, color: "red.fg", sub: share(d.added), to: L.issues({ vs: vsParam, seg: "new" }) },
               { label: "Fixed issues", icon: LuCircleCheck, value: `−${fmtInt(d.fixed)}`, color: "green.fg", sub: share(d.fixed), to: L.issues({ vs: vsParam, seg: "fixed" }) },
-              { label: "Pages added", icon: LuPlus, value: fmtInt(pc.added), color: undefined, sub: `first seen ${since}`, to: L.pages(scope, undefined, { vs: vsParam, change: "new" }) },
-              { label: "Pages changed", icon: LuPencil, value: fmtInt(pc.changed), color: undefined, sub: `edited ${since}`, to: L.pages(scope, undefined, { vs: vsParam, change: "changed" }) },
+              { label: "Pages added", icon: LuPlus, value: fmtInt(pc.added), color: undefined, sub: `first seen ${since}`, to: L.pages(scope, undefined, { vs: vsParam, change: "new", pri: undefined, markup: undefined }) },
+              { label: "Pages changed", icon: LuPencil, value: fmtInt(pc.changed), color: undefined, sub: `edited ${since}`, to: L.pages(scope, undefined, { vs: vsParam, change: "changed", pri: undefined, markup: undefined }) },
             ].map((t, k) => (
               <Box asChild key={t.label} display="block" p="4" borderColor="border" bg="bg" cursor="pointer" transition="background .15s" _hover={{ bg: "bg.subtle", "& .go": { opacity: 1 } }}
                 borderStartWidth={{ base: k % 2 ? "1px" : 0, md: k ? "1px" : 0 }} borderTopWidth={{ base: k > 1 ? "1px" : 0, md: 0 }}>
@@ -174,7 +172,7 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
             <Panel title={scope.type ? "Critical pages by year or folder" : "Critical pages by page type"}>
               {p1Parts.length ? <Donut parts={p1Parts} center={fmtInt(snap.p1Pages)} centerLabel="pages with a P1" /> : <Text textStyle="sm" color="fg.muted">No page here has a critical issue.</Text>}
             </Panel>
-            <Panel title="Shared template vs page-specific issues"><Donut parts={h.parts.markup} center={`${pct(snap.shared.issues, snap.issues)}%`} centerLabel="shared" /></Panel>
+            <Panel title="Shared template vs page-specific elements"><Donut parts={h.parts.markup} center={`${pct(snap.shared.elements, snap.elements)}%`} centerLabel="shared" /></Panel>
           </Grid>
         </Box>
 
@@ -194,7 +192,7 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
         {/* ───────── Core Web Vitals ───────── */}
         <Box as="section">
           <Panel
-            title={<HStack gap="1.5"><Text>Core Web Vitals</Text><Help text={vt.audited ? `Lighthouse lab results on ${fmtInt(vt.audited)} of ${fmtInt(vt.pages)} pages${vt.full ? "" : " (a sample; running Lighthouse on every page is more accurate but takes about 8 hours)"}.` : "Lighthouse didn't audit any pages in this selection."} /></HStack>}
+            title={<HStack gap="1.5"><Text>Core Web Vitals</Text><Help text={vt.audited ? `Simulated Lighthouse lab measurements on ${fmtInt(vt.audited)} of ${fmtInt(vt.pages)} pages${vt.full ? "" : " (sample coverage)"}.` : "Lighthouse didn't audit any pages in this selection."} /></HStack>}
             action={vt.audited > 0 ? <HStack gap="2"><Status rating={passed ? "good" : "poor"} /><Text textStyle="sm" fontWeight="semibold" color={passed ? "green.fg" : "red.fg"}>{passed ? "Passed" : "Failed"}</Text></HStack> : undefined}>
             {vt.audited > 0 && <Box mt="-2">{vt.stats.map((st) => <VitalRow key={st.id} st={st} audited={vt.audited} />)}</Box>}
           </Panel>
@@ -207,7 +205,7 @@ export function HealthSummary({ site, range, header }: { site: SiteId; range: Ra
             {fixes.length === 0 && <Text px="4" py="3" textStyle="sm" color="fg.muted">No template fixes match these filters.</Text>}
             {fixes.map((f) => (
               <HStack asChild key={f.rule.id + f.pattern} gap="4" px="4" py="3" borderTopWidth="1px" _first={{ borderTopWidth: 0 }} _hover={{ bg: "bg.subtle" }}>
-                <RouterLink to={L.rule(f.rule.id, f.pattern)}>
+                <RouterLink to={L.rule(f.rule.id, f.pattern, { markup: "shared" })}>
                   <Badge variant="subtle" colorPalette="green" flexShrink={0} w={{ base: "24", sm: "28" }} justifyContent="center">{templateComponent(f.pattern)}</Badge>
                   <Stack gap="0" flex="1" minW="0">
                     <Text textStyle="sm" truncate>{f.rule.title}</Text>

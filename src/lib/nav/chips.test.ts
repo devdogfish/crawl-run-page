@@ -32,9 +32,9 @@ describe("serialize(parseSegs(text))", () => {
     }
   });
   test("a reference followed by punctuation still resolves; unresolved ones stay text", () => {
-    const [line] = parseSegs("see @issue:220003, and @issue:abc", ctx, "chat");
+    const [line] = parseSegs("see @issue:461110000, and @issue:abc", ctx, "chat");
     expect(line.filter((s) => s.t === "ref")).toHaveLength(1);
-    expect(serialize([line])).toBe("see @issue:220003, and @issue:abc");
+    expect(serialize([line])).toBe("see @issue:461110000, and @issue:abc");
   });
   test("lines: chat keeps them, search flattens them", () => {
     expect(through("a\nb", "chat")).toBe("a\nb");

@@ -122,7 +122,7 @@ describe("references copied from Ask AI", () => {
   test("@issue, @rule, @page and @crawl go straight to the thing", () => {
     expect(search("@issue:210000", ctx)[0].url).toBe(search("210000", ctx)[0].url);
     expect(search("@rule:image-alt", ctx)[0].url).toBe("/rbccm/issues/image-alt");
-    expect(search("@page:22", ctx)[0].url).toMatch(/^\/rbccm\/pages\/22/);
+    expect(search("@page:46111", ctx)[0].url).toMatch(/^\/rbccm\/pages\/46111/);
     expect(search("@crawl:806", ctx)[0].url).toBe("/rbccm/crawls/806");
     expect(search("  @Rule : image-alt ", ctx)[0].url).toBe("/rbccm/issues/image-alt");
   });

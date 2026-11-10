@@ -4,7 +4,7 @@ import urlMap from "../../../url-map.json";
 
 import { crawlsFor } from "@/lib/crawls-list";
 import { RULE_CATALOG } from "@/lib/page-issues";
-import { siteSize } from "@/lib/site-pages";
+import { hasPage } from "@/lib/site-pages";
 import { SITE_IDS, type SiteId } from "@/lib/sites";
 
 type Param = { type: string; label?: string; default?: string; values?: string[]; extra?: string[]; labels?: Record<string, string> };
@@ -30,7 +30,7 @@ function valueOk(p: Param, v: string, site: string | null): boolean {
     case "list": return v !== "" && v.split(",").every((x) => p.values?.includes(x));
     case "int": return /^\d+$/.test(v);
     case "crawl": return /^\d+$/.test(v) && (!site || crawlExists(site, v));
-    case "page": return /^\d+$/.test(v) && (!site || Number(v) < siteSize(site as SiteId));
+    case "page": return /^\d+$/.test(v) && (!site || hasPage(site as SiteId, Number(v)));
     case "rule": return v in RULE_CATALOG;
     default: return true; // text
   }

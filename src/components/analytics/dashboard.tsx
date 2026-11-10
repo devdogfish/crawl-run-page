@@ -140,8 +140,8 @@ function Headline({ h, scope, focus }: { h: Health; scope: Filter; focus: { gain
     top && top.gain >= 0.5 ? `Fixing "${top.rule.title}" in one template would add ${top.gain.toFixed(1)} points.` : null,
   ].filter(Boolean).join(" ");
 
-  const parts: Part[] = [...PRIORITIES.map((p) => ({ name: `Worst issue ${p} ${PRI_LABEL[p]}`, value: snap.worstPages[p], color: PRI_COLOR[p], to: L.pages(scope, "worst") })),
-    { name: "No issues", value: snap.worstPages.none, color: "green.solid" }];
+  const parts: Part[] = [...PRIORITIES.map((p) => ({ name: `Worst issue ${p} ${PRI_LABEL[p]}`, value: snap.worstPages[p], color: PRI_COLOR[p], to: L.pages(scope, "worst", { worst: p }) })),
+    { name: "No issues", value: snap.worstPages.none, color: "green.solid", to: L.pages(scope, "worst", { worst: "none" }) }];
 
   return (
     <Box as="section">

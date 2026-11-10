@@ -1,0 +1,25 @@
+{
+  "provenance": "Legacy links are compatibility records with no captured document. QA profiles reuse a subset of captured public production pages. No QA hosts were accessed.",
+  "legacy": {
+    "rbccm": [
+      {"id":21,"path":"/en/insights/2021/data-centres-outlook","title":"Data centres: outlook"},
+      {"id":9155,"path":"/en/insights/2025/private-credit-in-the-uk-the-road-ahead-2","title":"Private credit in the UK: the road ahead"}
+    ],
+    "rbcits": [
+      {"id":0,"path":"/en/about-us","title":"About us"},
+      {"id":1,"path":"/en/careers","title":"Careers"}
+    ]
+  },
+  "qa": {
+    "rbccm-qa": [
+      {"id":0,"sourceId":0},{"id":1,"sourceId":1},{"id":2,"sourceId":2},{"id":3,"sourceId":3},
+      {"id":4,"sourceId":4},{"id":5,"sourceId":5},{"id":6,"sourceId":6},{"id":7,"sourceId":7},
+      {"id":8,"sourceId":8},{"id":9,"sourceId":18}
+    ],
+    "rbcits-qa": [
+      {"id":0,"sourceId":3,"path":"/en/about-us"},{"id":1,"sourceId":846,"path":"/en/careers"},
+      {"id":2,"sourceId":2},{"id":3,"sourceId":4},{"id":4,"sourceId":5},{"id":5,"sourceId":6},
+      {"id":6,"sourceId":7},{"id":7,"sourceId":8},{"id":8,"sourceId":18},{"id":9,"sourceId":9}
+    ]
+  }
+}

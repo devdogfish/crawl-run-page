@@ -110,12 +110,12 @@ describe("official Mention + Suggestion", () => {
   });
   test("space resolves an exact ID; invalid IDs remain text", () => {
     const t = setup();
-    t.type("@issue:220003 ");
+    t.type("@issue:461110000 ");
     expect(t.count("mention")).toBe(1);
-    expect(t.text()).toBe("@issue:220003");
+    expect(t.text()).toBe("@issue:461110000");
     t.type(" @issue:nope ");
     expect(t.count("mention")).toBe(1);
-    expect(t.text()).toBe("@issue:220003 @issue:nope ");
+    expect(t.text()).toBe("@issue:461110000 @issue:nope ");
   });
   test("Enter with suggestions never forwards; Escape dismisses first; ordinary Enter forwards", async () => {
     const onKeyDown = vi.fn(), t = setup("chat", { onKeyDown });

@@ -37,7 +37,7 @@ export function HealthBoard({ site, range }: { site: SiteId; range: Range }) {
         </Panel>
         <Tile label="Critical (P1) issues" value={fmtInt(snap.priority.P1.issues)} to={L.issues({ pri: "P1" })} values={pts.map((p) => p.P1)} color="red.solid"
           delta={<Delta now={last.P1} then={first.P1} goodWhen="down" label={h.since} />} />
-        <Tile label="Pages with a P1 issue" value={`${h.p1Share}%`} to={L.pages({}, "worst")} sub={`${fmtInt(snap.p1Pages)} of ${fmtInt(snap.pages)} pages`}
+        <Tile label="Pages with a P1 issue" value={`${h.p1Share}%`} to={L.pages({}, "worst", { pri: "P1" })} sub={`${fmtInt(snap.p1Pages)} of ${fmtInt(snap.pages)} pages`}
           values={pts.map((p) => p.P1)} color="red.solid" />
         <Tile label="Fixable in templates" value={`${pct(snap.shared.issues, snap.issues)}%`} to={L.issues({ markup: "shared" })}
           help="Issues in markup shared across pages. One fix in the template covers every page."
